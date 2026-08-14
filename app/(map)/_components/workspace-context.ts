@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type { CallDTO } from "@/data/call/call.dto";
+import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
 import type { SiteDTO } from "@/data/site/site.dto";
 import type { TabId } from "@/lib/tabs";
 
@@ -35,6 +36,9 @@ export type WorkspaceValue = {
    *  already narrowed to it; this is here so a panel can say which one. */
   barrio: { name: string; comuna: string | null } | null;
   clearBarrio: () => void;
+  /** The selected barrio's evacuation/utility status, or null when it has none
+   *  on record — most barrios, most of the time. */
+  barrioStatus: NeighborhoodStatusDTO | null;
 };
 
 export const WorkspaceContext = createContext<WorkspaceValue | null>(null);

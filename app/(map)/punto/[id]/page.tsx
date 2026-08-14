@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
+import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { SituationDAL } from "@/data/situation/situation.dal";
 import { clientEnv } from "@/lib/env";
@@ -63,13 +64,15 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedSitePage({ params }: Params) {
   const { id } = await params;
 
-  const [site, sites, calls, animals, report] = await Promise.all([
-    SiteDAL.public().findById(id),
-    SiteDAL.public().listPublished(),
-    CallDAL.public().listPublished(),
-    AnimalDAL.public().listPublished(),
-    SituationDAL.public().latest(),
-  ]);
+  const [site, sites, calls, animals, report, neighborhoodStatuses] =
+    await Promise.all([
+      SiteDAL.public().findById(id),
+      SiteDAL.public().listPublished(),
+      CallDAL.public().listPublished(),
+      AnimalDAL.public().listPublished(),
+      SituationDAL.public().latest(),
+      NeighborhoodDAL.public().statuses(),
+    ]);
 
   if (!site) notFound();
 
@@ -91,6 +94,7 @@ export default async function SharedSitePage({ params }: Params) {
         calls={calls}
         animals={animals}
         report={report}
+        neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={site.id}
         tab={tab}
       >

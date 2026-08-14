@@ -5,7 +5,9 @@ import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
   neighborhoodSchema,
+  neighborhoodStatusSchema,
   type NeighborhoodDTO,
+  type NeighborhoodStatusDTO,
 } from "./neighborhood.dto";
 
 /**
@@ -55,6 +57,49 @@ export class NeighborhoodDAL {
         municipality: row.municipality,
         longitude: row.longitude,
         latitude: row.latitude,
+      }),
+    );
+  }
+
+  /**
+   * Every barrio that has a status on record — evacuation, gas, power, water —
+   * and has not expired.
+   *
+   * A handful of rows, not 118: only barrios an announcement actually named get
+   * one. The rest stay unlisted rather than defaulting to "normal", because
+   * silence is not the same claim as a utility saying so.
+   */
+  async statuses(): Promise<NeighborhoodStatusDTO[]> {
+    const supabase = await createServerSupabase();
+
+    const { data, error } = await supabase
+      .from("neighborhood_status_public")
+      .select(
+        "neighborhood_id, neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes, source, source_url, confirmed_at, expires_at",
+      )
+      .gt("expires_at", new Date().toISOString());
+
+    if (error) {
+      log.error("neighborhood.statuses failed", { code: error.code });
+      // Never blocks the map: a barrio with no status behaves exactly like one
+      // nobody has reported on, which is the correct fallback either way.
+      return [];
+    }
+
+    return (data ?? []).map((row) =>
+      neighborhoodStatusSchema.parse({
+        neighborhoodId: row.neighborhood_id,
+        name: row.neighborhood,
+        municipality: row.municipality,
+        evacuated: row.evacuated,
+        gasStatus: row.gas_status,
+        powerStatus: row.power_status,
+        waterStatus: row.water_status,
+        notes: row.notes,
+        source: row.source,
+        sourceUrl: row.source_url,
+        confirmedAt: row.confirmed_at,
+        expiresAt: row.expires_at,
       }),
     );
   }

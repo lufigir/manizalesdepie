@@ -1,5 +1,6 @@
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
+import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { SituationDAL } from "@/data/situation/situation.dal";
 
@@ -22,12 +23,14 @@ export default async function TabsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [sites, calls, animals, report] = await Promise.all([
-    SiteDAL.public().listPublished(),
-    CallDAL.public().listPublished(),
-    AnimalDAL.public().listPublished(),
-    SituationDAL.public().latest(),
-  ]);
+  const [sites, calls, animals, report, neighborhoodStatuses] =
+    await Promise.all([
+      SiteDAL.public().listPublished(),
+      CallDAL.public().listPublished(),
+      AnimalDAL.public().listPublished(),
+      SituationDAL.public().latest(),
+      NeighborhoodDAL.public().statuses(),
+    ]);
 
   return (
     <main className="h-dvh w-full overflow-hidden">
@@ -36,6 +39,7 @@ export default async function TabsLayout({
         calls={calls}
         animals={animals}
         report={report}
+        neighborhoodStatuses={neighborhoodStatuses}
       >
         {children}
       </MapWorkspace>

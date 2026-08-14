@@ -10,6 +10,7 @@ import { Map, MapControls, MapPopup } from "@/components/ui/map";
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type { CallDTO } from "@/data/call/call.dto";
+import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
 import type { SituationReportDTO } from "@/data/situation/situation.dto";
 import { BARRIO_TOGGLE } from "@/lib/labels";
 import {
@@ -45,6 +46,8 @@ type Props = {
   animals?: AnimalDTO[];
   /** The Alcaldía's latest balance, or null once it has expired. */
   report?: SituationReportDTO | null;
+  /** Every barrio with an evacuation/utility status on record. */
+  neighborhoodStatuses?: NeighborhoodStatusDTO[];
   /** Set when arriving from a shared link. The map opens already centred on
    *  that pin with its card up, because the question the link was sent to
    *  answer is "¿por dónde queda exactamente?" and it should be answered
@@ -70,6 +73,7 @@ export function MapWorkspace({
   calls = [],
   animals = [],
   report,
+  neighborhoodStatuses = [],
   initialSelectedId,
   tab: forcedTab,
   children,
@@ -195,6 +199,14 @@ export function MapWorkspace({
 
   const reportEntries = REPORT_ENTRY[tab];
 
+  const barrioStatus = useMemo(
+    () =>
+      barrio
+        ? (neighborhoodStatuses.find((s) => s.name === barrio.name) ?? null)
+        : null,
+    [neighborhoodStatuses, barrio],
+  );
+
   const workspace = useMemo(
     () => ({
       tab,
@@ -206,8 +218,9 @@ export function MapWorkspace({
       select: setSelectedId,
       barrio,
       clearBarrio: () => setBarrio(null),
+      barrioStatus,
     }),
-    [tab, panelSites, panelCalls, animals, selectedId, barrio],
+    [tab, panelSites, panelCalls, animals, selectedId, barrio, barrioStatus],
   );
 
   return (
@@ -239,6 +252,7 @@ export function MapWorkspace({
                 onCentreChange={setCentreBarrio}
                 selected={barrio?.name ?? null}
                 onSelect={setBarrio}
+                statuses={neighborhoodStatuses}
               />
             )}
             {/* Framed over both, so a jornada convened on the edge of the city
@@ -313,6 +327,7 @@ export function MapWorkspace({
             <div className="pointer-events-auto flex items-start justify-between gap-2">
               <InfoSheet
                 report={report}
+                neighborhoodStatuses={neighborhoodStatuses}
                 showBarrios={showBarrios}
                 onBarriosChange={setShowBarrios}
               />

@@ -13,6 +13,16 @@
 -- /admin queue: verify the address, fix the point, then publish.
 
 -- ------------------------------------------------------- neighborhoods -----
+--
+-- Placeholders only: `barrios.sql` upserts the official 114 with real
+-- boundaries and overwrites these centroids on top. `on conflict do nothing`
+-- so this file loads cleanly whether it runs before or after `barrios.sql` —
+-- without it, running this after `barrios.sql` has already inserted the same
+-- (name, municipality) pairs would abort the whole script.
+--
+-- Run `barrios.sql` BEFORE this file when possible: the sites below rely on
+-- the `neighborhood_id`-stamping trigger, which resolves to null until a
+-- barrio has a `boundary` polygon — that only exists after `barrios.sql` runs.
 
 insert into neighborhood (name, municipality, centroid) values
   ('Centro',            'manizales',  st_point(-75.5174, 5.0689)::geography),
@@ -23,7 +33,12 @@ insert into neighborhood (name, municipality, centroid) values
   ('Milán',             'manizales',  st_point(-75.4790, 5.0575)::geography),
   ('Los Naranjos',      'manizales',  st_point(-75.4835, 5.0602)::geography),
   ('Aranjuez',          'manizales',  st_point(-75.4880, 5.0480)::geography),
-  ('Villamaría centro', 'villamaria', st_point(-75.5133, 5.0447)::geography);
+  ('La Estrella',       'manizales',  st_point(-75.48924, 5.05958)::geography),
+  ('Palermo',           'manizales',  st_point(-75.48873, 5.05265)::geography),
+  ('Versalles',         'manizales',  st_point(-75.49934, 5.06177)::geography),
+  ('San Jorge',         'manizales',  st_point(-75.49942, 5.06699)::geography),
+  ('Villamaría centro', 'villamaria', st_point(-75.5133, 5.0447)::geography)
+on conflict (name, municipality) do nothing;
 
 -- ---------------------------------------------------------------- sites ----
 
@@ -100,8 +115,95 @@ from (values
    'Centro', 'manizales'::municipality,
    'open'::site_status,
    'Consultar horario del día',
-   'https://www.cruzrojacolombiana.org')
+   'https://www.cruzrojacolombiana.org'),
+
+  -- Added on 14 August after checking mapadelterremoto.com for Manizales and
+  -- Villamaría (see docs/PLAN.md §9).
+
+  ('shelter'::site_type,
+   'Coliseo de la Universidad de Caldas',
+   'Habilitado como albergue temporal en la zona del Velódromo Alcides Nieto Patiño.',
+   'Universidad de Caldas, Carrera 25A, sector Velódromo',
+   st_point(-75.4938881, 5.0556000)::geography,
+   'La Estrella', 'manizales'::municipality,
+   'open'::site_status,
+   'Consultar horario del día',
+   'https://www.mapadelterremoto.com'),
+
+  ('shelter'::site_type,
+   'Coliseo de Villamaría',
+   'Habilitado por la administración municipal para atender a las familias afectadas.',
+   'Villamaría, cerca de la Alcaldía municipal',
+   st_point(-75.5115, 5.0460)::geography,
+   'Villamaría centro', 'villamaria'::municipality,
+   'open'::site_status,
+   'Consultar horario del día',
+   'https://www.mapadelterremoto.com'),
+
+  ('collection_point'::site_type,
+   'Banco de Alimentos de Manizales',
+   'Recepción de donaciones. Comparte sede con el Banco Arquidiocesano de Alimentos. Dirección exacta pendiente de confirmar por un curador.',
+   'Calle 49 #27A-85 (por confirmar)',
+   st_point(-75.4990, 5.0660)::geography,
+   'Avenida Santander', 'manizales'::municipality,
+   'unknown'::site_status,
+   null,
+   'https://www.mapadelterremoto.com')
 ) as v(type, name, description, address, location, neighborhood, municipality, status, schedule, source_url);
+
+-- ---------------------------------------------------- neighborhood status --
+-- Utility or Alcaldía announcements named these barrios specifically. Rows are
+-- short-lived on purpose: no silence is promoted into "normal".
+
+insert into neighborhood_status (
+  neighborhood_id,
+  evacuated,
+  gas_status,
+  power_status,
+  water_status,
+  notes,
+  source,
+  source_url,
+  confirmed_at,
+  expires_at
+)
+select n.id,
+       v.evacuated,
+       v.gas_status,
+       v.power_status,
+       v.water_status,
+       v.notes,
+       v.source,
+       v.source_url,
+       now(),
+       now() + interval '24 hours'
+from (values
+  ('La Estrella', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
+   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.',
+   'Caracol Radio / Efigas',
+   'https://caracol.com.co/2026/08/11/servicio-de-gas-se-restablece-por-sectores-efigas-envia-recomendaciones-de-seguridad-tras-terremoto/'),
+  ('Milán', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
+   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.',
+   'Caracol Radio / Efigas',
+   'https://caracol.com.co/2026/08/11/servicio-de-gas-se-restablece-por-sectores-efigas-envia-recomendaciones-de-seguridad-tras-terremoto/'),
+  ('Centro', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
+   'Efigas reportó afectación/intermitencia del servicio de gas en la zona centro.',
+   'Caracol Radio / Efigas',
+   'https://caracol.com.co/2026/08/11/servicio-de-gas-se-restablece-por-sectores-efigas-envia-recomendaciones-de-seguridad-tras-terremoto/')
+) as v(neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes, source, source_url)
+join neighborhood n
+  on n.name = v.neighborhood
+ and n.municipality = v.municipality
+on conflict (neighborhood_id) do update set
+  evacuated = excluded.evacuated,
+  gas_status = excluded.gas_status,
+  power_status = excluded.power_status,
+  water_status = excluded.water_status,
+  notes = excluded.notes,
+  source = excluded.source,
+  source_url = excluded.source_url,
+  confirmed_at = excluded.confirmed_at,
+  expires_at = excluded.expires_at;
 
 -- ------------------------------------------------------------ site items ---
 -- What each collection point wants, and what it explicitly refuses. The
@@ -146,14 +248,3 @@ cross join (values
   ('Ropa y zapatos usados',        'not_accepted'::item_mode, 0)
 ) as v(label, mode, priority)
 where s.type = 'shelter';
-
--- ----------------------------------------------------------- closed roads --
--- Curated by hand: the INVIAS API serves the road network, while the daily
--- landslide bulletins are published only as PDF.
-
-insert into closed_road (name, segment, marker, status, cause, source, published, expires_at) values
-  ('Manizales – Fresno',      'Sector Alto de Letras',       st_point(-75.3200, 4.9800)::geography, 'fully_closed',    'Deslizamientos y caída de rocas',        'INVIAS / prensa', false, now() + interval '48 hours'),
-  ('Manizales – Bogotá',      'Sector Letras',               st_point(-75.3300, 4.9750)::geography, 'fully_closed',    'Afectación crítica por el sismo',        'INVIAS / prensa', false, now() + interval '48 hours'),
-  ('Pereira – Chinchiná',     'Kilómetros 22 a 24',          st_point(-75.6300, 4.9800)::geography, 'fully_closed',    'Deslizamiento',                          'INVIAS / prensa', false, now() + interval '48 hours'),
-  ('Manzanares – Marulanda',  'Vía completa',                st_point(-75.1500, 5.2500)::geography, 'fully_closed',    'Derrumbe; afecta transporte agrícola',   'INVIAS / prensa', false, now() + interval '48 hours'),
-  ('Manizales – Neira',       'Sector El Naranjal',          st_point(-75.5200, 5.1200)::geography, 'partially_open',  'Derrumbe; paso parcial habilitado',      'INVIAS / prensa', false, now() + interval '48 hours');

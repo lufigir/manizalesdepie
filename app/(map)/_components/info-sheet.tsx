@@ -10,14 +10,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
 import type { SituationReportDTO } from "@/data/situation/situation.dto";
 import {
   BARRIO_TOGGLE,
+  NEIGHBORHOOD_STATUS_LABEL,
   OFFICIAL_LINES,
   SITUATION_LABEL,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { NeighborhoodStatusList } from "./neighborhood-status-list";
 import { SituationCard } from "./situation-card";
 
 /**
@@ -34,10 +37,12 @@ import { SituationCard } from "./situation-card";
  */
 export function InfoSheet({
   report,
+  neighborhoodStatuses = [],
   showBarrios,
   onBarriosChange,
 }: {
   report?: SituationReportDTO | null;
+  neighborhoodStatuses?: NeighborhoodStatusDTO[];
   showBarrios: boolean;
   onBarriosChange: (show: boolean) => void;
 }) {
@@ -77,6 +82,15 @@ export function InfoSheet({
             <p className="text-muted-foreground text-sm">
               No hay un balance vigente ahora mismo.
             </p>
+          )}
+
+          {neighborhoodStatuses.length > 0 && (
+            <div className="flex flex-col gap-2 border-t pt-4">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                {NEIGHBORHOOD_STATUS_LABEL.title}
+              </p>
+              <NeighborhoodStatusList statuses={neighborhoodStatuses} />
+            </div>
           )}
 
           <div className="flex flex-col gap-2 border-t pt-4">

@@ -264,6 +264,27 @@ export const SITUATION_LABEL = {
 } as const;
 
 /**
+ * Per-barrio status: evacuation and utilities.
+ *
+ * Badges only render for `normal` and `suspended` — `unknown` never earns a
+ * chip, because "sin dato" repeated across every utility is noise, not a
+ * finding. The banner leads with evacuation because a family decides on that
+ * before anything else.
+ */
+export const NEIGHBORHOOD_STATUS_LABEL = {
+  title: "Barrios con novedades",
+  empty: "Sin barrios con novedades registradas por ahora.",
+  evacuated: "Evacuado",
+  gas: "Gas",
+  power: "Energía",
+  water: "Agua",
+  normal: "Normal",
+  suspended: "Suspendido",
+  bannerEvacuated: "Este barrio tiene evacuación oficial.",
+  bannerUtility: "Servicios afectados en este barrio.",
+} as const;
+
+/**
  * The animal board.
  *
  * "Visto en" rather than "está en", everywhere. The distinction is the whole
