@@ -1,8 +1,10 @@
 "use client";
 
-import { CONFIDENCE_BADGE, RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL, SERVICES_LABEL, confidence, freshness } from "@/lib/labels";
+import { CONFIDENCE_BADGE, PANEL_LABEL, RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL, SERVICES_LABEL, confidence, freshness } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { BalanceTab } from "./balance-tab";
+import { PanelTabs, type PanelTabDef } from "./panel-tabs";
 import { useWorkspace } from "./workspace-context";
 
 /**
@@ -14,18 +16,26 @@ import { useWorkspace } from "./workspace-context";
 export function ServicesPanel() {
   const { resourceOffers } = useWorkspace();
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-col gap-1 border-b p-2">
-        <h2 className="text-sm font-semibold">{SERVICES_LABEL.title}</h2>
-        <p className="text-muted-foreground text-xs tabular-nums">
-          {resourceOffers.length === 1
-            ? SERVICES_LABEL.countOne
-            : SERVICES_LABEL.countMany(resourceOffers.length)}
-        </p>
-      </div>
+  const tabs: PanelTabDef[] = [
+    { id: "balance", label: PANEL_LABEL.balance, content: <BalanceTab /> },
+    {
+      id: "services",
+      label: SERVICES_LABEL.title,
+      count: resourceOffers.length,
+      content: <ServicesGrid resourceOffers={resourceOffers} />,
+    },
+  ];
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+  return <PanelTabs tabs={tabs} />;
+}
+
+function ServicesGrid({
+  resourceOffers,
+}: {
+  resourceOffers: ReturnType<typeof useWorkspace>["resourceOffers"];
+}) {
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {resourceOffers.length === 0 ? (
           <p className="text-muted-foreground p-6 text-center text-sm text-balance">
             {SERVICES_LABEL.empty}
@@ -93,7 +103,6 @@ export function ServicesPanel() {
             })}
           </ul>
         )}
-      </div>
     </div>
   );
 }

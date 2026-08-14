@@ -748,6 +748,20 @@ export const BARRIO_PICKER = {
  * against what they know, and "official" is the word that settles an argument
  * about where a border runs.
  */
+/**
+ * The panel's own tab bar — Balance plus whatever each section's content
+ * splits into (see PanelTabs). Only the titles that don't already exist
+ * elsewhere: a jornada tab reuses CALL_LABEL.heading, a service tab reuses
+ * SERVICES_LABEL.title, and so on.
+ */
+export const PANEL_LABEL = {
+  balance: "Balance",
+  sites: "Sitios",
+  pets: "Mascotas",
+  collapse: "Minimizar panel",
+  expand: "Mostrar panel",
+} as const;
+
 export const BARRIO_TOGGLE = {
   title: "Mostrar también",
   label: "Barrios",
@@ -895,7 +909,10 @@ export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
 };
 
 export const WORK_ORDER_LABEL = {
-  heading: "Escombros y daños",
+  // Short: this is now only a PanelTabs label, sharing a 320px-or-less strip
+  // with up to three other tabs. "Escombros y daños" fit as a section header
+  // with the whole panel to itself; it does not fit as one of four tabs.
+  heading: "Escombros",
   headingHint: "Casos reportados que alguien con volqueta o manos puede reclamar",
   countOne: "1 caso",
   countMany: (n: number) => `${n} casos`,

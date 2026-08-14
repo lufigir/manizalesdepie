@@ -24,7 +24,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-import { BalancePanel } from "./balance-panel";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
 import { CallMarkers } from "./call-markers";
 import { CallPopup } from "./call-popup";
@@ -122,6 +121,10 @@ export function MapWorkspace({
   // The barrio being filtered by, set by tapping one on the map. Null is the
   // whole city, which is where everyone starts.
   const [barrio, setBarrio] = useState<BarrioProps | null>(null);
+  // Mobile only: shrinks the panel to just its tab bar so the map can take
+  // the freed space. Lives here rather than inside PanelTabs so it survives
+  // moving between sections during the same visit.
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
 
   const liveStatus = useLiveSiteStatus();
 
@@ -262,6 +265,12 @@ export function MapWorkspace({
       barrio,
       clearBarrio: () => setBarrio(null),
       barrioStatus,
+      report: report ?? null,
+      neighborhoodStatuses,
+      showBarrios,
+      onBarriosChange: setShowBarrios,
+      panelCollapsed,
+      setPanelCollapsed,
     }),
     [
       tab,
@@ -273,6 +282,10 @@ export function MapWorkspace({
       selectedId,
       barrio,
       barrioStatus,
+      report,
+      neighborhoodStatuses,
+      showBarrios,
+      panelCollapsed,
     ],
   );
 
@@ -282,7 +295,23 @@ export function MapWorkspace({
         <div
           className={cn(
             "relative min-h-0 transition-[flex-grow] duration-300",
-            panelLeads ? "h-[32dvh] md:h-auto md:flex-[0_0_38%]" : "flex-1",
+            // Non-panelLeads sections are always flex-1 already, mobile and
+            // desktop alike — the aside next to it carries a fixed height, so
+            // shrinking that height (collapsed) already hands this the freed
+            // space with no extra class needed here.
+            //
+            // panelLeads sections invert that today (map fixed, aside grows)
+            // because the panel is the product there. Collapsing has to
+            // invert it back on mobile — the map takes the freed space
+            // instead — but only on mobile: md: always restores the normal
+            // 38% share, since there is room to spare there and the toggle
+            // that sets `panelCollapsed` is hidden on that breakpoint.
+            panelLeads
+              ? cn(
+                  panelCollapsed ? "flex-1" : "h-[32dvh]",
+                  "md:h-auto md:flex-[0_0_38%]",
+                )
+              : "flex-1",
           )}
         >
           <Map
@@ -380,11 +409,16 @@ export function MapWorkspace({
 
             {/* Reference belongs away from the section switcher: the tabs steer
                 the app, while the clock is context checked between actions.
-                The balance moved into the panel (BalancePanel) — it is
+                The balance moved into the panel's own Balance tab — it is
                 something you check once and carry, not a control that
                 belongs on the map. */}
             <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5 self-end sm:self-auto">
-              <LiveClock />
+              {/* Mobile is tight on vertical space above an already-small
+                  map, and the clock is reassurance ("this is live"), not a
+                  control — the barrio chip below it matters more there. */}
+              <div className="hidden md:block">
+                <LiveClock />
+              </div>
                 {/* One slot, two states. While a barrio is filtered the chip
                     IS the filter and carries the way out of it; otherwise it
                     just says where the map is centred. Two chips stacked said
@@ -460,20 +494,23 @@ export function MapWorkspace({
         <aside
           className={cn(
             "bg-background flex min-h-0 flex-col border-t md:border-t-0 md:border-l",
-            panelLeads
-              ? "flex-1 overflow-y-auto"
-              : "h-[38dvh] shrink-0 md:h-auto md:w-80",
+            // Collapsed shrinks the aside to just its tab bar on mobile,
+            // whatever the section — Balance now lives inside `children`
+            // (every section's own PanelTabs) rather than as a block here,
+            // so there is nothing left above it to keep visible. md: always
+            // restores the section's normal desktop share.
+            panelCollapsed
+              ? cn(
+                  "h-12 shrink-0 overflow-hidden",
+                  panelLeads
+                    ? "md:h-auto md:flex-1 md:overflow-y-auto"
+                    : "md:h-auto md:w-80",
+                )
+              : panelLeads
+                ? "flex-1 overflow-y-auto"
+                : "h-[38dvh] shrink-0 md:h-auto md:w-80",
           )}
         >
-          {/* Same block on every section, above whatever the section itself
-              renders — the balance is context for the whole app, not one tab
-              of it. */}
-          <BalancePanel
-            report={report}
-            neighborhoodStatuses={neighborhoodStatuses}
-            showBarrios={showBarrios}
-            onBarriosChange={setShowBarrios}
-          />
           {children}
         </aside>
       </div>

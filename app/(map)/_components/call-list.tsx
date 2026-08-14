@@ -7,7 +7,6 @@ import type { CallDTO } from "@/data/call/call.dto";
 import {
   CALL_CATEGORY_ICON,
   CALL_CATEGORY_LABEL,
-  CALL_LABEL,
   CALL_STATE_LABEL,
   CALL_STATE_MARKER,
   CALL_STATE_STYLE,
@@ -18,16 +17,16 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The jornadas block at the top of "Ayudar".
+ * The jornadas tab in "Ayudar".
  *
- * Above the list of places, and not mixed into it, because the two answer
+ * Its own tab rather than mixed into the site list, because the two answer
  * different questions. A place is open for hours and you go when you can; a
- * shift is a time, it passes, and by tonight the same row is worth nothing. The
- * thing with an expiry goes first.
+ * shift is a time, it passes, and by tonight the same row is worth nothing.
  *
  * Selecting here selects on the map, exactly as the site list does — the two
  * halves share one selection, so nothing on screen ever disagrees with anything
- * else on screen.
+ * else on screen. The heading and count live in the tab itself (see
+ * PanelTabs), not here — this only ever renders once that tab is showing.
  */
 export function CallList({
   calls,
@@ -47,26 +46,8 @@ export function CallList({
       ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedId]);
 
-  // Hidden entirely when there is nothing, rather than showing an empty state.
-  // The section's own empty copy already names jornadas, and a permanent empty
-  // block above the list would push the acopios off a phone screen for nothing.
-  if (calls.length === 0) return null;
-
   return (
-    // Capped and scrollable so a busy Saturday cannot push the acopios off a
-    // phone screen. The block leads the panel; it does not take it over.
-    <section className="max-h-[45%] shrink-0 overflow-y-auto border-b p-2">
-      <header className="flex items-baseline justify-between gap-2 px-1 pb-1.5">
-        <h2 className="text-[0.7rem] font-bold tracking-wide uppercase">
-          {CALL_LABEL.heading}
-        </h2>
-        <p className="text-muted-foreground text-[0.7rem] tabular-nums">
-          {calls.length === 1
-            ? CALL_LABEL.countOne
-            : CALL_LABEL.countMany(calls.length)}
-        </p>
-      </header>
-
+    <div className="min-h-0 flex-1 overflow-y-auto p-2">
       <ul className="flex flex-col gap-0.5">
         {calls.map((call) => {
           const active = call.id === selectedId;
@@ -129,6 +110,6 @@ export function CallList({
           );
         })}
       </ul>
-    </section>
+    </div>
   );
 }

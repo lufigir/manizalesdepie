@@ -27,9 +27,10 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Debris and damage, in "Ayudar" — same block shape as `CallList` above it,
- * for the same reason: this is a thing with a lifecycle, not a place with
- * hours, so it leads the panel instead of living inside the site list.
+ * Debris and damage, in "Ayudar" — its own tab, same reasoning as `CallList`:
+ * this is a thing with a lifecycle, not a place with hours, so it does not
+ * belong inside the site list. The heading and count live in the tab itself
+ * (see PanelTabs), not here — this only ever renders once that tab is showing.
  */
 export function WorkOrderList({
   workOrders,
@@ -38,27 +39,14 @@ export function WorkOrderList({
   workOrders: WorkOrderDTO[];
   signedIn: boolean;
 }) {
-  if (workOrders.length === 0) return null;
-
   return (
-    <section className="max-h-[45%] shrink-0 overflow-y-auto border-b p-2">
-      <header className="flex items-baseline justify-between gap-2 px-1 pb-1.5">
-        <h2 className="text-[0.7rem] font-bold tracking-wide uppercase">
-          {WORK_ORDER_LABEL.heading}
-        </h2>
-        <p className="text-muted-foreground text-[0.7rem] tabular-nums">
-          {workOrders.length === 1
-            ? WORK_ORDER_LABEL.countOne
-            : WORK_ORDER_LABEL.countMany(workOrders.length)}
-        </p>
-      </header>
-
+    <div className="min-h-0 flex-1 overflow-y-auto p-2">
       <ul className="flex flex-col gap-1">
         {workOrders.map((order) => (
           <WorkOrderItem key={order.id} order={order} signedIn={signedIn} />
         ))}
       </ul>
-    </section>
+    </div>
   );
 }
 
