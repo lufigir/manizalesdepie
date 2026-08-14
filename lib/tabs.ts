@@ -1,7 +1,10 @@
 import {
   HandHeart,
   LifeBuoy,
+  MapPin,
+  Megaphone,
   PawPrint,
+  Shovel,
   Truck,
   type LucideIcon,
 } from "lucide-react";
@@ -37,7 +40,14 @@ export type TabDef = {
   segment: string;
   href: string;
   label: string;
+  /** The full sentence, for the hover title on desktop — where a tooltip
+   *  actually works. */
   hint: string;
+  /** The same content, cut to a few words. This is what is actually drawn
+   *  under the label: a hover-only hint said nothing on a phone, which is
+   *  most of this app's readers, so the tab itself carries a short preview
+   *  of what's inside instead of asking someone to open it to find out. */
+  subtitle: string;
   icon: LucideIcon;
 };
 
@@ -50,6 +60,7 @@ export const TABS: readonly TabDef[] = [
     href: "/ayudar",
     label: "Ayudar",
     hint: "Acopios, sangre, jornadas y familias que piden",
+    subtitle: "Acopios, sangre, jornadas",
     icon: HandHeart,
   },
   {
@@ -58,6 +69,7 @@ export const TABS: readonly TabDef[] = [
     href: "/necesito",
     label: "Necesito",
     hint: "Albergues, censo y entrega de ayudas",
+    subtitle: "Albergues, censo, ayudas",
     icon: LifeBuoy,
   },
   {
@@ -66,6 +78,7 @@ export const TABS: readonly TabDef[] = [
     href: "/mascotas",
     label: "Mascotas",
     hint: "Perdidos, encontrados y avistados",
+    subtitle: "Perdidos y encontrados",
     icon: PawPrint,
   },
   {
@@ -74,6 +87,7 @@ export const TABS: readonly TabDef[] = [
     href: "/servicios",
     label: "Servicios",
     hint: "Volqueta, carro, herramienta, bodega, hogar de paso",
+    subtitle: "Volqueta, herramienta, transporte",
     icon: Truck,
   },
 ] as const;
@@ -139,12 +153,22 @@ export const TAB_SITE_TYPES: Record<"help" | "need", SiteType[]> = {
  * would earn the second wording does not exist yet. A button that promises more
  * than the form delivers is read once and never trusted again.
  */
-export const REPORT_ENTRY: Record<TabId, { href: string; label: string }[]> = {
+export const REPORT_ENTRY: Record<
+  TabId,
+  { href: string; label: string; icon: LucideIcon }[]
+> = {
   help: [
-    { href: "/reportar/ayudar", label: "Reportar un punto" },
-    { href: "/reportar/jornada", label: "Convocar una jornada" },
+    { href: "/reportar/ayudar", label: "Reportar un punto", icon: MapPin },
+    // Megaphone rather than a calendar: "convocar" is calling people, not
+    // scheduling an event — the icon should say who this button is for.
+    { href: "/reportar/jornada", label: "Convocar una jornada", icon: Megaphone },
   ],
-  need: [{ href: "/reportar/necesito", label: "Reportar un punto" }],
-  pets: [{ href: "/reportar/animal", label: "Reportar un animal" }],
-  services: [],
+  need: [
+    { href: "/reportar/necesito", label: "Reportar un punto", icon: MapPin },
+    { href: "/reportar/escombros", label: "Reportar escombros o un daño", icon: Shovel },
+  ],
+  pets: [{ href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint }],
+  services: [
+    { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
+  ],
 };

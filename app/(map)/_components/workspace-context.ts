@@ -5,7 +5,9 @@ import { createContext, useContext } from "react";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type { CallDTO } from "@/data/call/call.dto";
 import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
+import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { SiteDTO } from "@/data/site/site.dto";
+import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import type { TabId } from "@/lib/tabs";
 
 /**
@@ -30,6 +32,15 @@ export type WorkspaceValue = {
   /** Every animal report. Unlike sites these are not filtered by tab: they
    *  only ever appear in one. */
   animals: AnimalDTO[];
+  /** Every resource offer. Same shape as `animals`: one section, no
+   *  filtering, no map markers — "Tarjetas" in the original section table,
+   *  not a pin, because a truck someone can lend has no one fixed spot the
+   *  way a collection point does. */
+  resourceOffers: ResourceOfferDTO[];
+  /** Debris and damage reports, shown in "Ayudar" — "las necesidades se ven
+   *  en Ayudar, se crean desde Necesito", the same rule a site request
+   *  follows. Not filtered per tab; the block only renders there. */
+  workOrders: WorkOrderDTO[];
   selectedId: string | null;
   select: (id: string | null) => void;
   /** The barrio being filtered by, or null for the whole city. `sites` is

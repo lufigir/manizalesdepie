@@ -14,15 +14,17 @@ import {
   type AnimalKind,
   type AnimalSpecies,
 } from "@/data/animal/animal.dto";
+import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
 import { compressImage } from "@/lib/image";
 import { ANIMAL_FORM, ANIMAL_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { BarrioPicker } from "../../_components/barrio-picker";
 import { PinPicker } from "../../_components/pin-picker";
 
 const START: [number, number] = [-75.5074, 5.0631];
 
-export function AnimalForm() {
+export function AnimalForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -31,6 +33,11 @@ export function AnimalForm() {
   const [species, setSpecies] = useState<AnimalSpecies>("dog");
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // No neighborhood_id on animal_report — see the migration's own note that
+  // the map is secondary here. This just gives the "zone" text field the
+  // same barrio picker every other form uses instead of a blank input, and
+  // still writes plain text into the same nullable column.
+  const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(null);
   const [usePin, setUsePin] = useState(false);
   const [point, setPoint] = useState({ lng: START[0], lat: START[1] });
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +69,7 @@ export function AnimalForm() {
     formData.set("lastSeenAt", new Date(
       String(formData.get("lastSeenAtLocal") || "") || Date.now(),
     ).toISOString());
+    if (barrio) formData.set("zone", barrio.name);
     if (photo) formData.set("photo", photo);
     if (usePin) {
       formData.set("longitude", String(point.lng));
@@ -100,11 +108,15 @@ export function AnimalForm() {
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold">{ANIMAL_FORM.photo}</span>
+        {/* No `capture`: that attribute skips straight to the camera on a
+            phone, with no way back to the gallery. Most photos of a lost or
+            found animal already exist — taken minutes ago, sent in a
+            WhatsApp group — so forcing a new one through the camera would
+            throw away the one that already answers the question. */}
         <input
           ref={fileInput}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={pickPhoto}
           className="hidden"
         />
@@ -149,9 +161,10 @@ export function AnimalForm() {
         <Input name="lastSeenAtLocal" type="datetime-local" required />
       </Field>
 
-      <Field label={ANIMAL_FORM.zone}>
-        <Input name="zone" placeholder={ANIMAL_FORM.zonePlaceholder} />
-      </Field>
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-semibold">{ANIMAL_FORM.zone}</label>
+        <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
+      </div>
 
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-2 text-sm font-semibold">
@@ -164,7 +177,18 @@ export function AnimalForm() {
         </label>
         {usePin && (
           <>
-            <PinPicker center={START} onMove={handleMove} />
+            {/* Aimed at the chosen barrio, same as the site and jornada
+                pickers — one less thing to drag across the whole city to
+                find. */}
+            <PinPicker
+              center={[
+                barrio?.longitude ?? START[0],
+                barrio?.latitude ?? START[1],
+              ]}
+              focusLongitude={barrio?.longitude ?? null}
+              focusLatitude={barrio?.latitude ?? null}
+              onMove={handleMove}
+            />
             <p className="text-muted-foreground text-xs">
               {ANIMAL_FORM.whereHint}
             </p>

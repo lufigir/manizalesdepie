@@ -1,21 +1,32 @@
 import {
   Boxes,
+  Car,
   ClipboardList,
+  Construction,
   Cross,
   GlassWater,
   Droplet,
   HardHat,
   HeartPulse,
+  Home,
   Package,
   PawPrint,
   Shovel,
   Tent,
+  Truck,
   Users,
+  Warehouse,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
 import type { CallCategory, CallDTO } from "@/data/call/call.dto";
+import type { ResourceType } from "@/data/resource_offer/resource_offer.dto";
 import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
+import type {
+  WorkOrderCategory,
+  WorkOrderStatus,
+} from "@/data/work_order/work_order.dto";
 import type { TabId } from "@/lib/tabs";
 
 /**
@@ -76,10 +87,17 @@ export const SITE_TYPE_COLOR: Record<SiteType, string> = {
   census_point: "bg-layer-census",
 };
 
+/**
+ * "Abierto/Cerrado" reads as business hours, and half of what this status
+ * covers is not a business: a family's living room taking in donations, a
+ * parish organising an acopio in its atrio. "Disponible" asks the question
+ * that actually matters here — can I bring something right now — instead of
+ * one that only some of these places can honestly answer.
+ */
 export const SITE_STATUS_LABEL: Record<SiteStatus, string> = {
-  open: "Abierto",
-  full: "Lleno",
-  closed: "Cerrado",
+  open: "Disponible",
+  full: "Sin cupo",
+  closed: "No disponible",
   // "Sin dato", not "Sin confirmar": confidence already owns that phrase, and
   // the two mean different things. This one says nobody knows whether the place
   // is receiving people; the other says nobody has vouched for the report at
@@ -135,6 +153,9 @@ export const SHEET_LABEL = {
   share: "Compartir",
   copied: "Enlace copiado",
   confirmPrompt: "¿Estás ahí ahora? Dinos cómo lo encontraste:",
+  moreInfo: "Ver más",
+  description: "Descripción",
+  source: "Fuente",
 } as const;
 
 /**
@@ -325,8 +346,7 @@ export const ANIMAL_FORM = {
   descriptionPlaceholder:
     "Perro criollo café, collar azul, mediano, cojea de una pata.",
   when: "¿Cuándo fue?",
-  zone: "¿En qué sector?",
-  zonePlaceholder: "Chipre, cerca del parque",
+  zone: "¿En qué barrio?",
   where: "Marca en el mapa dónde lo viste (opcional)",
   whereHint:
     "Es dónde lo VIERON, no dónde está. Se dibuja punteado para que nadie lo confunda.",
@@ -483,12 +503,21 @@ function day(at: Date, now: Date): string {
   return bogotaCalendar.format(at).replace(/\.$/, "");
 }
 
-/** "Hoy 8:00 AM – 12:00 PM". The day comes first because during an emergency
- *  the wrong day is the mistake that costs someone a morning. */
+/**
+ * "Hoy 8:00 AM – 12:00 PM". The day comes first because during an emergency
+ * the wrong day is the mistake that costs someone a morning.
+ *
+ * An informal call's `startsAt` is the instant someone reported it, not an
+ * hour anyone chose (see `CallDAL.gather`) — printed as a clock time it reads
+ * as a scheduled start, which is the one claim this kind of pin cannot back
+ * up. It says what is actually known instead: someone is there right now.
+ */
 export function callWhen(
-  call: Pick<CallDTO, "startsAt" | "endsAt">,
+  call: Pick<CallDTO, "startsAt" | "endsAt" | "informal">,
   now: Date = new Date(),
 ): string {
+  if (call.informal) return CALL_LABEL.happeningNow;
+
   const starts = new Date(call.startsAt);
   const head = `${day(starts, now)} ${clock(starts)}`;
   if (!call.endsAt) return head;
@@ -508,9 +537,22 @@ export const CALL_LABEL = {
   share: "Compartir",
   ended: "Esta jornada ya terminó.",
   endedHint: "Mira las que están abiertas ahora en el mapa.",
+  happeningNow: "Actualmente hay gente ayudando",
   backToMap: "Ver el mapa",
   countOne: "1 jornada",
   countMany: (n: number) => `${n} jornadas`,
+} as const;
+
+/** Moving an informal pin. See `RelocateCall` and `CallDAL.relocateInformal`. */
+export const RELOCATE_LABEL = {
+  open: "Ajustar el punto",
+  title: "¿Dónde exactamente?",
+  hint: "Solo se puede mover dentro del mismo barrio. Si el punto queda fuera, no se guarda.",
+  save: "Guardar",
+  saving: "Guardando…",
+  cancel: "Cancelar",
+  done: "Punto actualizado",
+  failed: "No se pudo mover el punto. Intenta otra vez.",
 } as const;
 
 /**
@@ -587,6 +629,17 @@ export const CALL_FORM = {
     "Está muy cerca y casi a la misma hora. Si es la misma, apúntate en vez de partir el grupo en dos.",
   nearbyIgnore: "No es la misma, publicar igual",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
+  // The informal path: no title, no hour, no account. See
+  // createInformalCallSchema — this is a sighting, not a commitment, so the
+  // copy asks a different question than the formal form above it.
+  modeFormal: "Convocatoria",
+  modeFormalHint: "Con hora y responsable. Quien vaya se apunta y le llegan sus contactos.",
+  modeInformal: "Solo el punto",
+  modeInformalHint: "Sin cuenta, sin hora fija — gente que ya se está juntando en un barrio.",
+  informalDescription: "¿Qué está pasando ahí?",
+  informalDescriptionPlaceholder: "Un grupo de vecinos recogiendo escombros en la cuadra.",
+  informalSubmit: "Publicar el punto",
+  informalHint: "Sale del mapa solo, al terminar el día.",
 } as const;
 
 /**
@@ -597,14 +650,56 @@ export const CALL_FORM = {
  * nobody anything. The copy says what will be here and what to do meanwhile —
  * it does not offer a form that would drop what someone typed.
  */
+export const RESOURCE_TYPE_LABEL: Record<ResourceType, string> = {
+  dump_truck: "Volqueta",
+  pickup: "Carro",
+  tools: "Herramienta",
+  warehouse: "Bodega",
+  free_transport: "Transporte",
+  machinery: "Maquinaria",
+  home_stay: "Hogar de paso",
+  other: "Otro",
+};
+
+export const RESOURCE_TYPE_ICON: Record<ResourceType, LucideIcon> = {
+  dump_truck: Truck,
+  pickup: Car,
+  tools: Wrench,
+  warehouse: Warehouse,
+  free_transport: Car,
+  machinery: Construction,
+  home_stay: Home,
+  other: Package,
+};
+
 export const SERVICES_LABEL = {
-  title: "Servicios prestados",
+  title: "Servicios",
+  headingHint: "Lo que la gente ya tiene y presta: volqueta, herramienta, un cuarto libre.",
   empty:
-    "Aquí van los servicios que la gente presta: volqueta, carro, herramienta, bodega, transporte y hogar de paso.",
-  soon: "Todavía no está abierto para publicar.",
-  meanwhile:
-    "Mientras tanto, si tienes con qué ayudar, repórtalo en Ayudar y alguien lo verá hoy mismo.",
-  cta: "Ir a Ayudar",
+    "Todavía no hay servicios publicados. Si tienes con qué ayudar, sé el primero.",
+  countOne: "1 servicio",
+  countMany: (n: number) => `${n} servicios`,
+} as const;
+
+export const SERVICES_FORM = {
+  title: "Ofrecer un servicio",
+  subtitle:
+    "Sale al mapa de una vez, sin cuenta. Publica solo lo que ya tienes, no una promesa.",
+  type: "¿Qué ofreces?",
+  description: "Cuéntalo en pocas palabras",
+  descriptionPlaceholder: "Volqueta doble troque, disponible fines de semana.",
+  quantity: "¿Cuántos?",
+  quantityHint: "Opcional. Solo si ofreces más de uno.",
+  barrio: "¿Desde qué barrio?",
+  wholeCity: "Toda la ciudad",
+  whatsapp: "Tu WhatsApp",
+  whatsappHint: "Para que te escriban directamente. Queda visible para todos.",
+  availableFrom: "¿Desde cuándo?",
+  availableUntil: "¿Hasta cuándo?",
+  availableHint: "Opcional. Sin fecha, el servicio sigue visible una semana.",
+  submit: "Publicar el servicio",
+  submitting: "Publicando…",
+  failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
 } as const;
 
 /**
@@ -738,3 +833,103 @@ export function freshness(confirmedAt: string): {
   const days = Math.floor(hours / 24);
   return { label: `Sin confirmar ${relative.format(-days, "day")}`, stale: true };
 }
+
+/**
+ * Órdenes de trabajo. "Jornada" was the city's own word for a shift; this is
+ * closer to "reporté los escombros de la 24" — a single job, not an event.
+ */
+export const WORK_ORDER_CATEGORY_LABEL: Record<WorkOrderCategory, string> = {
+  debris_removal: "Escombros",
+  animal_rescue: "Rescate de animales",
+  structural_risk: "Riesgo estructural",
+  supplies: "Insumos",
+  water: "Agua",
+  other: "Otro",
+};
+
+export const WORK_ORDER_CATEGORY_ICON: Record<WorkOrderCategory, LucideIcon> = {
+  debris_removal: Shovel,
+  animal_rescue: PawPrint,
+  structural_risk: HardHat,
+  supplies: Package,
+  water: GlassWater,
+  other: Boxes,
+};
+
+/**
+ * Five states in the database, three on screen. The public reader's only
+ * question is "¿alguien ya está en esto?" — closed_completed,
+ * closed_by_others and closed_rejected all answer "no, and it does not need
+ * you either", so they read the same. The detail behind each one is still
+ * in the database for whoever claimed it; it was never hidden, just not
+ * asked of a stranger scanning the map.
+ */
+export type WorkOrderRollup = "unclaimed" | "claimed" | "closed";
+
+export function workOrderRollup(status: WorkOrderStatus): WorkOrderRollup {
+  if (status === "unclaimed") return "unclaimed";
+  if (status === "claimed") return "claimed";
+  return "closed";
+}
+
+export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
+  unclaimed: "Necesita atención",
+  claimed: "En proceso",
+  closed: "Cerrado",
+};
+
+/** Same grammar as a site's marker: red asks for eyes on it, amber says
+ *  someone is already moving, grey says there is nothing left to do here —
+ *  matching `stale`, not `resolved`, because "closed_rejected" is not a
+ *  success worth the green. */
+export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
+  unclaimed: "bg-unclaimed text-unclaimed-foreground",
+  claimed: "bg-claimed text-claimed-foreground",
+  closed: "bg-stale text-background",
+};
+
+export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
+  unclaimed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  claimed: "bg-claimed-surface text-claimed border-claimed/30",
+  closed: "bg-stale-surface text-stale border-stale/30",
+};
+
+export const WORK_ORDER_LABEL = {
+  heading: "Escombros y daños",
+  headingHint: "Casos reportados que alguien con volqueta o manos puede reclamar",
+  countOne: "1 caso",
+  countMany: (n: number) => `${n} casos`,
+  claim: "Reclamar este caso",
+  claiming: "Reclamando…",
+  claimed: "Lo tienes tú",
+  claimedHint: "Se libera solo si no lo cierras en 6 días.",
+  needsAccount: "Entra con tu cuenta para reclamarlo",
+  seeContact: "Ver dirección y contacto",
+  loadingContact: "Cargando…",
+  closeCompleted: "Ya se resolvió",
+  closeByOthers: "Ya lo habían resuelto",
+  closeRejected: "No es un caso real",
+  closed: "Cerrado",
+  failed: "No se pudo completar. Intenta otra vez.",
+} as const;
+
+export const WORK_ORDER_FORM = {
+  title: "Reportar escombros o un daño",
+  subtitle:
+    "Sale al mapa de una vez, sin cuenta. Alguien con volqueta o manos lo puede reclamar.",
+  category: "¿Qué tipo de caso es?",
+  description: "Describe el caso",
+  descriptionPlaceholder:
+    "Escombros bloqueando la entrada de dos casas, se necesita volqueta.",
+  barrio: "¿En qué barrio?",
+  contactTitle: "Si sabes la dirección exacta y cómo contactar",
+  contactHint:
+    "Opcional y privado: solo lo ve quien reclame el caso y un curador. Nunca se publica.",
+  exactAddress: "Dirección exacta",
+  contactName: "Nombre de contacto",
+  phone: "Teléfono",
+  notes: "Notas para quien reclame",
+  submit: "Publicar el caso",
+  submitting: "Publicando…",
+  failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
+} as const;

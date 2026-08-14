@@ -1,8 +1,10 @@
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
+import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { SituationDAL } from "@/data/situation/situation.dal";
+import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 
 import { MapWorkspace } from "../_components/map-workspace";
 
@@ -23,14 +25,26 @@ export default async function TabsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [sites, calls, animals, report, neighborhoodStatuses] =
-    await Promise.all([
-      SiteDAL.public().listPublished(),
-      CallDAL.public().listPublished(),
-      AnimalDAL.public().listPublished(),
-      SituationDAL.public().latest(),
-      NeighborhoodDAL.public().statuses(),
-    ]);
+  const [
+    sites,
+    calls,
+    animals,
+    resourceOffers,
+    workOrders,
+    report,
+    neighborhoodStatuses,
+  ] = await Promise.all([
+    SiteDAL.public().listPublished(),
+    CallDAL.public().listPublished(),
+    AnimalDAL.public().listPublished(),
+    ResourceOfferDAL.public().listPublished(),
+    // .create(), not .public(): `claimedByMe` needs to know who is asking,
+    // and it is the one field here that differs between an anonymous
+    // visitor and the person who already holds the claim.
+    WorkOrderDAL.create().then((dal) => dal.listPublished()),
+    SituationDAL.public().latest(),
+    NeighborhoodDAL.public().statuses(),
+  ]);
 
   return (
     <main className="h-dvh w-full overflow-hidden">
@@ -38,6 +52,8 @@ export default async function TabsLayout({
         sites={sites}
         calls={calls}
         animals={animals}
+        resourceOffers={resourceOffers}
+        workOrders={workOrders}
         report={report}
         neighborhoodStatuses={neighborhoodStatuses}
       >

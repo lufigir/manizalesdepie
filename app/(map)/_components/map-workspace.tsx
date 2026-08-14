@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { Map, MapControls, MapPopup } from "@/components/ui/map";
 
@@ -11,7 +11,9 @@ import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type { CallDTO } from "@/data/call/call.dto";
 import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
+import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { SituationReportDTO } from "@/data/situation/situation.dto";
+import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import { BARRIO_TOGGLE } from "@/lib/labels";
 import {
   REPORT_ENTRY,
@@ -22,11 +24,11 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
+import { BalancePanel } from "./balance-panel";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
 import { CallMarkers } from "./call-markers";
 import { CallPopup } from "./call-popup";
 import { LiveClock } from "./live-clock";
-import { InfoSheet } from "./info-sheet";
 import { FitToSites, FlyToSelected } from "./map-camera";
 import { SightingMarkers } from "./sighting-markers";
 import { SiteMarkers } from "./site-markers";
@@ -38,12 +40,32 @@ import { WorkspaceContext } from "./workspace-context";
  *  FitToSites takes over; it holds the city and Villamaría across the river. */
 const MANIZALES = { longitude: -75.5074, latitude: 5.0631, zoom: 12.4 };
 
+/**
+ * Where the emergency is. Nothing this app knows about exists outside it.
+ *
+ * The box is the bounding box of all 114 barrios (`public/barrios.geojson`)
+ * plus roughly 4.5 km of margin on every side — enough that panning still
+ * feels free rather than hitting a wall, but not so loose that someone can
+ * scroll all the way out to another department. Villamaría's own point
+ * (-75.512, 5.045) already falls inside the barrios' bbox, so the margin is
+ * there for breathing room, not to reach across the river.
+ */
+const CITY_BOUNDS: [[number, number], [number, number]] = [
+  [-75.592, 4.983],
+  [-75.382, 5.144],
+];
+
 type Props = {
   sites: SiteDTO[];
   /** Jornadas. Places with an hour attached, drawn only in "Ayudar". */
   calls?: CallDTO[];
   /** Animal reports. Not sites: they mostly have no location at all. */
   animals?: AnimalDTO[];
+  /** Resource offers. Cards in "Servicios", never pins — see
+   *  workspace-context.ts. */
+  resourceOffers?: ResourceOfferDTO[];
+  /** Debris and damage reports, shown in "Ayudar". */
+  workOrders?: WorkOrderDTO[];
   /** The Alcaldía's latest balance, or null once it has expired. */
   report?: SituationReportDTO | null;
   /** Every barrio with an evacuation/utility status on record. */
@@ -72,6 +94,8 @@ export function MapWorkspace({
   sites,
   calls = [],
   animals = [],
+  resourceOffers = [],
+  workOrders = [],
   report,
   neighborhoodStatuses = [],
   initialSelectedId,
@@ -130,6 +154,14 @@ export function MapWorkspace({
     [calls, tab],
   );
 
+  /** Debris and damage reports: same rule as a jornada — read in "Ayudar",
+   *  nowhere else, because "las necesidades se ven en Ayudar" applies here
+   *  too. */
+  const visibleWorkOrders = useMemo(
+    () => (tab === "help" ? workOrders : []),
+    [workOrders, tab],
+  );
+
   /**
    * The panel narrows to the chosen barrio; the map never does.
    *
@@ -154,6 +186,14 @@ export function MapWorkspace({
     [visibleCalls, barrio],
   );
 
+  const panelWorkOrders = useMemo(
+    () =>
+      barrio
+        ? visibleWorkOrders.filter((order) => order.neighborhood === barrio.name)
+        : visibleWorkOrders,
+    [visibleWorkOrders, barrio],
+  );
+
   /**
    * Per-section counts, so an empty section is visible before it is opened.
    * City-wide, matching the map: the pins for every barrio stay drawn, so a
@@ -175,10 +215,11 @@ export function MapWorkspace({
     // much is on that map, and a shift is on it.
     base.help += calls.length;
     // Only the animals still missing: a reunited pet is good news, not an open
-    // case. Services has no entity yet, so its count stays at zero.
+    // case.
     base.pets = animals.filter((a) => a.resolvedAt === null).length;
+    base.services = resourceOffers.length;
     return base;
-  }, [withLiveStatus, animals, calls]);
+  }, [withLiveStatus, animals, calls, resourceOffers]);
 
   /**
    * One selection, two kinds of thing. Ids are uuids from different tables, so
@@ -214,13 +255,25 @@ export function MapWorkspace({
       sites: panelSites,
       calls: panelCalls,
       animals,
+      resourceOffers,
+      workOrders: panelWorkOrders,
       selectedId,
       select: setSelectedId,
       barrio,
       clearBarrio: () => setBarrio(null),
       barrioStatus,
     }),
-    [tab, panelSites, panelCalls, animals, selectedId, barrio, barrioStatus],
+    [
+      tab,
+      panelSites,
+      panelCalls,
+      animals,
+      resourceOffers,
+      panelWorkOrders,
+      selectedId,
+      barrio,
+      barrioStatus,
+    ],
   );
 
   return (
@@ -236,6 +289,7 @@ export function MapWorkspace({
             className="h-full w-full"
             center={[MANIZALES.longitude, MANIZALES.latitude]}
             zoom={MANIZALES.zoom}
+            maxBounds={CITY_BOUNDS}
           >
             {/* Bottom-right because the clock holds the top-right corner.
                 showLocate is the one that earns its place: "¿dónde ayudo hoy?"
@@ -325,18 +379,12 @@ export function MapWorkspace({
             </div>
 
             {/* Reference belongs away from the section switcher: the tabs steer
-                the app, while the balance/clock are context checked between
-                actions. */}
+                the app, while the clock is context checked between actions.
+                The balance moved into the panel (BalancePanel) — it is
+                something you check once and carry, not a control that
+                belongs on the map. */}
             <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5 self-end sm:self-auto">
-              <div className="flex items-center gap-1.5">
-                <LiveClock />
-                <InfoSheet
-                  report={report}
-                  neighborhoodStatuses={neighborhoodStatuses}
-                  showBarrios={showBarrios}
-                  onBarriosChange={setShowBarrios}
-                />
-              </div>
+              <LiveClock />
                 {/* One slot, two states. While a barrio is filtered the chip
                     IS the filter and carries the way out of it; otherwise it
                     just says where the map is centred. Two chips stacked said
@@ -375,7 +423,7 @@ export function MapWorkspace({
               that ends at a sign-in. */}
           {reportEntries.length > 0 && (
             <div className="absolute bottom-4 left-2 z-10 flex flex-col-reverse items-start gap-2">
-              {reportEntries.map(({ href, label }, index) => (
+              {reportEntries.map(({ href, label, icon: Icon }, index) => (
                 <Link
                   key={href}
                   // The barrio being looked at travels to the form, which opens
@@ -394,9 +442,9 @@ export function MapWorkspace({
                       : "bg-background/95 border py-2 pr-3.5 pl-3 text-xs backdrop-blur",
                   )}
                 >
-                  <Plus
+                  <Icon
                     className={index === 0 ? "size-4" : "size-3.5"}
-                    strokeWidth={3}
+                    strokeWidth={2.5}
                     aria-hidden
                   />
                   {label}
@@ -417,6 +465,15 @@ export function MapWorkspace({
               : "h-[38dvh] shrink-0 md:h-auto md:w-80",
           )}
         >
+          {/* Same block on every section, above whatever the section itself
+              renders — the balance is context for the whole app, not one tab
+              of it. */}
+          <BalancePanel
+            report={report}
+            neighborhoodStatuses={neighborhoodStatuses}
+            showBarrios={showBarrios}
+            onBarriosChange={setShowBarrios}
+          />
           {children}
         </aside>
       </div>

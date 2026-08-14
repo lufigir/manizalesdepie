@@ -71,10 +71,22 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
 ## 2. Qué está construido y funcionando
 
 - **Mapa** con icono = tipo, color = estado, solidez = confianza.
+- **El mapa no sale de la ciudad**: `maxBounds` en `<Map>` (map-workspace.tsx),
+  la caja de los 114 barrios más ~4,5 km de margen. Cubre Villamaría sin
+  ensancharse a propósito — su único punto ya cae dentro de la caja de los
+  barrios.
 - **Agrupación de pines** propia (no `MapClusterLayer`, que dibuja círculos y
   no admite marcadores HTML). Incluye **abanico** para puntos en coordenadas
   idénticas, que el zoom no puede separar nunca.
 - **Popover anclado al pin** (no sheet inferior: tapaba el mapa).
+  - **"Ver más" desde el 14 de agosto**, para lo que no cabe en el resumen sin
+    volverlo ilegible en un teléfono. En el popup de sitio abre una hoja
+    inferior con dirección, descripción y el enlace de la fuente — datos que
+    ya estaban en la base y no se mostraban en ningún lado, ni aquí ni en
+    `/punto/[id]`. En el de jornada, la descripción se recorta a 2 líneas
+    (`line-clamp-2`) y el mismo "ver más" abre la versión completa; antes una
+    descripción larga era justo lo que empujaba la tarjeta fuera del
+    `max-h-[58dvh]` del popup.
 - **Barrios**, que reemplazaron a las comunas el 14 de agosto: nadie dice "estoy
   en la Comuna 4", dice "estoy en Chipre".
   - Resaltado al pasar y **etiqueta con el nombre siguiendo al cursor**. Reabre
@@ -82,6 +94,17 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
     comuna y no le decía nada a nadie.
   - **Nombres dibujados en el mapa** desde zoom 14, con los del basemap de CARTO
     ocultos para que no salgan dos juegos de nombres.
+    - **Bug corregido el 14 de agosto**: la ocultación comparaba el *id* del
+      layer contra un regex (`/suburb|neighbou?rhood|quarter/i`), y CARTO mete
+      `class: "neighbourhood"` (la clase real de un barrio en OSM) dentro de un
+      layer llamado `place_hamlet` — compartido con `class: "hamlet"`, un
+      caserío rural que sí debe seguir viéndose. El id nunca contenía la
+      palabra "neighbourhood", así que el regex nunca lo tocaba y los nombres
+      de barrio de CARTO seguían saliendo. Ahora se parcha el `filter` de
+      cualquier layer de símbolos cuyo `source-layer` sea `"place"`,
+      agregándole `["!in", "class", "suburb", "neighbourhood", "quarter"]` —
+      apunta a la clase real, no al nombre que CARTO le puso al layer, y por
+      eso "hamlet" no se pierde de paso.
   - **Clic en un barrio**: la cámara vuela a él y el panel se limita a él, pero
     **el mapa sigue mostrando todos los puntos de la ciudad**. Ocultar los pines
     de los demás barrios fue un error y se corrigió: el mapa es justo cómo uno
@@ -92,6 +115,14 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
     por barrio sin trabajo extra. Está en la base y no en el DAL porque las
     hojas de cálculo reales se van a cargar por MCP, sin pasar por la app.
 - **Cuatro secciones por intención** (§1), cada una con su ruta y su formulario.
+  El nombre de cada pestaña no cambió (sigue justificado en §1), pero desde el
+  14 de agosto cada una muestra un subtítulo corto y **siempre visible** de qué
+  hay adentro ("Ayudar" → "Acopios, sangre, jornadas", etc.). Antes esa
+  descripción vivía solo en el `title` del enlace, un tooltip que no existe en
+  un teléfono — que es donde está la mayoría de quien abre esto.
+- **Los 3 botones de reportar tienen ícono propio** (pin / megáfono / pata) en
+  vez de un `+` genérico repetido. El texto no cambió — "convocar" es llamar
+  gente, no agendar un evento, y de ahí el megáfono para la jornada.
 - **Convocatorias** (`volunteer_call`), desde el 14 de agosto. Viven en Ayudar:
   bloque «Jornadas» encima de la lista de puntos, pin cuadrado en el mapa (un
   sitio se distingue de una cita antes de leer el icono) y color = estado
@@ -138,33 +169,85 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
 - **Animales**: entidad, tablero de fotos, formulario con compresión en el
   navegador, marcador punteado de avistamiento.
 - **Auth Google** con registro diferido (`PublishGate` + `useDraft`).
-- **Sheet de balance** con el reporte diario de la Alcaldía.
-- **Reloj en vivo** y `lib/curfew.ts`.
+- **Balance de la Alcaldía y estado de barrios, en el panel lateral, no sobre
+  el mapa.** Hasta el 14 de agosto vivían detrás de un botón flotante encima
+  del mapa (`InfoSheet`, un `Sheet`); ese día se movió todo el contenido
+  (reporte + estado de barrios + líneas oficiales + el toggle de mostrar
+  barrios) a `BalancePanel`, un bloque plegable (cerrado por defecto) que
+  aparece arriba de la lista de cada sección, igual en las cuatro pestañas. El
+  botón salió del mapa por completo.
+- **Reloj en vivo** (se quedó solo, flotando donde estaba) y `lib/curfew.ts`.
+- **Convocatorias informales**, desde el 14 de agosto: "alguien ya se está
+  juntando aquí", sin cuenta, sin título, sin hora — igual de anónimo que
+  reportar un sitio, no como convocar una jornada formal. El formulario de
+  `/reportar/jornada` tiene un selector de modo (Convocatoria / Solo el
+  punto); el modo informal solo pide categoría, barrio y el punto exacto
+  (opcional). `starts_at` se estampa con `now()` y `expires_at` con la
+  medianoche de Bogotá del mismo día — se apaga solo al terminar el día si
+  nadie le puso hora. Sin título en la base, `CallDAL.toDTO` sintetiza uno
+  ("Escombros en Chipre") a partir de categoría + barrio, así que ningún
+  lector aguas abajo tiene que saber que el título puede faltar.
+  - **Cualquiera puede reubicar el pin después**, pero solo dentro del mismo
+    barrio — `canRelocateInformalCall` en call.policy.ts. Sin llamar a
+    `neighborhood_at()` directo (esa función está revocada para todo excepto
+    el trigger, a propósito): el DAL escribe el punto nuevo, deja que
+    `volunteer_call_sets_neighborhood` recalcule el barrio como hace con
+    cualquier otra escritura, y revierte si cambió.
+- **Servicios**, desde el 14 de agosto: `resource_offer` completo
+  (`data/resource_offer/`), con `home_stay` agregado al enum. Sin pin exacto
+  —a diferencia de un sitio o una jornada—: el barrio (o "Toda la ciudad" para
+  ofertas como transporte libre, que no salen de un punto fijo) es la
+  pregunta y la respuesta, y su centroide es el punto que se guarda. Tarjetas
+  en el panel, nunca pines en el mapa, tal como decía la tabla original de
+  §1.
+- **Órdenes de trabajo** (`work_order`), desde el 14 de agosto:
+  `data/work_order/` construido sobre el enum que ya existía en la base
+  (`unclaimed`, `claimed`, `closed_completed`, `closed_by_others`,
+  `closed_rejected`) — **sin** los dos estados nuevos que se habían planeado
+  (`open_assigned`, `open_needs_followup`), ni bandera de escombros
+  retirados, ni enum de motivos de bloqueo. **Alcance reducido a propósito**:
+  la gente no va a estar en la app manteniendo estados finos al día. El
+  público ve un resumen de tres (`workOrderRollup` en lib/labels.ts:
+  necesita atención / en proceso / cerrado) derivado del enum existente, que
+  ya calza con los tokens de color (`unclaimed`=rojo, `claimed`=ámbar,
+  `stale`=gris — cerrado usa gris y no verde, porque `closed_rejected` no es
+  un éxito). Motivos de bloqueo y esas cosas, si un curador los necesita, van
+  como texto libre en `description`.
+  Se reportan sin cuenta desde "Necesito" (`/reportar/escombros`) y se
+  ven/reclaman en "Ayudar" — la misma regla que ya regía las necesidades de
+  sitio. Reclamar sí exige cuenta (igual que convocar una jornada): el
+  reclamo bloquea el caso 6 días (`CLAIM_DAYS`, el número real de Crisis
+  Cleanup, no las 48 horas que tenía AGENTS.md antes de la corrección en §5)
+  y solo el reclamante o un curador lo cierra. La dirección exacta y el
+  contacto (`work_order_contact`) solo los ve quien reclamó el caso o un
+  curador, y cada lectura queda registrada en `work_order_access` — el
+  guardrail de AGENTS.md, aplicado.
+  - **Bug encontrado de paso**: a `resource_offer` nunca se le había agregado
+    la columna `neighborhood_id`, aunque el trigger que la llena ya existía
+    desde el 14 de agosto — cualquier escritura a su `location` fallaba en
+    seco. Corregido en su propia migración antes de construir el DAL.
 
 ---
 
 ## 3. Qué falta, en orden
 
-1. **Órdenes de trabajo** (`work_order`): faltan los estados
-   `open_assigned` y `open_needs_followup`, la bandera de escombros retirados y
-   el enum de **motivos de bloqueo** (falta volqueta, requiere demolición, sin
-   contacto, requiere bomberos).
-2. **Solicitudes de ayuda**: entidad nueva, aún sin crear. Conteos del hogar
-   sí (mujeres, niños, adultos mayores, mascotas); condiciones médicas **no**.
-   Es lo que hará que el botón de "Necesito" diga *pedir ayuda* y no *reportar
-   un punto*.
-3. **Ofertas de recursos** = la sección Servicios, hoy vacía con su explicación.
-   Añadir *hogar de paso* al enum.
-4. **Consola `/admin`**, una sección por entidad. `signOut` ya existe y no
-   tiene quién lo llame. Ahí van también `verifyCall` y el resto de acciones de
-   curador, que hoy existen sin pantalla.
-5. **Turnstile** en los formularios públicos (faltan las llaves).
-6. **Franja de réplicas del SGC** (solo aviso, sin mapa de calor).
-7. **Terminar de cablear el toque de queda**: ya decide el «apuntarme para
-   mañana» de las jornadas (`for_tomorrow`); falta el aviso general en el mapa.
-8. **Coropleta de necesidad desatendida por comuna** — bloqueada hasta que
-   haya órdenes de trabajo. `public/barrios.geojson` ya trae la comuna de cada
-   barrio, así que agregar de barrio a comuna no necesita otra fuente.
+1. **Solicitudes de ayuda**: entidad nueva, aún sin crear — **no es
+   `work_order`**, que ya está construido (§2). Es el pedido de una familia
+   afectada: conteos del hogar sí (mujeres, niños, adultos mayores, mascotas);
+   condiciones médicas **no**. Es lo que hará que "Necesito" tenga un botón
+   que diga *pedir ayuda* y no solo *reportar un punto*.
+2. **Consola `/admin`**, una sección por entidad. `signOut` ya existe y no
+   tiene quién lo llame. Ahí van también `verifyCall`, `verifyWorkOrder` y el
+   resto de acciones de curador, que hoy existen sin pantalla.
+3. **Coropleta de necesidad desatendida por comuna** — ya **no** está
+   bloqueada: `work_order` existe desde el 14 de agosto. `public/barrios.geojson`
+   ya trae la comuna de cada barrio, así que agregar de barrio a comuna no
+   necesita otra fuente.
+
+**Descartado el 14 de agosto, sin retomar**: Turnstile en los formularios
+públicos, la franja de réplicas del SGC, y terminar de cablear el aviso
+general de toque de queda en el mapa (`for_tomorrow` en las jornadas se queda
+como está, solo no hay un aviso adicional en el mapa).
 
 ---
 
@@ -275,6 +358,29 @@ sangre, el PMU, el punto de censo de Fundadores y —desde el 14 de agosto— el
 Parque Bolívar), el primer punto del otro lado del río. Su coordenada es la de
 la Alcaldía, a unos 60 m del tramo de la Carrera 5 que corresponde a esa
 dirección: geocodificada, no verificada en terreno.
+
+**+3 puntos, también el 14 de agosto**, investigados con `WebSearch` +
+Nominatim (no hay MCP de NotebookLM ni de redes sociales conectado — no habría
+qué buscar tampoco: el sismo es ficticio, así que lo que se investigó fueron
+instituciones **reales** de Manizales, para que el escenario ficticio se apoye
+en sitios y direcciones verificables, siguiendo el mismo criterio del
+`seed.sql` original:
+
+- **Cruz Roja Colombiana — Seccional Caldas** (Carrera 21 N.° 69-350,
+  Alta Suiza), `blood_donation`. Dirección exacta: coincidió con un POI de OSM.
+- **Defensa Civil Colombiana — Seccional Caldas** (Calle 12A N.° 14-63,
+  Chipre), `collection_point`. Nominatim solo ubicó el tramo de calle, no el
+  predio exacto — mismo nivel de precisión que Villamaría.
+- **Catedral Basílica de Manizales** (Parque de Bolívar, Centro),
+  `collection_point` **informal**: el ejemplo del usuario de un punto "de
+  gente común" — una parroquia organizando un acopio en el atrio, un patrón
+  real y frecuente en Colombia, no una institución de socorro.
+
+Los tres entraron **publicados** (política de publicación abierta) pero con
+`status = 'unknown'` — ninguno tiene ahora mismo un dato real de "¿está
+recibiendo gente?", y afirmarlo habría sido inventar justo lo que el mecanismo
+de confirmación existe para resolver. `verified = false`, `confirmed_count = 0`:
+quedan tan sin curar como cualquier reporte anónimo nuevo.
 
 Más el balance del Reporte 10 de la Alcaldía, las 12 comunas en
 `public/comunas.geojson` y los 114 barrios oficiales, tanto en

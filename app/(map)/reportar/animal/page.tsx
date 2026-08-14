@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { ANIMAL_FORM } from "@/lib/labels";
 
 import { AnimalForm } from "./_components/animal-form";
@@ -14,7 +15,9 @@ export const metadata: Metadata = { title: "Reportar un animal" };
  * is the field that matters most. Folding them together would have meant a form
  * that hides half of itself.
  */
-export default function ReportAnimalPage() {
+export default async function ReportAnimalPage() {
+  const barrios = await NeighborhoodDAL.public().list();
+
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
@@ -31,7 +34,7 @@ export default function ReportAnimalPage() {
         <p className="text-muted-foreground text-sm">{ANIMAL_FORM.subtitle}</p>
       </header>
 
-      <AnimalForm />
+      <AnimalForm barrios={barrios} />
     </main>
   );
 }
