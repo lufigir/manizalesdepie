@@ -1,3 +1,4 @@
+import { AnimalDAL } from "@/data/animal/animal.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { SituationDAL } from "@/data/situation/situation.dal";
 
@@ -11,14 +12,15 @@ import { MapShell } from "./_components/map-shell";
  * only part that needs interactivity.
  */
 export default async function MapPage() {
-  const [sites, report] = await Promise.all([
+  const [sites, animals, report] = await Promise.all([
     SiteDAL.public().listPublished(),
+    AnimalDAL.public().listPublished(),
     SituationDAL.public().latest(),
   ]);
 
   return (
     <main className="h-dvh w-full overflow-hidden">
-      <MapShell sites={sites} report={report} />
+      <MapShell sites={sites} animals={animals} report={report} />
     </main>
   );
 }

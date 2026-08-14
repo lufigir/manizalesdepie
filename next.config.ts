@@ -25,7 +25,9 @@ const csp = [
   `worker-src 'self' blob:`,
   `child-src 'self' blob:`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com`,
+  // Supabase Storage serves the animal photos. blob: is here for the local
+  // preview the report form shows before anything is uploaded.
+  `img-src 'self' data: blob: https://*.supabase.co https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com`,
   `font-src 'self' data:`,
   `connect-src ${connectSources}`,
   `frame-src https://challenges.cloudflare.com`,
@@ -36,6 +38,18 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  images: {
+    // Animal photos live in Supabase Storage. Narrowed to the storage path so
+    // the optimizer cannot be pointed at arbitrary URLs on the project host.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
+
   async headers() {
     return [
       {

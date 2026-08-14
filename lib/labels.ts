@@ -228,6 +228,65 @@ export const SITUATION_LABEL = {
   inShelters: "en albergues",
 } as const;
 
+/**
+ * The animal board.
+ *
+ * "Visto en" rather than "está en", everywhere. The distinction is the whole
+ * point of this board: nobody knows where a lost animal is, and wording that
+ * implies otherwise sends people to the wrong block.
+ */
+export const ANIMAL_LABEL = {
+  lost: "Se perdió",
+  found: "Lo encontraron",
+  sighted: "Lo vieron",
+  dog: "Perro",
+  cat: "Gato",
+  other: "Otro",
+  resolved: "Ya está en casa",
+  markResolved: "Ya apareció",
+  seenAt: "Visto",
+  contact: "Escribir por WhatsApp",
+  noPhoto: "Sin foto",
+  empty: "Todavía no hay reportes de animales.",
+} as const;
+
+/** The animal report form. */
+export const ANIMAL_FORM = {
+  title: "Reportar un animal",
+  subtitle:
+    "Sale al tablero de una vez. La foto es lo que de verdad hace que alguien lo reconozca.",
+  kind: "¿Qué pasó?",
+  species: "¿Qué animal es?",
+  photo: "Foto",
+  photoHint: "Se reduce en tu teléfono antes de subirla, para que no gaste datos.",
+  photoPick: "Elegir foto",
+  photoChange: "Cambiar foto",
+  petName: "Nombre (si lo sabes)",
+  petNamePlaceholder: "Lolia, Abba…",
+  description: "¿Cómo se reconoce?",
+  descriptionPlaceholder:
+    "Perro criollo café, collar azul, mediano, cojea de una pata.",
+  when: "¿Cuándo fue?",
+  zone: "¿En qué sector?",
+  zonePlaceholder: "Chipre, cerca del parque",
+  where: "Marca en el mapa dónde lo viste (opcional)",
+  whereHint:
+    "Es dónde lo VIERON, no dónde está. Se dibuja punteado para que nadie lo confunda.",
+  whatsapp: "Tu WhatsApp",
+  whatsappHint: "Obligatorio: es como te avisan si lo encuentran.",
+  submit: "Publicar en el tablero",
+  submitting: "Publicando…",
+  failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
+} as const;
+
+/** Badge styling per kind. Found and sighted are good news and read as such;
+ *  lost is the one that needs eyes on it. */
+export const ANIMAL_KIND_STYLE = {
+  lost: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  found: "bg-resolved-surface text-resolved border-resolved/30",
+  sighted: "bg-claimed-surface text-claimed border-claimed/30",
+} as const;
+
 /** The comuna tooltip. "Sin puntos reportados" is deliberately about reports,
  *  not about reality: an empty comuna may be well served or simply unseen, and
  *  the map only ever knows the second. */

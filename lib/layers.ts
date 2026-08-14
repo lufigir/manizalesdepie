@@ -3,7 +3,6 @@ import {
   HandHeart,
   Hospital,
   PawPrint,
-  Route,
   Truck,
   type LucideIcon,
 } from "lucide-react";
@@ -33,7 +32,7 @@ import type { SiteType } from "@/data/site/site.dto";
  */
 
 export type ActionLayer = "help" | "requests" | "animals" | "resources";
-export type ContextLayer = "infrastructure" | "roads" | "comunas";
+export type ContextLayer = "infrastructure" | "comunas";
 
 export type LayerDef = {
   label: string;
@@ -69,11 +68,6 @@ export const CONTEXT_LAYERS: Record<ContextLayer, LayerDef> = {
     label: "Infraestructura",
     hint: "Hospitales, albergues, censo",
     icon: Hospital,
-  },
-  roads: {
-    label: "Vías cerradas",
-    hint: "Derrumbes y pasos habilitados",
-    icon: Route,
   },
   comunas: {
     label: "Comunas",

@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import { Map, MapControls, MapPopup } from "@/components/ui/map";
 
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
+import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type { SituationReportDTO } from "@/data/situation/situation.dto";
 import {
   SITE_TYPE_LAYER,
@@ -14,16 +15,18 @@ import {
   type ContextLayer,
 } from "@/lib/layers";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
-import { ComunaLayer, type ComunaHover } from "./comuna-layer";
-import { ComunaTooltip } from "./comuna-tooltip";
+import { AnimalBoard } from "./animal-board";
+import { ComunaLayer } from "./comuna-layer";
 import { LayerControl } from "./layer-control";
 import { LiveClock } from "./live-clock";
+import { InfoSheet } from "./info-sheet";
 import { FitToSites, FlyToSelected } from "./map-camera";
 import { SiteList } from "./site-list";
+import { SightingMarkers } from "./sighting-markers";
 import { SiteMarkers } from "./site-markers";
 import { SitePopup } from "./site-popup";
-import { SituationCard } from "./situation-card";
 
 /** Manizales sits on a ridge running east–west. Only the starting frame before
  *  FitToSites takes over; it holds the city and Villamaría across the river. */
@@ -31,6 +34,8 @@ const MANIZALES = { longitude: -75.5074, latitude: 5.0631, zoom: 12.4 };
 
 type Props = {
   sites: SiteDTO[];
+  /** Animal reports. Not sites: they mostly have no location at all. */
+  animals?: AnimalDTO[];
   /** The Alcaldía's latest balance, or null once it has expired. */
   report?: SituationReportDTO | null;
   /** Set when arriving from a shared link. The map opens already centred on
@@ -40,7 +45,12 @@ type Props = {
   initialSelectedId?: string;
 };
 
-export function MapShell({ sites, report, initialSelectedId }: Props) {
+export function MapShell({
+  sites,
+  animals = [],
+  report,
+  initialSelectedId,
+}: Props) {
   // One action layer at a time — choosing one is choosing what NOT to look at.
   // Context layers stack, because they answer a different question at the same
   // time. This is the anti-clutter rule: saturation is not solved by layout, it
@@ -52,12 +62,22 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId ?? null,
   );
-  // What is inside the comuna under the cursor. Nothing is labelled on the
-  // polygons themselves; the information appears where the eye already is.
-  const [hoveredComuna, setHoveredComuna] = useState<ComunaHover | null>(null);
+  // Which comuna the map is centred on. Zoomed in you are inside one, its
+  // outline is off-screen and the wash is invisible, so the layer looks dead
+  // even though it is working. This says where you are without a cursor —
+  // which also makes it the only version of this that exists on a phone.
+  const [centreComuna, setCentreComuna] = useState<string | null>(null);
   // Plain text filter over what is already loaded. Not geocoding: nothing
   // leaves the device, so it still works with no signal.
   const [query, setQuery] = useState("");
+
+  const toggleContext = (layer: ContextLayer) =>
+    setContext((current) => {
+      const next = new Set(current);
+      if (next.has(layer)) next.delete(layer);
+      else next.add(layer);
+      return next;
+    });
 
   const liveStatus = useLiveSiteStatus();
 
@@ -96,8 +116,11 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
       const layer = SITE_TYPE_LAYER[site.type];
       if (layer in base) base[layer as ActionLayer] += 1;
     }
+    // Animals do not come from `site`, so they are counted separately. Only
+    // the ones still missing: a reunited pet is good news, not an open case.
+    base.animals = animals.filter((a) => a.resolvedAt === null).length;
     return base;
-  }, [withLiveStatus]);
+  }, [withLiveStatus, animals]);
 
   // The list is filtered further by the text box; the map is not, so a filter
   // never makes a pin silently vanish from under the reader's finger.
@@ -112,11 +135,24 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
   }, [visible, query]);
 
   const selected = withLiveStatus.find((site) => site.id === selectedId) ?? null;
-  const openNow = withLiveStatus.filter((site) => site.status === "open").length;
+
+  /**
+   * Some layers are not about places at all.
+   *
+   * A lost animal has no location — that is what lost means — and a resource
+   * moves by definition. For those, the panel is the product and the map
+   * shrinks to a zone reference, rather than the other way round.
+   */
+  const cardLayer = action === "animals" || action === "resources";
 
   return (
     <div className="flex h-full w-full flex-col md:flex-row">
-      <div className="relative min-h-0 flex-1">
+      <div
+        className={cn(
+          "relative min-h-0 transition-[flex-grow] duration-300",
+          cardLayer ? "h-[32dvh] md:h-auto md:flex-[0_0_38%]" : "flex-1",
+        )}
+      >
         <Map
           className="h-full w-full"
           center={[MANIZALES.longitude, MANIZALES.latitude]}
@@ -132,7 +168,7 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
             showCompass
             showFullscreen
           />
-          <ComunaLayer sites={visible} onHover={setHoveredComuna} />
+<ComunaLayer onCentreChange={setCentreComuna} />
           <FitToSites sites={visible} />
           <FlyToSelected site={selected} />
 
@@ -141,6 +177,14 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
             selectedId={selectedId}
             onSelect={setSelectedId}
           />
+
+          {action === "animals" && (
+            <SightingMarkers
+              animals={animals}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
+          )}
 
           {/* Anchored to the pin rather than sliding over the map, so the
               answer and its place on the map stay on screen together. Rendered
@@ -166,50 +210,44 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
           )}
         </Map>
 
-        {/* Live summary. This is the "¿dónde ayudo hoy?" answer, first thing,
-            before the reader has to filter anything themselves. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="bg-background/90 pointer-events-auto flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur">
-              <span className="bg-resolved size-2 animate-pulse rounded-full" />
-              <span className="tabular-nums">
-                HOY: {openNow} de {withLiveStatus.length} puntos abiertos
-              </span>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-2 sm:p-3">
+          {/* One row: reference on the left, the live clock on the right.
+              Everything that is consulted rather than steered moved into the
+              sheet behind that button, which is what gave the map its corner
+              back on a phone. */}
+          <div className="pointer-events-auto flex items-start justify-between gap-2">
+            <InfoSheet
+              report={report}
+              context={context}
+              onContextToggle={toggleContext}
+            />
+            <div className="flex flex-col items-end gap-1.5">
+              <LiveClock />
+              {context.has("comunas") && centreComuna && (
+                <span className="bg-background/90 rounded-full border px-2.5 py-1 text-[0.7rem] font-medium shadow-sm backdrop-blur">
+                  {centreComuna}
+                </span>
+              )}
             </div>
-            <LiveClock />
           </div>
-
-          {report && (
-            <div className="pointer-events-none mt-1 self-start">
-              <SituationCard report={report} />
-            </div>
-          )}
 
           <LayerControl
             action={action}
             onActionChange={setAction}
-            context={context}
             counts={counts}
-            onContextToggle={(layer) =>
-              setContext((current) => {
-                const next = new Set(current);
-                if (next.has(layer)) next.delete(layer);
-                else next.add(layer);
-                return next;
-              })
-            }
           />
         </div>
 
-        {hoveredComuna && <ComunaTooltip hover={hoveredComuna} />}
 
         {/* Bottom-left: the thumb's reach on a phone, and clear of the map
-            controls on the right. This is the only write path the city has. */}
+            controls on the right. This is the only write path the city has.
+            It follows the active layer, because "reportar" means something
+            different depending on what you are looking at. */}
         <Link
-          href="/reportar"
+          href={action === "animals" ? "/reportar/animal" : "/reportar"}
           // left-16 clears mapcn's compass, which sits bottom-left regardless
           // of where MapControls is placed. Still within thumb reach.
-          className="bg-primary text-primary-foreground focus-visible:ring-ring absolute bottom-4 left-16 z-10 flex items-center gap-2 rounded-full py-3 pr-4 pl-3.5 text-sm font-semibold shadow-lg focus-visible:ring-2 focus-visible:outline-none"
+          className="bg-primary text-primary-foreground focus-visible:ring-ring absolute bottom-4 left-2 z-10 flex items-center gap-2 rounded-full py-3 pr-4 pl-3.5 text-sm font-semibold shadow-lg focus-visible:ring-2 focus-visible:outline-none"
         >
           <Plus className="size-4" strokeWidth={3} aria-hidden />
           Reportar
@@ -222,15 +260,26 @@ export function MapShell({ sites, report, initialSelectedId }: Props) {
         )}
       </div>
 
-      {/* Below the map on a phone, beside it on a laptop. The map keeps the
-          larger share either way: it is the product. */}
-      <SiteList
-        sites={listed}
-        query={query}
-        onQueryChange={setQuery}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-      />
+      {/* Below the map on a phone, beside it on a laptop. Which of the two
+          gets the space depends on the layer: for places the map is the
+          product, for animals and resources the cards are. */}
+      {cardLayer ? (
+        <aside className="bg-background min-h-0 flex-1 overflow-y-auto border-t md:border-t-0 md:border-l">
+          <AnimalBoard
+            animals={animals}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        </aside>
+      ) : (
+        <SiteList
+          sites={listed}
+          query={query}
+          onQueryChange={setQuery}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+      )}
     </div>
   );
 }

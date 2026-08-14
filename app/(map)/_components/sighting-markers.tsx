@@ -1,0 +1,64 @@
+"use client";
+
+import { MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/map";
+import type { AnimalDTO } from "@/data/animal/animal.dto";
+import { ANIMAL_LABEL } from "@/lib/labels";
+import { cn } from "@/lib/utils";
+
+/**
+ * Where an animal was last SEEN — never where it is.
+ *
+ * Drawn as a dashed ring with no fill, deliberately unlike every other marker
+ * on this map. A solid pin means "this is here", and for a lost animal that is
+ * false by definition: it was somewhere, once, and has been moving since. The
+ * marker has to look like a trace rather than a location or it will be read as
+ * one, and someone will search the wrong block.
+ *
+ * Reports with no coordinate at all simply do not appear — most will be like
+ * that, and the board beside the map is where they live.
+ */
+export function SightingMarkers({
+  animals,
+  selectedId,
+  onSelect,
+}: {
+  animals: AnimalDTO[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const located = animals.filter(
+    (animal) =>
+      animal.longitude !== null &&
+      animal.latitude !== null &&
+      animal.resolvedAt === null,
+  );
+
+  return (
+    <>
+      {located.map((animal) => (
+        <MapMarker
+          key={animal.id}
+          longitude={animal.longitude!}
+          latitude={animal.latitude!}
+          onClick={() => onSelect(animal.id)}
+        >
+          <MarkerContent>
+            <span
+              className={cn(
+                "border-unclaimed bg-unclaimed/15 block size-6 rounded-full border-2 border-dashed transition-transform",
+                selectedId === animal.id && "scale-125",
+              )}
+              aria-label={`${ANIMAL_LABEL[animal.kind]}: ${
+                animal.petName ?? ANIMAL_LABEL[animal.species]
+              }. ${ANIMAL_LABEL.seenAt} aquí.`}
+            />
+          </MarkerContent>
+          <MarkerTooltip offset={18}>
+            {ANIMAL_LABEL.seenAt} aquí ·{" "}
+            {animal.petName ?? ANIMAL_LABEL[animal.species]}
+          </MarkerTooltip>
+        </MapMarker>
+      ))}
+    </>
+  );
+}

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { MapGeoJSON } from "@/components/ui/map";
-import type { SiteDTO, SiteType } from "@/data/site/site.dto";
+import { MapGeoJSON, useMap } from "@/components/ui/map";
 import { contains } from "@/lib/geo";
 
 /**
@@ -85,23 +84,14 @@ type ComunaFeature = {
 };
 type Comunas = { type: "FeatureCollection"; features: ComunaFeature[] };
 
-/** What the tooltip says about the comuna under the cursor. */
-export type ComunaHover = {
-  name: string;
-  total: number;
-  open: number;
-  byType: { type: SiteType; count: number }[];
-  x: number;
-  y: number;
-};
-
 export function ComunaLayer({
-  sites,
-  onHover,
+  onCentreChange,
 }: {
-  sites: SiteDTO[];
-  onHover?: (hover: ComunaHover | null) => void;
+  /** Which comuna the map is centred on. Reported continuously, unlike the
+   *  hover, which needs a cursor and therefore does not exist on a phone. */
+  onCentreChange?: (name: string | null) => void;
 }) {
+  const { map } = useMap();
   // --foreground rather than a fixed grey: it is light on the dark basemap and
   // dark on the light one, so the outline keeps contrast in both themes. A grey
   // token disappeared into the basemap's own road lines.
@@ -133,6 +123,24 @@ export function ComunaLayer({
     };
   }, []);
 
+  useEffect(() => {
+    if (!map || !data || !onCentreChange) return;
+
+    const report = () => {
+      const { lng, lat } = map.getCenter();
+      const found = data.features.find((f) =>
+        contains(f.geometry, lng, lat),
+      );
+      onCentreChange(found?.properties.name ?? null);
+    };
+
+    report();
+    map.on("moveend", report);
+    return () => {
+      map.off("moveend", report);
+    };
+  }, [map, data, onCentreChange]);
+
   // Skip the first paint rather than flash a wrong colour: the token is only
   // readable once the stylesheet has applied.
   if (!border || !data) return null;
@@ -158,41 +166,10 @@ export function ComunaLayer({
         "line-opacity": 0.35,
         "line-dasharray": [3, 2],
       }}
-      interactive={Boolean(onHover)}
-      onHover={(event) => {
-        if (!onHover) return;
-        if (!event) {
-          onHover(null);
-          return;
-        }
-
-        // The hovered feature comes back from MapLibre with its geometry
-        // stripped down, so the count is taken against the source collection
-        // we loaded rather than against the event payload.
-        const { id, name } = event.feature.properties;
-        const feature = data.features.find((f) => f.properties.id === id);
-        const inside = feature
-          ? sites.filter((site) =>
-              contains(feature.geometry, site.longitude, site.latitude),
-            )
-          : [];
-
-        const counts = new Map<SiteType, number>();
-        for (const site of inside) {
-          counts.set(site.type, (counts.get(site.type) ?? 0) + 1);
-        }
-
-        onHover({
-          name,
-          total: inside.length,
-          open: inside.filter((site) => site.status === "open").length,
-          byType: [...counts.entries()]
-            .map(([type, count]) => ({ type, count }))
-            .sort((a, b) => b.count - a.count),
-          x: event.originalEvent.point.x,
-          y: event.originalEvent.point.y,
-        });
-      }}
+      /* Interactive purely for the hover highlight. mapcn binds that to the
+         fill layer and skips it entirely when this is false, so it stays on
+         even though nothing listens for the event any more. */
+      interactive
     />
   );
 }

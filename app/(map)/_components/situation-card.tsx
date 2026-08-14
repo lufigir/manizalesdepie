@@ -58,75 +58,102 @@ function formatReportedAt(iso: string): string {
   return `${get("day")} de ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod")}`;
 }
 
-export function SituationCard({ report }: { report: SituationReportDTO }) {
-  const [open, setOpen] = useState(false);
+export function SituationCard({
+  report,
+  /** Inside the sheet there is nothing to save space from, so the card shows
+   *  everything and drops its own toggle. */
+  alwaysOpen = false,
+}: {
+  report: SituationReportDTO;
+  alwaysOpen?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const open = alwaysOpen || expanded;
 
   const reported = formatReportedAt(report.reportedAt);
 
   return (
-    <Card className="bg-card/90 pointer-events-auto w-64 gap-0 py-3 backdrop-blur">
-      <CardHeader className="px-3">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="flex w-full items-start justify-between gap-2 text-left"
-        >
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] tracking-wider uppercase">
-              {SITUATION_LABEL.title}
-            </p>
-            {/* The hero figure. One number leads, because a card of twelve
-                equal numbers has no entry point. */}
-            {report.affectedPeople !== null && (
-              <p className="text-3xl leading-none font-semibold tabular-nums">
-                {report.affectedPeople.toLocaleString("es-CO")}
-                <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                  {SITUATION_LABEL.affected}
-                </span>
+    <Card
+      className={cn(
+        "gap-0",
+        alwaysOpen
+          ? "w-full border-0 bg-transparent p-0 shadow-none"
+          : "bg-card/90 pointer-events-auto w-[min(16rem,calc(100vw-1.5rem))] py-2.5 backdrop-blur",
+      )}
+    >
+      {/* Inside the sheet the drawer supplies the title and there is nothing
+          to collapse, so the card's own header would just repeat itself. */}
+      {!alwaysOpen && (
+      <CardHeader className={cn(alwaysOpen ? "px-0" : "px-3")}>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={open}
+            className="flex w-full items-start justify-between gap-2 text-left"
+          >
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-[10px] tracking-wider uppercase">
+                {SITUATION_LABEL.title}
               </p>
+              {/* The hero figure. One number leads, because a card of twelve
+                  equal numbers has no entry point. */}
+              {report.affectedPeople !== null && (
+                <p className="text-3xl leading-none font-semibold tabular-nums">
+                  {report.affectedPeople.toLocaleString("es-CO")}
+                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                    {SITUATION_LABEL.affected}
+                  </span>
+                </p>
+              )}
+            </div>
+            <ChevronDown
+              className={cn(
+                "text-muted-foreground mt-1 size-4 shrink-0 transition-transform",
+                open && "rotate-180",
+              )}
+              aria-hidden
+            />
+          </button>
+        </CardHeader>
+      )}
+
+      {/* Collapsed by default, and that is a mobile decision: expanded, this
+          card covered most of a phone's map. The headline number stays visible
+          because it is the one figure worth interrupting for; everything else
+          is a tap away. */}
+      {open && (
+        <CardContent className={cn(alwaysOpen ? "px-0" : "px-3")}>
+          <Meter
+            label={SITUATION_LABEL.evaluations}
+            done={report.evalDone}
+            total={report.evalRequested}
+          />
+
+          <div className="mt-3 flex items-center gap-3 border-t pt-3 text-xs">
+            {report.inShelters !== null && (
+              <span className="flex items-center gap-1.5">
+                <Users className="text-muted-foreground size-3.5" aria-hidden />
+                <span className="font-semibold tabular-nums">
+                  {report.inShelters}
+                </span>
+                <span className="text-muted-foreground">
+                  {SITUATION_LABEL.inShelters}
+                </span>
+              </span>
+            )}
+            {report.petsInShelters !== null && (
+              <span className="flex items-center gap-1.5">
+                <PawPrint
+                  className="text-muted-foreground size-3.5"
+                  aria-hidden
+                />
+                <span className="font-semibold tabular-nums">
+                  {report.petsInShelters}
+                </span>
+              </span>
             )}
           </div>
-          <ChevronDown
-            className={cn(
-              "text-muted-foreground mt-1 size-4 shrink-0 transition-transform",
-              open && "rotate-180",
-            )}
-            aria-hidden
-          />
-        </button>
-      </CardHeader>
 
-      <CardContent className="px-3">
-        <Meter
-          label={SITUATION_LABEL.evaluations}
-          done={report.evalDone}
-          total={report.evalRequested}
-        />
-
-        <div className="mt-3 flex items-center gap-3 border-t pt-3 text-xs">
-          {report.inShelters !== null && (
-            <span className="flex items-center gap-1.5">
-              <Users className="text-muted-foreground size-3.5" aria-hidden />
-              <span className="font-semibold tabular-nums">
-                {report.inShelters}
-              </span>
-              <span className="text-muted-foreground">
-                {SITUATION_LABEL.inShelters}
-              </span>
-            </span>
-          )}
-          {report.petsInShelters !== null && (
-            <span className="flex items-center gap-1.5">
-              <PawPrint className="text-muted-foreground size-3.5" aria-hidden />
-              <span className="font-semibold tabular-nums">
-                {report.petsInShelters}
-              </span>
-            </span>
-          )}
-        </div>
-
-        {open && (
           <div className="mt-3 flex flex-col gap-3 border-t pt-3">
             <Meter
               label={SITUATION_LABEL.villages}
@@ -159,12 +186,12 @@ export function SituationCard({ report }: { report: SituationReportDTO }) {
               </p>
             )}
           </div>
-        )}
 
-        <p className="text-muted-foreground mt-3 text-[10px] leading-tight">
-          {report.source} · {reported}
-        </p>
-      </CardContent>
+          <p className="text-muted-foreground mt-3 text-[10px] leading-tight">
+            {report.source} · {reported}
+          </p>
+        </CardContent>
+      )}
     </Card>
   );
 }

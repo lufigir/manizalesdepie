@@ -236,3 +236,16 @@
     @apply bg-transparent! dark:invert;
     }
 }
+
+@layer utilities {
+  /* Horizontal chip rows scroll, but a visible scrollbar under a row of
+     buttons reads as a broken layout on a phone rather than as an
+     affordance — the row already looks scrollable because it is cut off. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  ACTION_LAYERS,
-  CONTEXT_LAYERS,
-  type ActionLayer,
-  type ContextLayer,
-} from "@/lib/layers";
+import { ACTION_LAYERS, type ActionLayer } from "@/lib/layers";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,21 +15,17 @@ import { cn } from "@/lib/utils";
 export function LayerControl({
   action,
   onActionChange,
-  context,
-  onContextToggle,
   counts,
 }: {
   action: ActionLayer;
   onActionChange: (layer: ActionLayer) => void;
-  context: Set<ContextLayer>;
-  onContextToggle: (layer: ContextLayer) => void;
   /** How many points each action layer holds, so an empty one is visible
    *  before it is chosen rather than after. */
   counts: Record<ActionLayer, number>;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="pointer-events-auto -mx-1 flex gap-1.5 overflow-x-auto px-1">
+      <div className="pointer-events-auto -mx-1 no-scrollbar flex gap-1.5 overflow-x-auto px-1">
         {(Object.keys(ACTION_LAYERS) as ActionLayer[]).map((layer) => {
           const { label, icon: Icon } = ACTION_LAYERS[layer];
           const active = layer === action;
@@ -65,31 +56,6 @@ export function LayerControl({
         })}
       </div>
 
-      <div className="pointer-events-auto -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        {(Object.keys(CONTEXT_LAYERS) as ContextLayer[]).map((layer) => {
-          const { label, icon: Icon } = CONTEXT_LAYERS[layer];
-          const on = context.has(layer);
-
-          return (
-            <button
-              key={layer}
-              type="button"
-              onClick={() => onContextToggle(layer)}
-              aria-pressed={on}
-              title={CONTEXT_LAYERS[layer].hint}
-              className={cn(
-                "focus-visible:ring-ring flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem] font-medium shadow-sm backdrop-blur transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                on
-                  ? "bg-secondary text-secondary-foreground border-secondary"
-                  : "bg-background/70 text-muted-foreground hover:bg-accent",
-              )}
-            >
-              <Icon className="size-3.5" aria-hidden />
-              {label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
