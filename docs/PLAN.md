@@ -9,13 +9,40 @@ código no puede mostrar.
 
 ---
 
-## 1. La reorganización pendiente (lo más importante)
+## 1. La reorganización — HECHA el 14 de agosto
 
-La app se reordena **por intención del usuario**, no por tipo de objeto. Esta
-es la decisión más grande sin implementar y **reemplaza el modelo de capas
-actual** (`lib/layers.ts`).
+La app se reordenó **por intención del usuario**, no por tipo de objeto.
+`lib/layers.ts` y `layer-control.tsx` ya no existen; los reemplaza `lib/tabs.ts`.
 
-### Cuatro pestañas de primer nivel
+### Cómo quedó
+
+- **Cuatro rutas**, no estado de cliente: `/ayudar`, `/necesito`, `/mascotas`,
+  `/servicios`. `/` redirige a `/ayudar`. Se eligieron rutas por el enlace
+  compartible en WhatsApp y porque cada sección cuelga su propio formulario.
+- **El mapa vive en `app/(map)/(tabs)/layout.tsx`** y cada página aporta solo su
+  panel. Es lo que evita que MapLibre se remonte al cambiar de sección: se
+  perdía la cámara y parpadeaba. La selección compartida entre mapa y panel va
+  por contexto (`workspace-context.ts`), porque un layout no puede pasar props
+  a sus children.
+- **Un formulario por sección**: `/reportar/ayudar` y `/reportar/necesito`
+  ofrecen solo los tipos de su sección. El genérico `/reportar` se eliminó.
+- **Servicios se muestra vacío**, con texto que dice qué irá ahí. Sin
+  formulario: uno que botara lo escrito sería peor que no tener la sección.
+
+### Reparto de tipos de sitio
+
+| Tipo | Sección |
+|---|---|
+| `collection_point`, `blood_donation`, `medical_post` | Ayudar |
+| `shelter`, `census_point` | Necesito |
+| `water_point`, `vet_clinic` | **Ninguna** — no se dibujan |
+
+`medical_post` es el PMU, que no es un hospital: es donde a quien llega a
+ayudar le dicen a dónde ir, y por eso va en Ayudar. Los valores siguen en el
+enum de Postgres porque no se pueden borrar y porque las filas existentes deben
+seguir validando.
+
+### Las cuatro pestañas de primer nivel
 
 | Pestaña | Contenido | Forma |
 |---|---|---|
@@ -48,10 +75,66 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
   no admite marcadores HTML). Incluye **abanico** para puntos en coordenadas
   idénticas, que el zoom no puede separar nunca.
 - **Popover anclado al pin** (no sheet inferior: tapaba el mapa).
-- **Comunas** desde OSM con resaltado al pasar e indicador permanente de en qué
-  comuna está el centro. Sin tooltip, por decisión explícita.
+- **Barrios**, que reemplazaron a las comunas el 14 de agosto: nadie dice "estoy
+  en la Comuna 4", dice "estoy en Chipre".
+  - Resaltado al pasar y **etiqueta con el nombre siguiendo al cursor**. Reabre
+    la decisión de "sin tooltip", que se tomó cuando el nombre era el de una
+    comuna y no le decía nada a nadie.
+  - **Nombres dibujados en el mapa** desde zoom 14, con los del basemap de CARTO
+    ocultos para que no salgan dos juegos de nombres.
+  - **Clic en un barrio**: la cámara vuela a él y el panel se limita a él, pero
+    **el mapa sigue mostrando todos los puntos de la ciudad**. Ocultar los pines
+    de los demás barrios fue un error y se corrigió: el mapa es justo cómo uno
+    se entera de que el acopio más cercano queda en el barrio de al lado.
+  - **El barrio se estampa solo**, por geometría, con un trigger en Postgres
+    (`set_neighborhood_from_location`). Vale para `site`, `volunteer_call`,
+    `work_order` y `resource_offer`, así que las convocatorias quedan agrupadas
+    por barrio sin trabajo extra. Está en la base y no en el DAL porque las
+    hojas de cálculo reales se van a cargar por MCP, sin pasar por la app.
+- **Cuatro secciones por intención** (§1), cada una con su ruta y su formulario.
+- **Convocatorias** (`volunteer_call`), desde el 14 de agosto. Viven en Ayudar:
+  bloque «Jornadas» encima de la lista de puntos, pin cuadrado en el mapa (un
+  sitio se distingue de una cita antes de leer el icono) y color = estado
+  temporal (en curso / próxima / cupos llenos / terminó), con la misma gramática
+  de color que el estado de un sitio.
+  - **Crear exige cuenta**, el único caso en toda la app. No es desconfianza del
+    dato: es que desde que existe la fila, otras personas mueven su sábado y le
+    entregan su teléfono a quien convocó. El muro está al final (`PublishGate`)
+    y el borrador incluye el pin, porque el viaje a Google pasa a mitad de
+    formulario y una coordenada que vuelve sola al centro de la ciudad es peor
+    que perder el texto.
+  - **Apuntarse no exige nada**, ni el teléfono. Como no hay cuenta con qué
+    deduplicar a un anónimo, el navegador recuerda a qué jornadas se apuntó en
+    `localStorage` — solo ids.
+  - **Duplicados por radio Y ventana de tiempo** (150 m, ±3 h). Solo por
+    distancia se fusionarían la jornada del sábado y la del domingo en el mismo
+    parque, que es peor que un pin repetido.
+  - **`/jornada/[id]`** con OpenGraph, que es por donde de verdad circula esto:
+    en el grupo de WhatsApp se pierden siempre la esquina exacta y la hora.
+    Quien convocó —y solo esa persona— ve ahí la lista de quién se apuntó.
 - **Enlace por punto** `/punto/[id]` con OpenGraph → tarjeta en WhatsApp.
 - **Formulario público de sitios**, anónimo, con detección de duplicados a 120 m.
+- **Ubicación por barrio**, desde el 14 de agosto, en los formularios de punto y
+  de jornada. Antes abrían un mapa de toda la ciudad y pedían encontrar la
+  propia calle en él, que es la versión difícil de la pregunta: quien reporta
+  está parado en el sitio, con una barra de señal, y el mapa arranca a cuatro
+  kilómetros. Ahora se nombra el barrio —la versión fácil, nadie en Manizales
+  tiene que pensarla— y el mapa se abre ahí, a zoom de calle.
+  - Combobox con búsqueda que pliega tildes («fatima» encuentra «Fátima»), botón
+    **«el barrio donde estoy»** por geolocalización (barrio más cercano por
+    centroide, no point-in-polygon: los polígonos pesan 149 KB y esto es una
+    preselección que se cambia con un toque), y **texto obligatorio** de «¿dónde
+    exactamente?», que es lo que ahora carga la precisión.
+  - **El barrio elegido NO se guarda.** Lo sigue estampando el trigger según
+    dónde caiga el pin, así que el dato y el mapa no se pueden contradecir. El
+    selector apunta la cámara; la copia dice eso y no más.
+  - Tocar un barrio en el mapa lleva `?barrio=Chipre` al formulario. Va en la
+    URL porque el mapa vive en otra ruta: así sobrevive a una recarga.
+  - Villamaría es una entrada más del combobox. La lista sale de
+    `neighborhood_public` (118 filas, ~4 KB), no del geojson.
+  - Ninguna columna cambió: `address` y `meeting_address` siguen aceptando nulo,
+    porque las filas ya publicadas no todas la tienen y las hojas que entren por
+    MCP tampoco. La exigencia vive donde está quien puede responderla.
 - **Animales**: entidad, tablero de fotos, formulario con compresión en el
   navegador, marcador punteado de avistamiento.
 - **Auth Google** con registro diferido (`PublishGate` + `useDraft`).
@@ -62,29 +145,26 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
 
 ## 3. Qué falta, en orden
 
-1. **La reorganización de la sección 1.** Reemplaza `lib/layers.ts` y
-   `layer-control.tsx` por pestañas.
-2. **Convocatorias** (`volunteer_call`): DTO, policy, DAL, actions, UI y el
-   flujo **"quiero participar"**.
-   - Crear una convocatoria **exige cuenta** (es el único caso: quien convoca
-     recibe teléfonos de terceros y debe poder responder por ellos).
-   - Apuntarse **no** exige cuenta. WhatsApp opcional.
-   - Duplicados por **radio + ventana de tiempo**; al chocar, ofrecer unirse.
-3. **Órdenes de trabajo** (`work_order`): faltan los estados
+1. **Órdenes de trabajo** (`work_order`): faltan los estados
    `open_assigned` y `open_needs_followup`, la bandera de escombros retirados y
    el enum de **motivos de bloqueo** (falta volqueta, requiere demolición, sin
    contacto, requiere bomberos).
-4. **Solicitudes de ayuda**: entidad nueva, aún sin crear. Conteos del hogar
+2. **Solicitudes de ayuda**: entidad nueva, aún sin crear. Conteos del hogar
    sí (mujeres, niños, adultos mayores, mascotas); condiciones médicas **no**.
-5. **Ofertas de recursos** = la pestaña Servicios. Añadir *hogar de paso* al
-   enum.
-6. **Consola `/admin`**, una sección por entidad. `signOut` ya existe y no
-   tiene quién lo llame.
-7. **Turnstile** en los formularios públicos (faltan las llaves).
-8. **Franja de réplicas del SGC** (solo aviso, sin mapa de calor).
-9. **Cablear el toque de queda**: `lib/curfew.ts` existe y nadie lo usa.
-10. **Coropleta de necesidad desatendida por comuna** — bloqueada hasta que
-    haya órdenes de trabajo.
+   Es lo que hará que el botón de "Necesito" diga *pedir ayuda* y no *reportar
+   un punto*.
+3. **Ofertas de recursos** = la sección Servicios, hoy vacía con su explicación.
+   Añadir *hogar de paso* al enum.
+4. **Consola `/admin`**, una sección por entidad. `signOut` ya existe y no
+   tiene quién lo llame. Ahí van también `verifyCall` y el resto de acciones de
+   curador, que hoy existen sin pantalla.
+5. **Turnstile** en los formularios públicos (faltan las llaves).
+6. **Franja de réplicas del SGC** (solo aviso, sin mapa de calor).
+7. **Terminar de cablear el toque de queda**: ya decide el «apuntarme para
+   mañana» de las jornadas (`for_tomorrow`); falta el aviso general en el mapa.
+8. **Coropleta de necesidad desatendida por comuna** — bloqueada hasta que
+   haya órdenes de trabajo. `public/barrios.geojson` ya trae la comuna de cada
+   barrio, así que agregar de barrio a comuna no necesita otra fuente.
 
 ---
 
@@ -103,6 +183,24 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
   veterinarias (la gente ya sabe dónde quedan).
 - **Retención de datos personales: aplazada.** Decisión pendiente, no olvido.
 - **Turnstile: aprobado**, faltan llaves.
+- **Agua y veterinarias salen del mapa** (14 de agosto), junto con hospitales.
+  Los tipos siguen en el enum de Postgres porque no se pueden borrar; el mapa
+  simplemente no los dibuja (`SITE_TYPE_TAB` → `null`).
+- **Los barrios salen del SIG de la Alcaldía y son oficiales.** 114 polígonos de
+  la capa "Límite de barrios" (Acuerdo Municipal 589 de 2004), en el portal
+  ArcGIS `geodata-manizales-sigalcmzl.opendata.arcgis.com`.
+  `scripts/fetch-barrios.mjs` los descarga, simplifica y escribe
+  `public/barrios.geojson`, con la comuna de cada barrio incluida.
+  - **La creencia anterior era falsa:** "no existen polígonos de barrio" está
+    escrito en `fetch-comunas.mjs` y llevó a construir un Voronoi sobre los
+    puntos de OSM. Se descartó al aparecer la fuente real. **Antes de derivar
+    geometría, buscar en el portal de datos abiertos de la Alcaldía.**
+  - Los nombres oficiales vienen en mayúscula sin tildes; el script les pone la
+    ortografía correcta cruzando con OSM (97 de 114) y capitaliza el resto.
+  - **Villamaría no está**: su municipio no publica capa equivalente, así que
+    al otro lado del río el indicador no dice barrio.
+  - `public/comunas.geojson` se queda: la comuna sigue siendo la unidad de
+    agregación, y ahora cada barrio trae la suya.
 
 ---
 
@@ -130,8 +228,25 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
 - **`ALTER TYPE ... ADD VALUE`** necesita su propia migración.
 - **`onHover` de mapcn solo dispara al CAMBIAR de feature.** Si se necesita en
   cada movimiento, hay que registrar el listener propio.
+- **React desmonta un subárbol borrado de PADRE a HIJO.** `<Map>` llama
+  `map.remove()` en su limpieza, que hace `setStyle(null)`, así que cualquier
+  limpieza de un hijo que pregunte por capas explota dentro de MapLibre —
+  `getLayer` no devuelve `undefined`, revienta. Se sale temprano con
+  `if (!map.style) return`.
+- **Una prop `[lng, lat]` es un array nuevo en cada render.** Si un efecto
+  depende de ella y mueve el mapa, el `moveend` actualiza el formulario, el
+  formulario re-renderiza y el efecto vuelve a correr: bucle infinito que React
+  reporta como «Maximum update depth exceeded» y que no se ve leyendo el diff.
+  Se pasan dos números.
 - **`document.querySelector('[name="description"]')`** encuentra el `<meta>` del
   `<head>` antes que el campo del formulario.
+- **Borrar una ruta deja tipos generados obsoletos.** `.next/dev/types/
+  validator.ts` sigue importando el `page.js` que ya no existe y `tsc` falla con
+  TS2307 aunque el código esté bien. Se borra `.next/dev` y listo.
+- **Overpass responde 504 de forma intermitente**, a veces en los dos espejos a
+  la vez y minutos después funciona. Cualquier script que dependa de él necesita
+  espejos, reintentos y un camino sin él: `fetch-barrios.mjs` sigue funcionando
+  sin Overpass, solo que sin tildes.
 - Verificar siempre que una prueba falle por el motivo correcto: una que barre
   toda la pantalla cruza comunas y oculta justo el bug que se busca.
 
@@ -153,9 +268,16 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
 
 ## 8. Datos en la base ahora
 
-7 puntos publicados, todos específicos de la emergencia: 2 albergues, el punto
+8 puntos publicados, todos específicos de la emergencia: 2 albergues, el punto
 oficial de donaciones (Coliseo Menor, entrada A por la Av. Lindsay), 2 de
-sangre, el PMU y el punto de censo de Fundadores. Más el balance del Reporte 10
-de la Alcaldía y las 12 comunas en `public/comunas.geojson`.
+sangre, el PMU, el punto de censo de Fundadores y —desde el 14 de agosto— el
+**Centro de Acopio del Concejo Municipal de Villamaría** (Carrera 5 N.° 4-75,
+Parque Bolívar), el primer punto del otro lado del río. Su coordenada es la de
+la Alcaldía, a unos 60 m del tramo de la Carrera 5 que corresponde a esa
+dirección: geocodificada, no verificada en terreno.
+
+Más el balance del Reporte 10 de la Alcaldía, las 12 comunas en
+`public/comunas.geojson` y los 114 barrios oficiales, tanto en
+`public/barrios.geojson` como en la tabla `neighborhood`.
 
 El seed original tenía las coordenadas mal por entre 0,9 y 7,8 km.

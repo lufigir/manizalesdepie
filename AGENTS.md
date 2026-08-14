@@ -126,7 +126,8 @@ Version-specific things that are easy to get wrong:
 | Source | Gives us | Key |
 |---|---|---|
 | Nominatim | Geocoding an address the user typed | No |
-| Overpass | Neighbourhood and POI suggestions | No |
+| Overpass | POI suggestions, and the accented spelling of barrio names | No |
+| SIG Alcaldía de Manizales | The official barrio polygons (ArcGIS open data) | No |
 | SGC | Live aftershocks | No |
 | CARTO | Basemap tiles (mapcn default) | No |
 

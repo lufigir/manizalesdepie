@@ -11,10 +11,13 @@
  *   - Comuna borders do not move. Perishable data belongs in Postgres; this is
  *     the opposite of perishable.
  *
- * Why comunas and not barrios: barrio polygons do not exist in any open source.
- * The Alcaldía's "División por comunas y barrios" dataset is a CSV with no
- * geometry, and OSM carries no barrio areas for Manizales — only these 12
- * comunas plus the rural corregimientos, as admin_level=8 relations.
+ * OSM carries only these 12 comunas plus the rural corregimientos, as
+ * admin_level=8 relations — no barrio areas at all.
+ *
+ * This file used to claim barrio polygons did not exist anywhere. That was
+ * wrong: the Alcaldía's own GIS publishes them, and `fetch-barrios.mjs` now
+ * uses that. Comunas stay because they are the unit anything countable
+ * aggregates to, and the map still needs them for the unmet-need choropleth.
  */
 
 const OVERPASS = "https://overpass-api.de/api/interpreter";
