@@ -30,7 +30,7 @@ export function TabBar({
   return (
     <nav
       aria-label="Secciones"
-      className="pointer-events-auto no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-lg border bg-background/95 p-1 shadow-lg backdrop-blur-md"
+      className="pointer-events-auto no-scrollbar flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border bg-background/95 p-1 shadow-lg backdrop-blur-md sm:w-max"
     >
       {TABS.map(({ id, href, label, hint, icon: Icon }) => {
         const current = id === active;

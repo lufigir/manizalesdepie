@@ -80,7 +80,12 @@ export class NeighborhoodDAL {
       .gt("expires_at", new Date().toISOString());
 
     if (error) {
-      log.error("neighborhood.statuses failed", { code: error.code });
+      // The view was added after the first deploy. Until that migration reaches
+      // a local or remote project, the absence of status data is a valid empty
+      // state and should not make the map look broken in the console.
+      if (error.code !== "PGRST205") {
+        log.error("neighborhood.statuses failed", { code: error.code });
+      }
       // Never blocks the map: a barrio with no status behaves exactly like one
       // nobody has reported on, which is the correct fallback either way.
       return [];

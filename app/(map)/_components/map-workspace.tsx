@@ -319,15 +319,15 @@ export function MapWorkspace({
             )}
           </Map>
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3">
-            <div className="pointer-events-auto min-w-0 max-w-[calc(100vw-7.5rem)] md:max-w-[calc(100vw-24rem)]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-1.5 p-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2 sm:p-3">
+            <div className="pointer-events-auto min-w-0 sm:max-w-[calc(100vw-24rem)]">
               <TabBar active={tab} counts={counts} />
             </div>
 
             {/* Reference belongs away from the section switcher: the tabs steer
                 the app, while the balance/clock are context checked between
                 actions. */}
-            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
+            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5 self-end sm:self-auto">
               <div className="flex items-center gap-1.5">
                 <LiveClock />
                 <InfoSheet
