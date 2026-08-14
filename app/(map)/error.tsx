@@ -3,9 +3,12 @@
 import { useEffect } from "react";
 
 /**
- * If the map cannot load, the one thing that must still work is the way in for
- * someone who needs help. A blank error screen during an emergency is a dead
- * end; the WhatsApp line is not.
+ * A blank error screen during an emergency is a dead end, so this one says what
+ * happened and offers the only action left.
+ *
+ * There is no WhatsApp line here any more: contact is per-point now, carried by
+ * whoever published each pin, so there is no single number to fall back to when
+ * the map itself is what failed.
  */
 export default function MapError({
   error,
@@ -24,8 +27,7 @@ export default function MapError({
         No pudimos cargar el mapa
       </h1>
       <p className="text-muted-foreground max-w-sm text-sm">
-        Puede ser tu conexión o una falla nuestra. Si necesitas ayuda ahora, no
-        esperes al mapa: escríbenos.
+        Puede ser tu conexión o una falla nuestra. Vuelve a intentarlo.
       </p>
       <div className="flex w-full max-w-xs flex-col gap-2">
         <button
@@ -35,14 +37,6 @@ export default function MapError({
         >
           Reintentar
         </button>
-        <a
-          href={`https://wa.me/${process.env.NEXT_PUBLIC_CURATOR_WHATSAPP}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-secondary text-secondary-foreground rounded-lg px-4 py-2.5 text-sm font-semibold"
-        >
-          Escribir por WhatsApp
-        </a>
       </div>
     </div>
   );

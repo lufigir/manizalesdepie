@@ -1,0 +1,289 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronDown, PawPrint, Users } from "lucide-react";
+
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import type { SituationReportDTO } from "@/data/situation/situation.dto";
+import { SITUATION_LABEL } from "@/lib/labels";
+import { cn } from "@/lib/utils";
+
+/**
+ * The city's balance, as the Alcaldía last published it.
+ *
+ * Deliberately NOT the chart shapes this was modelled on. The source is a
+ * single evening's report: there is no history behind it, so an area chart
+ * would have to invent a trend, and a two-slice pie is the documented wrong
+ * form for a ratio. What the numbers actually are is ratios against known
+ * totals and a handful of headline counts — meters and stat tiles.
+ *
+ * Nothing here is a series, so nothing here is coloured by identity. The only
+ * colour that appears carries state, and it always arrives with its label.
+ */
+/**
+ * "13 de agosto, 9:50 p. m." — assembled from parts rather than handed to
+ * Intl's own joiner.
+ *
+ * Calling `.format()` directly produced a hydration mismatch: Node's ICU joins
+ * this locale as "13 de agosto a las 9:50 p. m." and the browser as
+ * "13 de agosto, 9:50 p. m.", so the server and client HTML disagreed and React
+ * threw the subtree away. Taking the parts and joining them here removes the
+ * only piece the two runtimes disagreed about, while still letting Intl do the
+ * month name and the a. m./p. m. convention.
+ */
+const dateParts = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  day: "numeric",
+  month: "long",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+const EXOTIC_SPACES = /[    ⁠]/g;
+
+function normalizeSpaces(value: string): string {
+  return value.replace(EXOTIC_SPACES, " ");
+}
+
+function formatReportedAt(iso: string): string {
+  const parts = dateParts.formatToParts(new Date(iso));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    // Node's ICU puts a NARROW NO-BREAK SPACE (U+202F) inside "p. m." where
+    // the browser puts an ordinary one. The two strings look identical on
+    // screen and even in React's own hydration diff, which is what made this
+    // worth a helper rather than a guess.
+    normalizeSpaces(parts.find((part) => part.type === type)?.value ?? "");
+
+  return `${get("day")} de ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod")}`;
+}
+
+export function SituationCard({ report }: { report: SituationReportDTO }) {
+  const [open, setOpen] = useState(false);
+
+  const reported = formatReportedAt(report.reportedAt);
+
+  return (
+    <Card className="bg-card/90 pointer-events-auto w-64 gap-0 py-3 backdrop-blur">
+      <CardHeader className="px-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="flex w-full items-start justify-between gap-2 text-left"
+        >
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-[10px] tracking-wider uppercase">
+              {SITUATION_LABEL.title}
+            </p>
+            {/* The hero figure. One number leads, because a card of twelve
+                equal numbers has no entry point. */}
+            {report.affectedPeople !== null && (
+              <p className="text-3xl leading-none font-semibold tabular-nums">
+                {report.affectedPeople.toLocaleString("es-CO")}
+                <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                  {SITUATION_LABEL.affected}
+                </span>
+              </p>
+            )}
+          </div>
+          <ChevronDown
+            className={cn(
+              "text-muted-foreground mt-1 size-4 shrink-0 transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
+      </CardHeader>
+
+      <CardContent className="px-3">
+        <Meter
+          label={SITUATION_LABEL.evaluations}
+          done={report.evalDone}
+          total={report.evalRequested}
+        />
+
+        <div className="mt-3 flex items-center gap-3 border-t pt-3 text-xs">
+          {report.inShelters !== null && (
+            <span className="flex items-center gap-1.5">
+              <Users className="text-muted-foreground size-3.5" aria-hidden />
+              <span className="font-semibold tabular-nums">
+                {report.inShelters}
+              </span>
+              <span className="text-muted-foreground">
+                {SITUATION_LABEL.inShelters}
+              </span>
+            </span>
+          )}
+          {report.petsInShelters !== null && (
+            <span className="flex items-center gap-1.5">
+              <PawPrint className="text-muted-foreground size-3.5" aria-hidden />
+              <span className="font-semibold tabular-nums">
+                {report.petsInShelters}
+              </span>
+            </span>
+          )}
+        </div>
+
+        {open && (
+          <div className="mt-3 flex flex-col gap-3 border-t pt-3">
+            <Meter
+              label={SITUATION_LABEL.villages}
+              done={report.villagesAffected}
+              total={report.villagesTotal}
+              // More-is-worse here, unlike the evaluation meter where more is
+              // progress. Stated in the label rather than left to the colour.
+              tone="warning"
+            />
+
+            <Split
+              label={SITUATION_LABEL.homes}
+              parts={[
+                { label: SITUATION_LABEL.homesPartial, value: report.homesPartial },
+                { label: SITUATION_LABEL.homesTotal, value: report.homesTotalLoss },
+              ]}
+            />
+
+            <dl className="flex flex-col gap-1 text-xs">
+              <Row label={SITUATION_LABEL.evacuated} value={report.familiesEvacuated} />
+              <Row label={SITUATION_LABEL.injured} value={report.injured} />
+              <Row label={SITUATION_LABEL.dead} value={report.dead} />
+              <Row label={SITUATION_LABEL.merchants} value={report.merchantsAffected} />
+              <Row label={SITUATION_LABEL.gas} value={report.gasPending} />
+            </dl>
+
+            {report.notes && (
+              <p className="text-muted-foreground text-[11px] leading-snug">
+                {report.notes}
+              </p>
+            )}
+          </div>
+        )}
+
+        <p className="text-muted-foreground mt-3 text-[10px] leading-tight">
+          {report.source} · {reported}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * A ratio against a known total. The track is the same hue as the fill, one
+ * step lighter — a meter, not a two-slice pie.
+ */
+function Meter({
+  label,
+  done,
+  total,
+  tone = "progress",
+}: {
+  label: string;
+  done: number | null;
+  total: number | null;
+  tone?: "progress" | "warning";
+}) {
+  if (done === null || total === null || total === 0) return null;
+  const pct = Math.min(100, Math.round((done / total) * 100));
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-semibold tabular-nums">
+          {done.toLocaleString("es-CO")}
+          <span className="text-muted-foreground font-normal">
+            {" "}
+            / {total.toLocaleString("es-CO")}
+          </span>
+        </span>
+      </div>
+      <div
+        className={cn(
+          "mt-1.5 h-1.5 w-full overflow-hidden rounded-full",
+          tone === "warning" ? "bg-claimed-surface" : "bg-verified/15",
+        )}
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label}
+      >
+        {/* 4px rounded data-end anchored to the track's start. */}
+        <div
+          className={cn(
+            "h-full rounded-full",
+            tone === "warning" ? "bg-claimed" : "bg-verified",
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Part-to-whole across two parts: a single stacked bar, with a 2px surface
+ *  gap between the segments so they never read as one mark. */
+function Split({
+  label,
+  parts,
+}: {
+  label: string;
+  parts: { label: string; value: number | null }[];
+}) {
+  const present = parts.filter((p) => p.value !== null) as {
+    label: string;
+    value: number;
+  }[];
+  if (present.length === 0) return null;
+
+  const total = present.reduce((sum, p) => sum + p.value, 0);
+
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <div className="mt-1.5 flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full">
+        {present.map((part, index) => (
+          <div
+            key={part.label}
+            className={cn(
+              "h-full rounded-full",
+              index === 0 ? "bg-claimed" : "bg-unclaimed",
+            )}
+            style={{ width: `${(part.value / total) * 100}%` }}
+          />
+        ))}
+      </div>
+      {/* Direct labels: identity never rests on colour alone. */}
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+        {present.map((part, index) => (
+          <span key={part.label} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "size-1.5 rounded-full",
+                index === 0 ? "bg-claimed" : "bg-unclaimed",
+              )}
+            />
+            <span className="font-semibold tabular-nums">
+              {part.value.toLocaleString("es-CO")}
+            </span>
+            <span className="text-muted-foreground">{part.label}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: number | null }) {
+  if (value === null) return null;
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-semibold tabular-nums">
+        {value.toLocaleString("es-CO")}
+      </dd>
+    </div>
+  );
+}

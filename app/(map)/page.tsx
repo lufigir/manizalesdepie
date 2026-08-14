@@ -1,5 +1,5 @@
 import { SiteDAL } from "@/data/site/site.dal";
-import { clientEnv } from "@/lib/env";
+import { SituationDAL } from "@/data/situation/situation.dal";
 
 import { MapShell } from "./_components/map-shell";
 
@@ -11,14 +11,14 @@ import { MapShell } from "./_components/map-shell";
  * only part that needs interactivity.
  */
 export default async function MapPage() {
-  const sites = await SiteDAL.public().listPublished();
+  const [sites, report] = await Promise.all([
+    SiteDAL.public().listPublished(),
+    SituationDAL.public().latest(),
+  ]);
 
   return (
     <main className="h-dvh w-full overflow-hidden">
-      <MapShell
-        sites={sites}
-        curatorWhatsapp={clientEnv.NEXT_PUBLIC_CURATOR_WHATSAPP}
-      />
+      <MapShell sites={sites} report={report} />
     </main>
   );
 }
