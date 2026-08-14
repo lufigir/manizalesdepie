@@ -1,9 +1,24 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+/**
+ * Inter, self-hosted at build time by next/font — no request ever leaves for
+ * Google, which keeps the CSP in next.config.ts closed and costs no round trip
+ * on a phone with one bar of signal.
+ *
+ * "latin-ext" is not optional: without it the map loses the tildes in
+ * Villamaría, Milán and Bogotá, and the ñ.
+ */
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -38,7 +53,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es-CO" suppressHydrationWarning>
+    <html lang="es-CO" className={inter.variable} suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider
           attribute="class"
