@@ -319,20 +319,24 @@ export function MapWorkspace({
             )}
           </Map>
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-2 sm:p-3">
-            {/* One row: reference on the left, the live clock on the right.
-                Everything that is consulted rather than steered lives inside
-                the sheet behind that button, which is what gave the map its
-                corner back on a phone. */}
-            <div className="pointer-events-auto flex items-start justify-between gap-2">
-              <InfoSheet
-                report={report}
-                neighborhoodStatuses={neighborhoodStatuses}
-                showBarrios={showBarrios}
-                onBarriosChange={setShowBarrios}
-              />
-              <div className="flex flex-col items-end gap-1.5">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3">
+            <div className="pointer-events-auto min-w-0 max-w-[calc(100vw-7.5rem)] md:max-w-[calc(100vw-24rem)]">
+              <TabBar active={tab} counts={counts} />
+            </div>
+
+            {/* Reference belongs away from the section switcher: the tabs steer
+                the app, while the balance/clock are context checked between
+                actions. */}
+            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <LiveClock />
+                <InfoSheet
+                  report={report}
+                  neighborhoodStatuses={neighborhoodStatuses}
+                  showBarrios={showBarrios}
+                  onBarriosChange={setShowBarrios}
+                />
+              </div>
                 {/* One slot, two states. While a barrio is filtered the chip
                     IS the filter and carries the way out of it; otherwise it
                     just says where the map is centred. Two chips stacked said
@@ -355,10 +359,7 @@ export function MapWorkspace({
                     </span>
                   )
                 )}
-              </div>
             </div>
-
-            <TabBar active={tab} counts={counts} />
           </div>
 
           {/* Bottom-left: the thumb's reach on a phone, and clear of the map

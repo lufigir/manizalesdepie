@@ -53,7 +53,7 @@ export function InfoSheet({
           <Button
             variant="outline"
             size="sm"
-            className="bg-background/90 backdrop-blur"
+            className="h-10 gap-2 bg-background/95 px-3 font-semibold shadow-lg backdrop-blur-md"
           />
         }
       >
@@ -61,7 +61,7 @@ export function InfoSheet({
         {/* The headline number rides on the button itself, so the one figure
             worth interrupting for needs no tap at all. */}
         {report?.affectedPeople != null && (
-          <span className="tabular-nums">
+          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[0.7rem] leading-none text-primary tabular-nums">
             {report.affectedPeople.toLocaleString("es-CO")}
           </span>
         )}

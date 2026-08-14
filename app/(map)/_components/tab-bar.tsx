@@ -30,7 +30,7 @@ export function TabBar({
   return (
     <nav
       aria-label="Secciones"
-      className="pointer-events-auto no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1"
+      className="pointer-events-auto no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-lg border bg-background/95 p-1 shadow-lg backdrop-blur-md"
     >
       {TABS.map(({ id, href, label, hint, icon: Icon }) => {
         const current = id === active;
@@ -43,18 +43,27 @@ export function TabBar({
             aria-current={current ? "page" : undefined}
             title={hint}
             className={cn(
-              "focus-visible:ring-ring flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm backdrop-blur transition-colors focus-visible:ring-2 focus-visible:outline-none",
+              "focus-visible:ring-ring flex h-10 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
               current
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background/90 hover:bg-accent",
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-foreground hover:bg-accent",
               // An empty section is dimmed but never hidden: knowing that
               // nobody has reported animals yet is information.
-              !current && count === 0 && "opacity-55",
+              !current && count === 0 && "text-muted-foreground",
             )}
           >
             <Icon className="size-4" aria-hidden />
             {label}
-            <span className="tabular-nums opacity-70">{count}</span>
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none tabular-nums",
+                current
+                  ? "bg-primary-foreground/20"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {count}
+            </span>
           </Link>
         );
       })}

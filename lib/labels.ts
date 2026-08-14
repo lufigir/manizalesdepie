@@ -249,6 +249,7 @@ export const REPORT_SECTION = {
 /** The Alcaldía's daily balance card. */
 export const SITUATION_LABEL = {
   title: "Balance de la ciudad",
+  peopleTitle: "Personas y familias",
   affected: "damnificados",
   evaluations: "Evaluaciones de estructuras",
   villages: "Veredas con afectación",
@@ -261,6 +262,7 @@ export const SITUATION_LABEL = {
   merchants: "Comerciantes afectados",
   gas: "Usuarios sin gas",
   inShelters: "en albergues",
+  petsInShelters: "mascotas en albergues",
 } as const;
 
 /**

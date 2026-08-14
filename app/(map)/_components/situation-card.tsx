@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, PawPrint, Users } from "lucide-react";
+import { ChevronDown, Home, PawPrint, ShieldAlert, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { SituationReportDTO } from "@/data/situation/situation.dto";
@@ -123,38 +123,14 @@ export function SituationCard({
           is a tap away. */}
       {open && (
         <CardContent className={cn(alwaysOpen ? "px-0" : "px-3")}>
-          <Meter
-            label={SITUATION_LABEL.evaluations}
-            done={report.evalDone}
-            total={report.evalRequested}
-          />
+          <AffectedSummary report={report} />
 
-          <div className="mt-3 flex items-center gap-3 border-t pt-3 text-xs">
-            {report.inShelters !== null && (
-              <span className="flex items-center gap-1.5">
-                <Users className="text-muted-foreground size-3.5" aria-hidden />
-                <span className="font-semibold tabular-nums">
-                  {report.inShelters}
-                </span>
-                <span className="text-muted-foreground">
-                  {SITUATION_LABEL.inShelters}
-                </span>
-              </span>
-            )}
-            {report.petsInShelters !== null && (
-              <span className="flex items-center gap-1.5">
-                <PawPrint
-                  className="text-muted-foreground size-3.5"
-                  aria-hidden
-                />
-                <span className="font-semibold tabular-nums">
-                  {report.petsInShelters}
-                </span>
-              </span>
-            )}
-          </div>
-
-          <div className="mt-3 flex flex-col gap-3 border-t pt-3">
+          <div className="mt-4 flex flex-col gap-3 border-t pt-4">
+            <Meter
+              label={SITUATION_LABEL.evaluations}
+              done={report.evalDone}
+              total={report.evalRequested}
+            />
             <Meter
               label={SITUATION_LABEL.villages}
               done={report.villagesAffected}
@@ -173,7 +149,6 @@ export function SituationCard({
             />
 
             <dl className="flex flex-col gap-1 text-xs">
-              <Row label={SITUATION_LABEL.evacuated} value={report.familiesEvacuated} />
               <Row label={SITUATION_LABEL.injured} value={report.injured} />
               <Row label={SITUATION_LABEL.dead} value={report.dead} />
               <Row label={SITUATION_LABEL.merchants} value={report.merchantsAffected} />
@@ -193,6 +168,90 @@ export function SituationCard({
         </CardContent>
       )}
     </Card>
+  );
+}
+
+function AffectedSummary({ report }: { report: SituationReportDTO }) {
+  return (
+    <section>
+      <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+        {SITUATION_LABEL.peopleTitle}
+      </p>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {report.affectedPeople !== null && (
+          <SummaryTile
+            className="col-span-2"
+            icon={Users}
+            label={SITUATION_LABEL.affected}
+            value={report.affectedPeople}
+            prominent
+          />
+        )}
+        <SummaryTile
+          icon={ShieldAlert}
+          label={SITUATION_LABEL.evacuated}
+          value={report.familiesEvacuated}
+        />
+        <SummaryTile
+          icon={Home}
+          label={SITUATION_LABEL.inShelters}
+          value={report.inShelters}
+        />
+        <SummaryTile
+          icon={PawPrint}
+          label={SITUATION_LABEL.petsInShelters}
+          value={report.petsInShelters}
+        />
+      </div>
+    </section>
+  );
+}
+
+function SummaryTile({
+  icon: Icon,
+  label,
+  value,
+  prominent = false,
+  className,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: number | null;
+  prominent?: boolean;
+  className?: string;
+}) {
+  if (value === null) return null;
+
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-2 rounded-md border bg-background p-2",
+        className,
+      )}
+    >
+      <span
+        className={cn(
+          "bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md",
+          prominent && "size-9",
+        )}
+      >
+        <Icon className={cn("size-4", prominent && "size-5")} aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span
+          className={cn(
+            "block leading-none font-semibold tabular-nums",
+            prominent ? "text-2xl" : "text-base",
+          )}
+        >
+          {value.toLocaleString("es-CO")}
+        </span>
+        <span className="text-muted-foreground mt-0.5 block text-[10px] leading-tight">
+          {label}
+        </span>
+      </span>
+    </div>
   );
 }
 
