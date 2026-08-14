@@ -1,15 +1,22 @@
 import {
+  Boxes,
   ClipboardList,
   Cross,
   GlassWater,
   Droplet,
+  HardHat,
+  HeartPulse,
   Package,
   PawPrint,
+  Shovel,
   Tent,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
+import type { CallCategory, CallDTO } from "@/data/call/call.dto";
 import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
+import type { TabId } from "@/lib/tabs";
 
 /**
  * The interface speaks Spanish; the code and the database speak English. This
@@ -182,16 +189,24 @@ export const CONFIDENCE_BADGE: Record<Confidence, string> = {
  * the pin is dragged, never typed as coordinates.
  */
 export const REPORT_LABEL = {
-  title: "Reportar un punto",
   subtitle:
     "Sale al mapa de una vez, marcado como sin confirmar. Otras personas lo confirman o lo corrigen.",
-  kind: "¿Qué hay aquí?",
-  where: "¿Dónde queda?",
-  whereHint: "Arrastra el mapa hasta que el punto quede en el sitio exacto.",
+  barrio: "¿En qué barrio?",
+  where: "Ajusta el punto",
+  whereHint:
+    "El mapa ya está en el barrio. Arrastra unos metros hasta el sitio exacto.",
+  whereLocked: "Elige el barrio y el mapa se abre ahí.",
+  barrioRequired:
+    "Elige primero el barrio. Sin eso el punto queda en el centro de la ciudad, que es peor que no publicarlo.",
   name: "Nombre del lugar",
   namePlaceholder: "Coliseo Menor, Sede comunal San José…",
-  address: "Dirección o referencia",
+  /** Was "Dirección o referencia", optional, and near the bottom. It is now
+   *  required and sits right under the barrio, because between the two of them
+   *  they carry the precision that dragging a pin across the city used to. */
+  address: "¿Dónde exactamente?",
   addressPlaceholder: "Frente a la panadería, casa 141…",
+  addressHint:
+    "La cuadra, la esquina, el punto de referencia. Es lo que hace que alguien lo encuentre.",
   description: "¿Qué hacen o qué necesitan?",
   descriptionPlaceholder:
     "Reciben mercado y kits de aseo. No reciben ropa usada.",
@@ -209,6 +224,26 @@ export const REPORT_LABEL = {
   nearbyOpen: "Ver ese punto",
   nearbyIgnore: "No es el mismo, publicar igual",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
+  back: "Volver al mapa",
+} as const;
+
+/**
+ * One form per section, worded for the person standing in it.
+ *
+ * The generic form used to open with all seven kinds of place at once, which
+ * made the first decision of the form the one nobody came to make. Arriving
+ * from "Ayudar" already says this is somewhere to give something; arriving from
+ * "Necesito" already says it is somewhere to go for help.
+ */
+export const REPORT_SECTION = {
+  help: {
+    title: "Reportar dónde ayudar",
+    kind: "¿Qué reciben aquí?",
+  },
+  need: {
+    title: "Reportar un punto de ayuda",
+    kind: "¿Qué es este lugar?",
+  },
 } as const;
 
 /** The Alcaldía's daily balance card. */
@@ -287,13 +322,364 @@ export const ANIMAL_KIND_STYLE = {
   sighted: "bg-claimed-surface text-claimed border-claimed/30",
 } as const;
 
-/** The comuna tooltip. "Sin puntos reportados" is deliberately about reports,
- *  not about reality: an empty comuna may be well served or simply unseen, and
- *  the map only ever knows the second. */
-export const COMUNA_LABEL = {
-  empty: "Sin puntos reportados",
-  summary: (total: number, open: number) =>
-    `${total} ${total === 1 ? "punto" : "puntos"} · ${open} abierto${open === 1 ? "" : "s"}`,
+/**
+ * Convocatorias — jornadas, brigadas, turnos.
+ *
+ * "Jornada" and not "convocatoria" everywhere the reader can see. The code says
+ * `volunteer_call` because that is what the row is; the city says "jornada de
+ * limpieza en Chipre el sábado", and matching the word people already use is
+ * what makes a map legible in a hurry.
+ */
+export const CALL_CATEGORY_LABEL: Record<CallCategory, string> = {
+  debris_removal: "Escombros",
+  logistics: "Logística",
+  census: "Censo",
+  animals: "Animales",
+  health: "Salud",
+  structural_survey: "Estructuras",
+  other: "Otra",
+};
+
+/** The icon carries the kind of work, exactly as it carries the kind of place
+ *  on a site pin. The shovel is the one that has to be unmistakable: removing
+ *  debris is most of what gets convened. */
+export const CALL_CATEGORY_ICON: Record<CallCategory, LucideIcon> = {
+  debris_removal: Shovel,
+  logistics: Boxes,
+  census: ClipboardList,
+  animals: PawPrint,
+  health: HeartPulse,
+  structural_survey: HardHat,
+  other: Users,
+};
+
+/**
+ * What a call is doing right now, which is the only question a reader has about
+ * one. Deliberately the same four colours as a site's status, carrying the same
+ * meaning — green helps you right now, amber not yet, red do not go, grey over —
+ * so the map teaches one grammar instead of two.
+ */
+export type CallState = "live" | "upcoming" | "full" | "ended";
+
+export function callState(
+  call: Pick<CallDTO, "startsAt" | "expiresAt" | "slotsTotal" | "slotsTaken">,
+  now: number = Date.now(),
+): CallState {
+  if (now >= Date.parse(call.expiresAt)) return "ended";
+  if (call.slotsTotal !== null && call.slotsTaken >= call.slotsTotal) {
+    return "full";
+  }
+  return now >= Date.parse(call.startsAt) ? "live" : "upcoming";
+}
+
+export const CALL_STATE_LABEL: Record<CallState, string> = {
+  live: "En curso",
+  upcoming: "Próxima",
+  full: "Cupos llenos",
+  ended: "Ya terminó",
+};
+
+export const CALL_STATE_MARKER: Record<CallState, string> = {
+  live: "bg-resolved text-resolved-foreground",
+  upcoming: "bg-claimed text-claimed-foreground",
+  full: "bg-unclaimed text-unclaimed-foreground",
+  ended: "bg-stale text-background",
+};
+
+export const CALL_STATE_STYLE: Record<CallState, string> = {
+  live: "bg-resolved-surface text-resolved border-resolved/30",
+  upcoming: "bg-claimed-surface text-claimed border-claimed/30",
+  full: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  ended: "bg-stale-surface text-stale border-stale/30",
+};
+
+/**
+ * How many people said they would come.
+ *
+ * Without a stated total the count is still shown, because "ya somos ocho" is
+ * what makes the ninth person go. Zero says so in words rather than as a
+ * number: "0 apuntados" reads as a failed event, and "sé el primero" is the
+ * same fact pointed at the reader.
+ */
+export function slotsLabel(call: Pick<CallDTO, "slotsTotal" | "slotsTaken">) {
+  if (call.slotsTotal !== null) {
+    return `${call.slotsTaken} de ${call.slotsTotal} cupos`;
+  }
+  if (call.slotsTaken === 0) return "Sé la primera persona en apuntarte";
+  return call.slotsTaken === 1 ? "1 persona apuntada" : `${call.slotsTaken} personas apuntadas`;
+}
+
+/**
+ * When a shift is, written the way it is spoken in Colombia.
+ *
+ * Built from `formatToParts` with the period normalised, and that is not
+ * cosmetic: es-CO renders "p. m." with a narrow no-break space in the browser
+ * and an ordinary one in Node, so the same timestamp produces two different
+ * strings and React tears the tree down on hydration. Normalising both to "PM"
+ * makes the server and the client agree by construction.
+ */
+const bogotaClock = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+const bogotaCalendar = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+
+/** The civil date in Bogotá as YYYY-MM-DD, only ever compared to another one. */
+const bogotaDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Bogota",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function clock(at: Date): string {
+  const found = bogotaClock.formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    found.find((part) => part.type === type)?.value ?? "";
+
+  return `${get("hour")}:${get("minute")} ${get("dayPeriod")
+    .replace(/\s|\./g, "")
+    .toUpperCase()}`;
+}
+
+function day(at: Date, now: Date): string {
+  const today = bogotaDate.format(now);
+  const tomorrow = bogotaDate.format(new Date(now.getTime() + 86_400_000));
+  const target = bogotaDate.format(at);
+
+  if (target === today) return "Hoy";
+  if (target === tomorrow) return "Mañana";
+  return bogotaCalendar.format(at).replace(/\.$/, "");
+}
+
+/** "Hoy 8:00 AM – 12:00 PM". The day comes first because during an emergency
+ *  the wrong day is the mistake that costs someone a morning. */
+export function callWhen(
+  call: Pick<CallDTO, "startsAt" | "endsAt">,
+  now: Date = new Date(),
+): string {
+  const starts = new Date(call.startsAt);
+  const head = `${day(starts, now)} ${clock(starts)}`;
+  if (!call.endsAt) return head;
+  return `${head} – ${clock(new Date(call.endsAt))}`;
+}
+
+/** The jornadas block at the top of "Ayudar", and the card on the map. */
+export const CALL_LABEL = {
+  heading: "Jornadas",
+  headingHint: "Sitios y horas donde se necesitan manos",
+  empty:
+    "Todavía no hay jornadas convocadas. Si estás organizando una, publícala y la ciudad la ve hoy mismo.",
+  meetingPoint: "Punto de encuentro",
+  bring: "Lleva",
+  organiser: "Escribir al organizador",
+  directions: "Cómo llegar",
+  share: "Compartir",
+  ended: "Esta jornada ya terminó.",
+  endedHint: "Mira las que están abiertas ahora en el mapa.",
+  backToMap: "Ver el mapa",
+  countOne: "1 jornada",
+  countMany: (n: number) => `${n} jornadas`,
+} as const;
+
+/**
+ * "Quiero participar".
+ *
+ * The number is optional and the copy says why in the same breath, because a
+ * field that looks required and is not gets filled with a fake number, which is
+ * worse than a blank: the organiser then thinks they can reach that person.
+ */
+export const JOIN_LABEL = {
+  join: "Quiero participar",
+  joinTomorrow: "Apuntarme para mañana",
+  whatsapp: "Tu WhatsApp",
+  whatsappHint:
+    "Opcional. Solo lo ve quien convocó la jornada, y es como te avisa si se cancela o se cambia la hora.",
+  submit: "Apuntarme",
+  submitting: "Apuntando…",
+  joined: "Listo, quedaste apuntado",
+  joinedHint: "Llega al punto de encuentro a la hora. Si no puedes, avísale al organizador.",
+  already: "Ya estabas apuntado a esta jornada",
+  full: "Ya se llenaron los cupos",
+  failed: "No se pudo apuntar. Intenta otra vez.",
+  cancel: "Ahora no",
+  attendees: "Quién se apuntó",
+  attendeesHint:
+    "Solo tú ves esta lista, porque tú convocaste. Escríbeles antes de la hora.",
+  attendeesEmpty: "Todavía nadie se ha apuntado.",
+  noContact: "Sin número",
+  tomorrowTag: "Para mañana",
+} as const;
+
+/**
+ * The form that convenes a jornada.
+ *
+ * It is the only form in this app that ends at a sign-in wall, and the copy
+ * says why at that exact moment rather than as a rule at the door — see
+ * AUTH_LABEL.gateReason.
+ */
+export const CALL_FORM = {
+  title: "Convocar una jornada",
+  subtitle:
+    "Sale al mapa de una vez. Quien quiera ir se apunta con un toque y tú recibes sus contactos.",
+  category: "¿Qué se va a hacer?",
+  callTitle: "¿Cómo se llama la jornada?",
+  callTitlePlaceholder: "Limpieza de escombros en la calle 24",
+  description: "¿Qué hay que hacer?",
+  descriptionPlaceholder:
+    "Sacar escombros de dos casas y despejar el andén. Somos vecinos del barrio.",
+  barrio: "¿En qué barrio se encuentran?",
+  where: "Ajusta el punto de encuentro",
+  whereHint:
+    "El mapa ya está en el barrio. Arrastra unos metros hasta la esquina exacta.",
+  whereLocked: "Elige el barrio y el mapa se abre ahí.",
+  barrioRequired:
+    "Elige primero el barrio. Sin eso el punto de encuentro queda en el centro de la ciudad.",
+  meetingAddress: "¿Dónde exactamente se ven?",
+  meetingAddressPlaceholder: "Frente a la tienda, portería del conjunto…",
+  meetingAddressHint:
+    "Diez personas tienen que llegar al mismo sitio a la misma hora. La esquina importa.",
+  starts: "¿Cuándo empieza?",
+  ends: "¿A qué hora termina?",
+  endsHint: "Opcional. Si no lo pones, la jornada sale del mapa seis horas después de empezar.",
+  slots: "¿Cuánta gente necesitas?",
+  slotsHint: "Opcional. Déjalo vacío si entre más manos mejor.",
+  bring: "¿Qué hay que llevar?",
+  bringPlaceholder: "Guantes, pala, tapabocas, agua.",
+  whatsapp: "Tu WhatsApp",
+  whatsappHint:
+    "Opcional, y visible para todos: es para que te pregunten si la jornada sigue en pie.",
+  submit: "Publicar la jornada",
+  submitting: "Publicando…",
+  nearbyTitle: "Ya hay una jornada parecida",
+  nearbyBody:
+    "Está muy cerca y casi a la misma hora. Si es la misma, apúntate en vez de partir el grupo en dos.",
+  nearbyIgnore: "No es la misma, publicar igual",
+  failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
+} as const;
+
+/**
+ * The services section, which has no entity behind it yet.
+ *
+ * It is shown empty rather than hidden because the four sections are the shape
+ * of the product, and a navigation that changes shape between visits teaches
+ * nobody anything. The copy says what will be here and what to do meanwhile —
+ * it does not offer a form that would drop what someone typed.
+ */
+export const SERVICES_LABEL = {
+  title: "Servicios prestados",
+  empty:
+    "Aquí van los servicios que la gente presta: volqueta, carro, herramienta, bodega, transporte y hogar de paso.",
+  soon: "Todavía no está abierto para publicar.",
+  meanwhile:
+    "Mientras tanto, si tienes con qué ayudar, repórtalo en Ayudar y alguien lo verá hoy mismo.",
+  cta: "Ir a Ayudar",
+} as const;
+
+/**
+ * What each section says when it holds nothing yet.
+ *
+ * Never "no hay resultados": that reads as a broken app during an emergency,
+ * and it is also false. It says who fills this section and how, so an empty
+ * screen is an invitation instead of a dead end.
+ */
+export const SECTION_EMPTY: Record<TabId, string> = {
+  help: "Todavía nadie ha reportado dónde ayudar. Si sabes de un acopio o una jornada, repórtalo y sale al mapa de una vez.",
+  need: "Todavía no hay albergues ni puntos de censo publicados en el mapa.",
+  pets: ANIMAL_LABEL.empty,
+  services: SERVICES_LABEL.empty,
+};
+
+/**
+ * Picking the barrio in a report form.
+ *
+ * The wording never promises that this is where the point will be recorded —
+ * it says what it does, which is open the map there. What lands in the database
+ * is still decided by where the pin ends up, and copy that implied otherwise
+ * would be a promise the app does not keep.
+ */
+export const BARRIO_PICKER = {
+  locate: "El barrio donde estoy",
+  locating: "Buscando…",
+  locateDenied:
+    "No pudimos usar tu ubicación. Busca el barrio en la lista de abajo.",
+  locateFailed: "Tu teléfono no dio la ubicación. Búscalo en la lista.",
+  search: "Buscar el barrio",
+  empty: "Ningún barrio se llama así. Revisa cómo se escribe, o busca el de al lado.",
+  change: "Cambiar",
+  municipality: {
+    manizales: "Manizales",
+    villamaria: "Villamaría",
+  },
+} as const;
+
+/**
+ * The barrio outlines. The one context layer left after the move to sections:
+ * it answers "¿en qué barrio estoy?" at the same time as whatever else is on
+ * screen, which is why it is a toggle and not a section of its own.
+ *
+ * The hint names the source. During an emergency people compare what they see
+ * against what they know, and "official" is the word that settles an argument
+ * about where a border runs.
+ */
+export const BARRIO_TOGGLE = {
+  title: "Mostrar también",
+  label: "Barrios",
+  hint: "División oficial de la Alcaldía",
+  clear: "Quitar el filtro de barrio",
+} as const;
+
+/**
+ * The header the panel grows when a barrio is being filtered by.
+ *
+ * "En este barrio" and not "resultados": the reader tapped a place on a map,
+ * and the answer belongs to the place, not to a query. The empty line names
+ * what is missing rather than saying zero, because during an emergency an empty
+ * barrio usually means nobody has reported it yet — not that nothing is needed
+ * there, which is the reading that would send help elsewhere.
+ */
+export const BARRIO_PANEL = {
+  comuna: (id: string) => `Comuna ${Number(id)}`,
+  countOne: "1 punto en este barrio",
+  countMany: (n: number) => `${n} puntos en este barrio`,
+  empty: "Nadie ha reportado nada en este barrio todavía. Que esté vacío no quiere decir que no haga falta ayuda.",
+  clear: "Ver toda la ciudad",
+} as const;
+
+/**
+ * The Alcaldía's own phone lines, in the reference drawer.
+ *
+ * They are here because they answer something this map deliberately does not:
+ * a damaged house nobody has reported yet, and a missing person. Missing people
+ * are out of scope as a feature — we do not hold that data — but refusing to
+ * show the official number for it would be withholding the one useful thing we
+ * can say about it.
+ *
+ * `tel:` links: this is read on a phone, standing outside a cracked house.
+ */
+export const OFFICIAL_LINES = {
+  title: "Líneas oficiales",
+  hint: "Alcaldía de Manizales. Reporta solo lo que aún no hayas reportado.",
+  lines: [
+    {
+      number: "132",
+      dial: "132",
+      what: "Personas desaparecidas y daños estructurales sin reportar",
+    },
+    {
+      number: "320 263 8306",
+      dial: "+573202638306",
+      what: "Censo de daños en viviendas y establecimientos",
+    },
+  ],
 } as const;
 
 /** The list beside the map. The filter matches what is already loaded, so the

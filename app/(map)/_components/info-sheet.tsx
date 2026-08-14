@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Boxes, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,11 +12,10 @@ import {
 } from "@/components/ui/sheet";
 import type { SituationReportDTO } from "@/data/situation/situation.dto";
 import {
-  CONTEXT_LAYERS,
-  LAYER_LABEL,
-  type ContextLayer,
-} from "@/lib/layers";
-import { SITUATION_LABEL } from "@/lib/labels";
+  BARRIO_TOGGLE,
+  OFFICIAL_LINES,
+  SITUATION_LABEL,
+} from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { SituationCard } from "./situation-card";
@@ -29,18 +28,18 @@ import { SituationCard } from "./situation-card";
  * is also not something anyone consults every few seconds — it is context you
  * check once and carry. That belongs in a drawer.
  *
- * The context layer toggles moved in with it for the same reason: they are set
- * once and left alone, unlike the action layer, which is the actual steering
- * wheel and stays on the map.
+ * The barrio toggle moved in with it for the same reason: it is set once and
+ * left alone, unlike the section switcher, which is the actual steering wheel
+ * and stays on the map.
  */
 export function InfoSheet({
   report,
-  context,
-  onContextToggle,
+  showBarrios,
+  onBarriosChange,
 }: {
   report?: SituationReportDTO | null;
-  context: Set<ContextLayer>;
-  onContextToggle: (layer: ContextLayer) => void;
+  showBarrios: boolean;
+  onBarriosChange: (show: boolean) => void;
 }) {
   return (
     <Sheet>
@@ -82,47 +81,71 @@ export function InfoSheet({
 
           <div className="flex flex-col gap-2 border-t pt-4">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              {LAYER_LABEL.contextTitle}
+              {OFFICIAL_LINES.title}
             </p>
-            <div className="flex flex-col gap-1.5">
-              {(Object.keys(CONTEXT_LAYERS) as ContextLayer[]).map((layer) => {
-                const { label, hint, icon: Icon } = CONTEXT_LAYERS[layer];
-                const on = context.has(layer);
-
-                return (
-                  <button
-                    key={layer}
-                    type="button"
-                    onClick={() => onContextToggle(layer)}
-                    aria-pressed={on}
-                    className={cn(
-                      "focus-visible:ring-ring flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                      on ? "bg-accent border-primary" : "hover:bg-accent",
-                    )}
+            <ul className="flex flex-col gap-1.5">
+              {OFFICIAL_LINES.lines.map((line) => (
+                <li key={line.number}>
+                  <a
+                    href={`tel:${line.dial}`}
+                    className="hover:bg-accent focus-visible:ring-ring flex items-center gap-2.5 rounded-lg border p-2.5 focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <Icon
-                      className={cn(
-                        "size-4 shrink-0",
-                        on ? "text-foreground" : "text-muted-foreground",
-                      )}
+                    <Phone
+                      className="text-muted-foreground size-4 shrink-0"
                       aria-hidden
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{label}</span>
+                      <span className="block text-sm font-semibold tabular-nums">
+                        {line.number}
+                      </span>
                       <span className="text-muted-foreground block text-xs">
-                        {hint}
+                        {line.what}
                       </span>
                     </span>
-                    <span
-                      className={cn(
-                        "size-2 shrink-0 rounded-full",
-                        on ? "bg-resolved" : "bg-muted",
-                      )}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="text-muted-foreground text-xs">
+              {OFFICIAL_LINES.hint}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 border-t pt-4">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {BARRIO_TOGGLE.title}
+            </p>
+            <button
+              type="button"
+              onClick={() => onBarriosChange(!showBarrios)}
+              aria-pressed={showBarrios}
+              className={cn(
+                "focus-visible:ring-ring flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                showBarrios ? "bg-accent border-primary" : "hover:bg-accent",
+              )}
+            >
+              <Boxes
+                className={cn(
+                  "size-4 shrink-0",
+                  showBarrios ? "text-foreground" : "text-muted-foreground",
+                )}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">
+                  {BARRIO_TOGGLE.label}
+                </span>
+                <span className="text-muted-foreground block text-xs">
+                  {BARRIO_TOGGLE.hint}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  showBarrios ? "bg-resolved" : "bg-muted",
+                )}
+              />
+            </button>
           </div>
         </div>
       </SheetPopup>

@@ -95,7 +95,21 @@ export const createSiteSchema = z.object({
   type: siteTypeSchema,
   name: z.string().trim().min(3, "Escribe un nombre reconocible").max(120),
   description: z.string().trim().max(1000).optional(),
-  address: z.string().trim().max(200).optional(),
+  /**
+   * Required, unlike the column behind it.
+   *
+   * The form stopped asking people to find their own street on a map of the
+   * whole city, so the written reference is now what carries the precision the
+   * dragged pin used to. The column stays nullable on purpose: the rows already
+   * published do not all have one, and neither will the spreadsheets loaded
+   * over MCP. The demand belongs where the person who can answer it is
+   * standing, not on every row that will ever exist.
+   */
+  address: z
+    .string()
+    .trim()
+    .min(5, "Escribe la cuadra, la esquina o un punto de referencia")
+    .max(200),
   longitude: z.number().min(-76.2, OUT_OF_AREA).max(-74.8, OUT_OF_AREA),
   latitude: z.number().min(4.6, OUT_OF_AREA).max(5.6, OUT_OF_AREA),
   schedule: z.string().trim().max(120).optional(),

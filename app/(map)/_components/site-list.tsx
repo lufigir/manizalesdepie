@@ -35,12 +35,17 @@ export function SiteList({
   onQueryChange,
   selectedId,
   onSelect,
+  empty,
 }: {
   sites: SiteDTO[];
   query: string;
   onQueryChange: (value: string) => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** What to say when there is nothing to list. The section supplies it,
+   *  because "nobody has reported this yet" and "your filter matched nothing"
+   *  are different facts and only one of them is the reader's doing. */
+  empty: string;
 }) {
   const items = useRef(new Map<string, HTMLButtonElement>());
 
@@ -52,7 +57,7 @@ export function SiteList({
   }, [selectedId]);
 
   return (
-    <aside className="bg-background flex h-[38dvh] min-h-0 shrink-0 flex-col border-t md:h-auto md:w-80 md:border-t-0 md:border-l">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-col gap-2 border-b p-3">
         <div className="relative">
           <Search
@@ -76,8 +81,8 @@ export function SiteList({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {sites.length === 0 ? (
-          <p className="text-muted-foreground p-6 text-center text-sm">
-            {LIST_LABEL.empty}
+          <p className="text-muted-foreground p-6 text-center text-sm text-balance">
+            {query.trim() ? LIST_LABEL.empty : empty}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
@@ -149,6 +154,6 @@ export function SiteList({
           </ul>
         )}
       </div>
-    </aside>
+    </div>
   );
 }

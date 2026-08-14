@@ -3,12 +3,12 @@
  *
  * Done in the browser rather than in PostGIS because the polygons are already
  * loaded to draw the outlines, and the alternative is a round trip per hover.
- * The numbers involved are small — twelve comunas against however many pins are
- * on screen — so the naive algorithm is the right one.
+ * The numbers involved are small — ~140 barrios tested once per map move — so
+ * the naive algorithm is the right one.
  *
  * The test counts how many times a ray cast east from the point crosses the
  * ring: an odd count means inside. Points exactly on an edge are undefined by
- * this method and that is fine here; a pin sitting on a comuna border being
+ * this method and that is fine here; a point sitting on a barrio border being
  * attributed to either neighbour changes nothing anyone acts on.
  */
 
@@ -37,7 +37,7 @@ type Geometry =
   | { type: "MultiPolygon"; coordinates: Ring[][] };
 
 /** Whether a point falls inside a GeoJSON Polygon or MultiPolygon. Only outer
- *  rings are considered; the comuna boundaries carry no holes. */
+ *  rings are considered; the barrio boundaries carry no holes. */
 export function contains(
   geometry: Geometry,
   lon: number,

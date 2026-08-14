@@ -1,26 +1,15 @@
-import { AnimalDAL } from "@/data/animal/animal.dal";
-import { SiteDAL } from "@/data/site/site.dal";
-import { SituationDAL } from "@/data/situation/situation.dal";
+import { redirect } from "next/navigation";
 
-import { MapShell } from "./_components/map-shell";
+import { DEFAULT_TAB } from "@/lib/tabs";
 
 /**
- * The map is the product, so it is the root route.
+ * "/" is not a screen of its own; it is the question "¿qué vengo a hacer?"
+ * already answered with the most common reply.
  *
- * A Server Component: it reads through the DAL and hands plain data down. The
- * only client code on this page is the map island itself, because that is the
- * only part that needs interactivity.
+ * A redirect rather than rendering "Ayudar" here: two URLs showing the same
+ * thing means two things to keep in step, and a shared link should always name
+ * the section it opens.
  */
-export default async function MapPage() {
-  const [sites, animals, report] = await Promise.all([
-    SiteDAL.public().listPublished(),
-    AnimalDAL.public().listPublished(),
-    SituationDAL.public().latest(),
-  ]);
-
-  return (
-    <main className="h-dvh w-full overflow-hidden">
-      <MapShell sites={sites} animals={animals} report={report} />
-    </main>
-  );
+export default function MapPage() {
+  redirect(DEFAULT_TAB.href);
 }

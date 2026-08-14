@@ -3,7 +3,14 @@
 import { useEffect, useRef } from "react";
 
 import { useMap } from "@/components/ui/map";
-import type { SiteDTO } from "@/data/site/site.dto";
+
+/**
+ * Anything with a coordinate. Both of these care about where something is and
+ * about nothing else, so they take the coordinate rather than the entity — which
+ * is what lets one camera frame acopios and jornadas together instead of the
+ * map opening on half of what it draws.
+ */
+type Located = { longitude: number; latitude: number };
 
 /**
  * Camera control, lifted from mapcn's store-locator pattern: a component that
@@ -21,7 +28,7 @@ import type { SiteDTO } from "@/data/site/site.dto";
  * Whatever exists should fill the screen, whether that is five pins or two
  * hundred.
  */
-export function FitToSites({ sites }: { sites: SiteDTO[] }) {
+export function FitToSites({ sites }: { sites: Located[] }) {
   const { map } = useMap();
   const done = useRef(false);
 
@@ -53,7 +60,7 @@ export function FitToSites({ sites }: { sites: SiteDTO[] }) {
 }
 
 /** Flies to the selected pin so its card is never anchored off-screen. */
-export function FlyToSelected({ site }: { site: SiteDTO | null }) {
+export function FlyToSelected({ site }: { site: Located | null }) {
   const { map } = useMap();
 
   useEffect(() => {

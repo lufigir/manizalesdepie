@@ -1,28 +1,58 @@
 "use client";
 
 import { useCallback, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
 import { findNearbySites, proposeSite } from "@/data/site/site.actions";
-import { SITE_TYPES, type SiteType } from "@/data/site/site.dto";
-import { REPORT_LABEL, SITE_TYPE_ICON, SITE_TYPE_LABEL } from "@/lib/labels";
+import type { SiteType } from "@/data/site/site.dto";
+import {
+  REPORT_LABEL,
+  REPORT_SECTION,
+  SITE_TYPE_ICON,
+  SITE_TYPE_LABEL,
+} from "@/lib/labels";
+import { TAB_SITE_TYPES } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
 import { useDraft } from "@/app/_hooks/use-draft";
 
+import { BarrioPicker } from "./barrio-picker";
 import { PinPicker } from "./pin-picker";
 
-/** Central Manizales. Only where the picker opens; the reporter moves it. */
+/** Central Manizales. Only where the picker opens before a barrio is chosen. */
 const START: [number, number] = [-75.5074, 5.0631];
 
 type Nearby = { id: string; name: string; distanceM: number };
 
-export function ReportForm() {
+export function ReportForm({
+  section,
+  barrios,
+}: {
+  section: "help" | "need";
+  barrios: NeighborhoodDTO[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+
+  /**
+   * The barrio tapped on the main map, if the reporter came from there.
+   *
+   * It travels in the URL rather than in client state because the map lives in
+   * a different route: /reportar/ayudar?barrio=Chipre survives a reload, can be
+   * shared, and needs nothing shared between two trees.
+   */
+  const fromMap = useSearchParams().get("barrio");
+  const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(
+    () => barrios.find((option) => option.name === fromMap) ?? null,
+  );
+
+  // What this section is allowed to create, and what it calls the choice.
+  const types = TAB_SITE_TYPES[section];
+  const copy = REPORT_SECTION[section];
 
   /**
    * The whole form is a draft until it is published.
@@ -32,8 +62,10 @@ export function ReportForm() {
    * the groundwork for deferred sign-up — a form that survives leaving the page
    * is what lets the account be asked for at the end instead of at the door.
    */
-  const { value: draft, setValue: setDraft, clear } = useDraft("report:site", {
-    type: "collection_point" as SiteType,
+  // Keyed by section: a draft started in "Necesito" must never come back with
+  // a type that section cannot create.
+  const { value: draft, setValue: setDraft, clear } = useDraft(`report:site:${section}`, {
+    type: types[0] as SiteType,
     name: "",
     description: "",
     address: "",
@@ -59,6 +91,14 @@ export function ReportForm() {
 
   async function submit(formData: FormData, skipDuplicateCheck = false) {
     setError(null);
+
+    // Without a barrio the map was never re-framed, so the pin is still sitting
+    // on the city centre — a coordinate that looks deliberate and is not. Worse
+    // than an empty field: it would send someone to the wrong place.
+    if (!barrio) {
+      setError(REPORT_LABEL.barrioRequired);
+      return;
+    }
 
     // Duplicate detection at the moment of reporting, where it is cheap and
     // where a duplicate can still be turned into a confirmation instead.
@@ -93,11 +133,9 @@ export function ReportForm() {
       className="flex flex-col gap-5"
     >
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-semibold">
-          {REPORT_LABEL.kind}
-        </legend>
+        <legend className="mb-2 text-sm font-semibold">{copy.kind}</legend>
         <div className="flex flex-wrap gap-1.5">
-          {SITE_TYPES.map((option) => {
+          {types.map((option) => {
             const Icon = SITE_TYPE_ICON[option];
             const active = option === draft.type;
             return (
@@ -121,11 +159,35 @@ export function ReportForm() {
         </div>
       </fieldset>
 
+      {/* Barrio, then the written reference, then the map. That order is the
+          change: finding your own street on a map of the whole city was the
+          hard part, and naming the barrio is the easy version of the same
+          question. The map comes last because by then it is already framed. */}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-semibold">{REPORT_LABEL.barrio}</label>
+        <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
+      </div>
+
+      <Field label={REPORT_LABEL.address} hint={REPORT_LABEL.addressHint}>
+        <Input
+          name="address"
+          required
+          value={draft.address}
+          onChange={(e) => field("address")(e.target.value)}
+          placeholder={REPORT_LABEL.addressPlaceholder}
+        />
+      </Field>
+
       <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold">{REPORT_LABEL.where}</label>
-        <PinPicker center={START} onMove={handleMove} />
+        <PinPicker
+          center={START}
+          focusLongitude={barrio?.longitude ?? null}
+          focusLatitude={barrio?.latitude ?? null}
+          onMove={handleMove}
+        />
         <p className="text-muted-foreground text-xs">
-          {REPORT_LABEL.whereHint}
+          {barrio ? REPORT_LABEL.whereHint : REPORT_LABEL.whereLocked}
         </p>
       </div>
 
@@ -146,15 +208,6 @@ export function ReportForm() {
           value={draft.description}
           onChange={(e) => field("description")(e.target.value)}
           placeholder={REPORT_LABEL.descriptionPlaceholder}
-        />
-      </Field>
-
-      <Field label={REPORT_LABEL.address}>
-        <Input
-          name="address"
-          value={draft.address}
-          onChange={(e) => field("address")(e.target.value)}
-          placeholder={REPORT_LABEL.addressPlaceholder}
         />
       </Field>
 

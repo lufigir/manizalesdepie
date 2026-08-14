@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { AnimalDAL } from "@/data/animal/animal.dal";
+import { CallDAL } from "@/data/call/call.dal";
 import { SiteDAL } from "@/data/site/site.dal";
+import { SituationDAL } from "@/data/situation/situation.dal";
 import { clientEnv } from "@/lib/env";
 import { SITE_STATUS_LABEL, SITE_TYPE_LABEL, confidence } from "@/lib/labels";
+import { DEFAULT_TAB, SITE_TYPE_TAB } from "@/lib/tabs";
 
-import { MapShell } from "../../_components/map-shell";
+import { MapWorkspace } from "../../_components/map-workspace";
+import { SitePanel } from "../../_components/site-panel";
 
 /**
  * A shared pin.
@@ -58,22 +63,39 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedSitePage({ params }: Params) {
   const { id } = await params;
 
-  const [site, sites] = await Promise.all([
+  const [site, sites, calls, animals, report] = await Promise.all([
     SiteDAL.public().findById(id),
     SiteDAL.public().listPublished(),
+    CallDAL.public().listPublished(),
+    AnimalDAL.public().listPublished(),
+    SituationDAL.public().latest(),
   ]);
 
   if (!site) notFound();
 
   // The shared pin may be unpublished — a curator's link, say — in which case
-  // it is not in the list. Adding it keeps the sheet from opening onto nothing.
+  // it is not in the list. Adding it keeps the card from opening onto nothing.
   const withShared = sites.some((s) => s.id === site.id)
     ? sites
     : [site, ...sites];
 
+  // The section is a property of the pin that was shared, not of the route, so
+  // it is passed in rather than read off the URL. A type that belongs to no
+  // section still opens: the pin is the answer the link was sent to give.
+  const tab = SITE_TYPE_TAB[site.type] ?? DEFAULT_TAB.id;
+
   return (
     <main className="h-dvh w-full overflow-hidden">
-      <MapShell sites={withShared} initialSelectedId={site.id} />
+      <MapWorkspace
+        sites={withShared}
+        calls={calls}
+        animals={animals}
+        report={report}
+        initialSelectedId={site.id}
+        tab={tab}
+      >
+        <SitePanel />
+      </MapWorkspace>
     </main>
   );
 }
