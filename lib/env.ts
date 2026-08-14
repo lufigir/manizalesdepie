@@ -16,9 +16,6 @@ const clientSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   NEXT_PUBLIC_SITE_URL: z.url(),
-  /** Public WhatsApp line curators staff, shown across the whole app so that
-   *  affected people — who are not the ones using this app — have a way in. */
-  NEXT_PUBLIC_CURATOR_WHATSAPP: z.string().regex(/^\d{10,15}$/),
 });
 
 const parsedClient = clientSchema.safeParse({
@@ -26,7 +23,6 @@ const parsedClient = clientSchema.safeParse({
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  NEXT_PUBLIC_CURATOR_WHATSAPP: process.env.NEXT_PUBLIC_CURATOR_WHATSAPP,
 });
 
 if (!parsedClient.success) {
