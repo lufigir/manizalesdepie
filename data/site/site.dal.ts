@@ -66,6 +66,31 @@ export class SiteDAL {
   }
 
   /**
+   * One site, or null.
+   *
+   * This is what a shared link resolves to. It reads through the same
+   * session-bound client as the map, so a link to something unpublished is a
+   * 404 for a stranger and visible to a curator — the link carries no more
+   * authority than the person opening it.
+   */
+  async findById(id: string): Promise<SiteDTO | null> {
+    const supabase = await createServerSupabase();
+
+    const { data, error } = await supabase
+      .from("site_public")
+      .select("*, items:site_item(id, label, mode, priority)")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      log.error("site.findById failed", { code: error.code, siteId: id });
+      throw new Error("No se pudo cargar el punto");
+    }
+
+    return data ? this.toDTO(data) : null;
+  }
+
+  /**
    * Sites within `radiusMeters` of a point, nearest first. Backed by the
    * PostGIS `<->` operator against the GiST index.
    *
@@ -102,8 +127,13 @@ export class SiteDAL {
   }
 
   /**
-   * Proposes a site. It lands unpublished: a curator has to look at it before
-   * the city does.
+   * Reports a site. It is on the map immediately.
+   *
+   * It used to land unpublished behind a curator. That gate was removed on
+   * purpose: in a fast emergency the reviewer becomes the bottleneck and the
+   * information arrives after it was needed. What replaces it is confidence
+   * shown rather than enforced — a new report reads "sin confirmar" until
+   * people vouch for it, and a curator can still take it down.
    *
    * Order, in every mutation, without exception:
    *   1. validate input   2. authorize   3. mutate   4. validate output
@@ -125,7 +155,7 @@ export class SiteDAL {
         schedule: data.schedule ?? null,
         whatsapp: data.whatsapp ?? null,
         source_url: data.sourceUrl ?? null,
-        published: false,
+        published: true,
         created_by: this.user?.id ?? null,
       })
       .select("id")
@@ -183,7 +213,7 @@ export class SiteDAL {
   async confirmStatus(input: unknown): Promise<void> {
     const { id, status } = updateSiteStatusSchema.parse(input);
 
-    if (!canConfirmSite(this.user)) throw new Error("Forbidden");
+    if (!canConfirmSite()) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
     const now = new Date().toISOString();
@@ -206,7 +236,9 @@ export class SiteDAL {
       entity: "site",
       entity_id: id,
       result: status === "closed" ? "no_longer_valid" : "still_valid",
-      created_by: this.user!.id,
+      // Anonymous confirmations are the common case now, so the signature is
+      // optional. An unsigned row still counts; it just carries no name.
+      created_by: this.user?.id ?? null,
     });
   }
 
@@ -227,6 +259,7 @@ export class SiteDAL {
       whatsapp: row.whatsapp,
       sourceUrl: row.source_url,
       verified: row.verified,
+      confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
       expiresAt: row.expires_at,
       items: row.items ?? [],

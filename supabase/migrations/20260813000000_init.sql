@@ -315,6 +315,10 @@ $$;
 
 -- Duplicate detection at the moment of reporting, which is where it is cheap.
 -- The <-> operator uses the GiST index when it appears in an ORDER BY.
+--
+-- search_path is 'extensions', not '' as everywhere else: PostGIS is installed
+-- in that schema, and the geography cast and the <-> operator cannot be
+-- schema-qualified inline. Tables are still written out as public.<table>.
 create or replace function find_nearby_sites(
   lng          double precision,
   lat          double precision,
@@ -324,7 +328,7 @@ create or replace function find_nearby_sites(
 returns table (id uuid, name text, type site_type, distance_m double precision)
 language sql
 stable
-set search_path = ''
+set search_path = extensions, pg_temp
 as $$
   select s.id,
          s.name,
@@ -346,7 +350,7 @@ create or replace function find_nearby_work_orders(
 returns table (id uuid, description text, status work_order_status, distance_m double precision)
 language sql
 stable
-set search_path = ''
+set search_path = extensions, pg_temp
 as $$
   select w.id,
          w.description,

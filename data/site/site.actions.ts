@@ -28,8 +28,25 @@ export async function proposeSite(formData: FormData) {
     sourceUrl: formData.get("sourceUrl") || undefined,
   });
 
+  // Since publication is open, a proposal is on the map the moment it lands.
+  // Revalidating only /admin would have left the reporter staring at a map
+  // without the thing they just reported.
+  revalidatePath("/");
   revalidatePath("/admin");
   return { id };
+}
+
+/**
+ * What is already mapped near a point the reporter just placed.
+ *
+ * Called before creating anything, because duplication is the documented
+ * number-one cause of congestion in citizen-reporting platforms — and because a
+ * duplicate turned into a confirmation is worth more than either: it is what
+ * moves an existing pin from "sin confirmar" to "confirmado".
+ */
+export async function findNearbySites(longitude: number, latitude: number) {
+  const dal = SiteDAL.public();
+  return dal.findNearby(longitude, latitude, 120);
 }
 
 export async function confirmSiteStatus(id: string, status: string) {

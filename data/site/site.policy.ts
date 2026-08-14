@@ -28,11 +28,16 @@ export function canMergeSite(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
 
-/** Anyone signed in can say a site is still open, or full, or closed. This is
- *  the mechanism that keeps the map from rotting, so the bar is deliberately
- *  low: a false report costs one confirmation, an empty map costs the city. */
-export function canConfirmSite(user: CurrentUser | null): boolean {
-  return user !== null;
+/**
+ * Anyone at all can say a site is still open, or full, or closed — no account.
+ *
+ * Requiring a session here had the incentive backwards: the person standing in
+ * front of the closed shelter, on someone else's phone, is the least likely to
+ * have signed in, and they are the only one who actually knows. A false report
+ * costs one confirmation; a map nobody can correct costs the city.
+ */
+export function canConfirmSite(): boolean {
+  return true;
 }
 
 /** Editing the substance of a published site: the curator who owns the queue,
