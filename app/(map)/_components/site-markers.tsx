@@ -98,8 +98,11 @@ function SinglePin({
         </span>
       </MarkerContent>
       {/* Names the pin before committing to a tap. Cheap on desktop, ignored
-          on touch, and it makes a dense area readable. */}
-      <MarkerTooltip offset={20}>{site.name}</MarkerTooltip>
+          on touch, and it makes a dense area readable. Suppressed once
+          selected: a click never moves the cursor off the marker, so the
+          tooltip would otherwise sit on top of the popup card it just
+          opened. */}
+      {!selected && <MarkerTooltip offset={20}>{site.name}</MarkerTooltip>}
     </MapMarker>
   );
 }
@@ -297,7 +300,12 @@ function FannedCluster({
                 </span>
               </span>
             </MarkerContent>
-            <MarkerTooltip offset={20}>{site.name}</MarkerTooltip>
+            {/* Same suppression as the single pin: once this fanned member is
+                the selection, its own tooltip would collide with the popup
+                that opens right under the click. */}
+            {selectedId !== site.id && (
+              <MarkerTooltip offset={20}>{site.name}</MarkerTooltip>
+            )}
           </MapMarker>
         );
       })}

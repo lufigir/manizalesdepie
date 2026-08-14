@@ -67,10 +67,14 @@ export function CallMarkers({
             </MarkerContent>
             {/* The hour rides in the tooltip. For a shift it is half the
                 identity, and it saves a tap for the reader deciding between
-                two of them. */}
-            <MarkerTooltip offset={20}>
-              {call.title} · {callWhen(call)}
-            </MarkerTooltip>
+                two of them. Suppressed once selected, same reason as the
+                site pins: the popup opens right under a cursor that never
+                left the marker. */}
+            {selectedId !== call.id && (
+              <MarkerTooltip offset={20}>
+                {call.title} · {callWhen(call)}
+              </MarkerTooltip>
+            )}
           </MapMarker>
         );
       })}
