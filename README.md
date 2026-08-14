@@ -25,15 +25,11 @@ cp .env.example .env.local     # then fill it in — see below
 
 ### 1. Supabase project
 
-> **Blocked as of 13 Aug 2026.** No project exists yet. The `astrxnomo` account
-> is at the free-tier ceiling of two active projects, both in the *Centro de
-> Prototipado* org: `vicerrectoria-app` and `Inventario Inteligente`, both
-> `ACTIVE_HEALTHY`. To unblock, either pause one of those (data survives a
-> pause) or create this project under a different Supabase account. Do not
-> delete either one; that decision is not the next session's to make.
+The project exists: `manizales-de-pie` (ref `lriozoktdpkggzywimek`, region
+`us-east-1`), in the **Felipe Giraldo** org — not *Centro de Prototipado*, which
+is at the free-tier ceiling of two active projects.
 
-Create one at [supabase.com](https://supabase.com) (free tier is enough to
-start). From **Project Settings → API**, copy into `.env.local`:
+From **Project Settings → API**, copy into `.env.local`:
 
 | Variable | Where it comes from |
 |---|---|
