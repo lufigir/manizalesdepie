@@ -21,6 +21,35 @@ export function canCreateCall(user: CurrentUser | null): boolean {
 }
 
 /**
+ * The informal path never asks for an account, on purpose.
+ *
+ * `canCreateCall` gates on identity because a real organiser collects other
+ * people's phone numbers. This path collects none — no attendance, no
+ * organiser's WhatsApp, nothing but a pin and a category — so it carries none
+ * of the reason the gate exists. It follows `canProposeSite`, not its
+ * sibling above: this is a sighting, not a commitment.
+ */
+export function canCreateInformalCall(): boolean {
+  return true;
+}
+
+/**
+ * Anyone may move an informal pin — never a formal one.
+ *
+ * A formal jornada's meeting point is part of what its organiser committed
+ * to; letting a stranger drag it would undo the one thing an account was
+ * asked for in the first place. An informal pin has no organiser to
+ * contradict, so the same openness that let anyone create it lets anyone
+ * correct it — this is a wiki entry, not somebody's word. `raw.title` is the
+ * signal because it is the DB-level fact `informal` is derived from (see
+ * `CallDAL.toDTO`); by the time a `CallDTO` reaches here it never carries
+ * null, so this checks the row itself, not the DTO.
+ */
+export function canRelocateInformalCall(call: { title: string | null }): boolean {
+  return call.title === null;
+}
+
+/**
  * Signing up requires nothing at all — not even the phone number.
  *
  * Deliberately asymmetric with the rule above. Requiring an account to show up

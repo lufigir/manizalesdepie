@@ -1,8 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clock, MapPin, Navigation, Share2, Users } from "lucide-react";
+import { Check, ChevronRight, Clock, MapPin, Navigation, Share2, Users } from "lucide-react";
 
+import {
+  Sheet,
+  SheetHeader,
+  SheetPanel,
+  SheetPopup,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import type { CallDTO } from "@/data/call/call.dto";
 import {
   CALL_CATEGORY_ICON,
@@ -12,6 +20,7 @@ import {
   CALL_STATE_MARKER,
   CALL_STATE_STYLE,
   CONFIDENCE_BADGE,
+  SHEET_LABEL,
   callState,
   callWhen,
   confidence,
@@ -20,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { JoinCall } from "./join-call";
+import { RelocateCall } from "./relocate-call";
 
 /**
  * The card that opens on a jornada's pin.
@@ -58,7 +68,7 @@ export function CallPopup({ call }: { call: CallDTO }) {
   }
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       <header className="flex items-start gap-2">
         <span
           className={cn(
@@ -97,18 +107,22 @@ export function CallPopup({ call }: { call: CallDTO }) {
         </span>
       </div>
 
-      {/* The hour first, and in its own line with an icon. It is the field that
-          distinguishes a jornada from every other pin on this map. */}
-      <p className="flex items-center gap-1.5 text-xs font-semibold">
-        <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-        {callWhen(call)}
-      </p>
-
-      <p className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
-        <Users className="size-3.5 shrink-0" aria-hidden />
-        {slotsLabel(call)}
-        {call.neighborhood && ` · ${call.neighborhood}`}
-      </p>
+      {/* The hour and the headcount used to be two stacked lines; on a
+          popup that already has 6+ blocks, that's a full row of height for
+          two short facts that fit side by side. Wraps back to two lines on
+          its own if the strings run long, so nothing is lost on a narrow
+          screen — just not spent by default. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+        <span className="flex items-center gap-1.5 text-xs font-semibold">
+          <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+          {callWhen(call)}
+        </span>
+        <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
+          <Users className="size-3.5 shrink-0" aria-hidden />
+          {slotsLabel(call)}
+          {call.neighborhood && ` · ${call.neighborhood}`}
+        </span>
+      </div>
 
       {call.meetingAddress && (
         <p className="text-muted-foreground flex items-start gap-1.5 text-[0.7rem] leading-snug">
@@ -118,7 +132,52 @@ export function CallPopup({ call }: { call: CallDTO }) {
       )}
 
       {call.description && (
-        <p className="text-[0.75rem] leading-snug">{call.description}</p>
+        <p className="flex items-start gap-1 text-[0.75rem] leading-snug">
+          {/* Clamped rather than shown in full: a long description was the
+              exact thing that pushed this card past the phone's popup cap
+              and off screen. The full text is one tap away, not gone. */}
+          <span className="line-clamp-2">{call.description}</span>
+
+          <Sheet>
+            <SheetTrigger
+              render={
+                <button
+                  type="button"
+                  className="text-primary inline-flex shrink-0 items-center gap-0.5 font-semibold"
+                />
+              }
+            >
+              {SHEET_LABEL.moreInfo}
+              <ChevronRight className="size-3" aria-hidden />
+            </SheetTrigger>
+
+            {/* Lateral, matching the site popup's "ver más": the map stays
+                visible next to the sheet instead of disappearing under it. */}
+            <SheetPopup side="right">
+              <SheetHeader>
+                <SheetTitle className="text-base">{call.title}</SheetTitle>
+              </SheetHeader>
+              <SheetPanel className="flex flex-col gap-4 text-sm">
+                {call.meetingAddress && (
+                  <div>
+                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {CALL_LABEL.meetingPoint}
+                    </p>
+                    <p>{call.meetingAddress}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                    {SHEET_LABEL.description}
+                  </p>
+                  <p className="leading-snug whitespace-pre-line">
+                    {call.description}
+                  </p>
+                </div>
+              </SheetPanel>
+            </SheetPopup>
+          </Sheet>
+        </p>
       )}
 
       {/* What to bring sits above the buttons on purpose. Gloves and a shovel
@@ -136,6 +195,7 @@ export function CallPopup({ call }: { call: CallDTO }) {
       )}
 
       <JoinCall call={call} />
+      <RelocateCall call={call} />
 
       <div className="flex gap-1.5">
         <a
@@ -161,7 +221,7 @@ export function CallPopup({ call }: { call: CallDTO }) {
           type="button"
           onClick={share}
           aria-label={CALL_LABEL.share}
-          className="bg-secondary text-secondary-foreground flex items-center justify-center rounded-md px-2 py-2"
+          className="bg-secondary text-secondary-foreground flex items-center justify-center rounded-md px-3.5 py-2"
         >
           {copied ? (
             <Check className="size-3.5" aria-hidden />

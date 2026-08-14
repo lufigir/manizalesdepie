@@ -39,6 +39,36 @@ export async function conveneCall(formData: FormData) {
   return { id };
 }
 
+/** "Alguien ya se está juntando aquí." No account, no title, no hour. */
+export async function gatherInformalCall(input: {
+  category: string;
+  description?: string;
+  longitude: number;
+  latitude: number;
+  meetingAddress?: string;
+}) {
+  const dal = await CallDAL.create();
+  const { id } = await dal.gather(input);
+
+  revalidatePath("/ayudar");
+  revalidatePath("/admin");
+  return { id };
+}
+
+/** "Sigue por aquí, no allá." No account. Only moves within the pin's own
+ *  barrio — see `CallDAL.relocateInformal`. */
+export async function relocateInformalCall(input: {
+  callId: string;
+  longitude: number;
+  latitude: number;
+}) {
+  const dal = CallDAL.public();
+  await dal.relocateInformal(input);
+
+  revalidatePath("/ayudar");
+  return { ok: true };
+}
+
 /**
  * What is already convened near a point AND near an hour.
  *

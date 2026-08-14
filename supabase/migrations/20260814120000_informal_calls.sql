@@ -1,0 +1,15 @@
+-- Informal convocatorias: someone noticed a group already forming in a barrio
+-- and wants to put a pin on it, without organising anything themselves.
+--
+-- The account requirement on `volunteer_call` exists because a real organiser
+-- collects other people's phone numbers during a curfew (see call.policy.ts).
+-- An informal pin does neither of those things — nobody signs up to it in the
+-- sense the attendance flow means, it is closer to a site report: "this is
+-- happening here", anonymous, no promises. So it follows `site.propose`'s
+-- rule, not `call.convene`'s.
+--
+-- `title` is the only column that has to give: a spontaneous gathering has no
+-- name. Everything else it needs already accepts what an anonymous pin can
+-- supply — `starts_at` is stamped with `now()` by the DAL rather than left
+-- null, so no other constraint changes.
+alter table volunteer_call alter column title drop not null;

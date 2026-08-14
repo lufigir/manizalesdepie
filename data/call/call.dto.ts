@@ -28,6 +28,11 @@ export type CallCategory = z.infer<typeof callCategorySchema>;
 export const callSchema = z.object({
   id: z.uuid(),
   title: z.string(),
+  /** True when this came from `CallDAL.gather` — no title was given, so one
+   *  was synthesised (see `title` above). Readers use this to know that
+   *  `startsAt` is the moment someone reported it, not a scheduled hour, and
+   *  say so instead of printing a clock time nobody chose. */
+  informal: z.boolean(),
   category: callCategorySchema,
   description: z.string().nullable(),
   longitude: z.number(),
@@ -103,6 +108,48 @@ export const createCallSchema = z
   );
 
 export type CreateCallInput = z.infer<typeof createCallSchema>;
+
+/**
+ * "Alguien ya se está juntando aquí" — the informal version.
+ *
+ * Not a shorter form of `createCallSchema`, a different promise. A formal
+ * jornada is a commitment someone made and other people are trusting; this is
+ * a sighting. No title (there is often no name for it yet), no hour (see
+ * `CallDAL.gather` — it is stamped "starting now" and left to expire at the
+ * end of the day on its own), no slots, no organiser's WhatsApp — there is no
+ * organiser. `canCreateInformalCall` in call.policy.ts is the reason: this
+ * path never asks for an account, so it can never collect a phone number
+ * beyond what an anonymous reporter chooses to type into `description`.
+ */
+export const createInformalCallSchema = z.object({
+  category: callCategorySchema,
+  description: z.string().trim().max(500).optional(),
+  longitude: z.number().min(-76.2, OUT_OF_AREA).max(-74.8, OUT_OF_AREA),
+  latitude: z.number().min(4.6, OUT_OF_AREA).max(5.6, OUT_OF_AREA),
+  meetingAddress: z.string().trim().max(200).optional(),
+});
+
+export type CreateInformalCallInput = z.infer<
+  typeof createInformalCallSchema
+>;
+
+/**
+ * "Sigue por aquí, no allá" — moving an informal pin after the fact.
+ *
+ * No account either, same reasoning as `createInformalCallSchema`: nobody is
+ * trusting a named organiser, so there is no one whose permission this needs
+ * beyond "is this actually the informal kind" — checked in the DAL, not
+ * here, because it requires a row to check against.
+ */
+export const relocateInformalCallSchema = z.object({
+  callId: z.uuid(),
+  longitude: z.number().min(-76.2, OUT_OF_AREA).max(-74.8, OUT_OF_AREA),
+  latitude: z.number().min(4.6, OUT_OF_AREA).max(5.6, OUT_OF_AREA),
+});
+
+export type RelocateInformalCallInput = z.infer<
+  typeof relocateInformalCallSchema
+>;
 
 /**
  * "Quiero participar", in full.

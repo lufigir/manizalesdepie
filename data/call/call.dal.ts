@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getCurrentUser, type CurrentUser } from "@/data/user/require-user";
+import { CALL_CATEGORY_LABEL } from "@/lib/labels";
 import { log } from "@/lib/log";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -9,13 +10,18 @@ import {
   attendeeSchema,
   callSchema,
   createCallSchema,
+  createInformalCallSchema,
   joinCallSchema,
+  relocateInformalCallSchema,
   type AttendeeDTO,
+  type CallCategory,
   type CallDTO,
 } from "./call.dto";
 import {
   canCreateCall,
+  canCreateInformalCall,
   canJoinCall,
+  canRelocateInformalCall,
   canSeeAttendees,
   canVerifyCall,
 } from "./call.policy";
@@ -199,6 +205,129 @@ export class CallDAL {
   }
 
   /**
+   * "Alguien ya se está juntando aquí." No account, no title, no hour —
+   * see `createInformalCallSchema`. Anonymous the way `SiteDAL.propose` is:
+   * if the caller happens to have a session, `created_by` still records it
+   * (nice to have, never required), which is why this resolves the user the
+   * same way `convene` does instead of skipping straight to the write.
+   */
+  async gather(input: unknown): Promise<{ id: string }> {
+    const data = createInformalCallSchema.parse(input);
+
+    if (!canCreateInformalCall()) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const now = new Date();
+
+    const { data: row, error } = await supabase
+      .from("volunteer_call")
+      .insert({
+        title: null,
+        category: data.category,
+        description: data.description ?? null,
+        meeting_point: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
+        meeting_address: data.meetingAddress ?? null,
+        // "Empezó ahora" rather than asked for — there is no hour to state,
+        // the group is already there. `callState` reads this against
+        // `expires_at` below, so this alone is enough to show "En curso".
+        starts_at: now.toISOString(),
+        published: true,
+        // No stated end, and DEFAULT_SHIFT_HOURS (six) does not fit a
+        // gathering nobody is running: it turns off with the day instead, at
+        // Bogotá midnight, whichever hour it was reported.
+        expires_at: endOfDayBogota(now),
+        created_by: this.user?.id ?? null,
+      })
+      .select("id")
+      .single();
+
+    if (error || !row) {
+      log.error("call.gather failed", { code: error?.code });
+      throw new Error("No se pudo publicar la convocatoria");
+    }
+
+    log.info("informal call gathered", {
+      callId: row.id,
+      byUser: this.user?.id ?? "anon",
+    });
+    return { id: row.id };
+  }
+
+  /**
+   * Moves an informal pin. Anyone; never a formal jornada — see
+   * `canRelocateInformalCall`.
+   *
+   * There is no `neighborhood_at` RPC call here on purpose: that function is
+   * revoked from every role except the trigger itself (security definer),
+   * deliberately, so application code has no direct line to it (see the
+   * comment on `neighborhood_at` in 20260814080000_neighborhood_boundaries.sql
+   * — "there is no surface here to abuse"). Respecting that means asking the
+   * question the trigger already answers instead of opening a second door to
+   * it: write the new point, let `volunteer_call_sets_neighborhood` recompute
+   * `neighborhood_id` the same way it does for every other write, and revert
+   * if the barrio it lands in is not the one it started in.
+   */
+  async relocateInformal(input: unknown): Promise<void> {
+    const data = relocateInformalCallSchema.parse(input);
+
+    const supabase = createAdminSupabase();
+
+    const { data: before, error: fetchError } = await supabase
+      .from("volunteer_call")
+      .select("title, neighborhood_id, meeting_point")
+      .eq("id", data.callId)
+      .maybeSingle();
+
+    if (fetchError || !before) {
+      log.error("call.relocateInformal lookup failed", {
+        code: fetchError?.code,
+        callId: data.callId,
+      });
+      throw new Error("No se encontró la convocatoria");
+    }
+
+    if (!canRelocateInformalCall(before)) {
+      throw new Error(
+        "Solo el punto de una convocatoria informal se puede reubicar así",
+      );
+    }
+
+    const { data: after, error: updateError } = await supabase
+      .from("volunteer_call")
+      .update({
+        meeting_point: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
+      })
+      .eq("id", data.callId)
+      .select("neighborhood_id")
+      .single();
+
+    if (updateError || !after) {
+      log.error("call.relocateInformal update failed", {
+        code: updateError?.code,
+        callId: data.callId,
+      });
+      throw new Error("No se pudo mover el punto");
+    }
+
+    if (after.neighborhood_id !== before.neighborhood_id) {
+      // The point moved out of its own barrio. Put it back rather than
+      // leave the row briefly wrong for the next reader — `meeting_point`
+      // round-trips through its own EWKB text, so the value PostgREST just
+      // handed back is valid input again.
+      await supabase
+        .from("volunteer_call")
+        .update({ meeting_point: before.meeting_point })
+        .eq("id", data.callId);
+
+      throw new Error(
+        "Ese punto queda en otro barrio. Solo se puede mover dentro del mismo barrio.",
+      );
+    }
+
+    log.info("informal call relocated", { callId: data.callId });
+  }
+
+  /**
    * "Quiero participar". No account, one optional field.
    *
    * The unique index only covers signed-in volunteers, so `alreadyJoined` is
@@ -302,7 +431,18 @@ export class CallDAL {
   private toDTO(row: Record<string, unknown>): CallDTO {
     return callSchema.parse({
       id: row.id,
-      title: row.title,
+      // Null only for an informal gathering — see `gather`. The DTO's title
+      // stays a plain string on purpose: every reader of a call (the popup,
+      // the list, the share text) already assumes one, and a synthesised
+      // "Escombros en Chipre" is a better title for those readers than
+      // teaching every one of them to handle null.
+      title:
+        row.title ??
+        fallbackTitle(
+          row.category as CallCategory,
+          row.neighborhood as string | null,
+        ),
+      informal: row.title === null,
       category: row.category,
       description: row.description,
       longitude: row.longitude,
@@ -331,4 +471,36 @@ function expiryOf(startsAt: string, endsAt?: string): string {
   return new Date(
     new Date(startsAt).getTime() + DEFAULT_SHIFT_HOURS * 60 * 60 * 1000,
   ).toISOString();
+}
+
+const bogotaCalendarDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Bogota",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * 23:59:59 in Bogotá, expressed as the UTC instant it actually is.
+ *
+ * Bogotá carries no DST and sits at a fixed UTC-5, so "23:59 local" is always
+ * "04:59 UTC the next calendar day" — `Date.UTC` normalises the day rollover
+ * on its own when the hour is given as 28 rather than 4.
+ */
+function endOfDayBogota(now: Date): string {
+  const [year, month, day] = bogotaCalendarDate.format(now).split("-").map(Number);
+  return new Date(
+    Date.UTC(year, month - 1, day, 23 + 5, 59, 59),
+  ).toISOString();
+}
+
+/** A spontaneous gathering has no name to give it. "Escombros en Chipre" is
+ *  what the category and the barrio already say without asking anyone. */
+function fallbackTitle(
+  category: CallCategory,
+  neighborhood: string | null,
+): string {
+  return neighborhood
+    ? `${CALL_CATEGORY_LABEL[category]} en ${neighborhood}`
+    : CALL_CATEGORY_LABEL[category];
 }
