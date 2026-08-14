@@ -58,7 +58,7 @@ export function SiteList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-col gap-2 border-b p-3">
+      <div className="flex flex-col gap-1.5 border-b p-2">
         <div className="relative">
           <Search
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
@@ -79,13 +79,13 @@ export function SiteList({
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {sites.length === 0 ? (
           <p className="text-muted-foreground p-6 text-center text-sm text-balance">
             {query.trim() ? LIST_LABEL.empty : empty}
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {sites.map((site) => {
               const active = site.id === selectedId;
               const Icon = SITE_TYPE_ICON[site.type];
@@ -94,6 +94,16 @@ export function SiteList({
 
               return (
                 <li key={site.id}>
+                  {/* One line for the name, one for everything else. The type
+                      used to have its own line above the name — the icon and
+                      the marker's colour already say what this is (the map's
+                      own "icono = tipo" rule), so the word was the third way
+                      of saying it. Folded into the meta line instead of cut,
+                      since it is still the fastest way to scan the list with
+                      a screen reader. The name truncates rather than wraps:
+                      a 3-line name was the single biggest thing making this
+                      list tall, and the full name is a tap (or a hover,
+                      title=) away either way. */}
                   <button
                     type="button"
                     ref={(el) => {
@@ -102,12 +112,13 @@ export function SiteList({
                     }}
                     onClick={() => onSelect(site.id)}
                     aria-current={active}
+                    title={site.name}
                     className={cn(
-                      "hover:bg-accent focus-visible:ring-ring w-full rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                      "hover:bg-accent focus-visible:ring-ring w-full rounded-lg border p-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
                       active ? "bg-accent border-primary" : "border-transparent",
                     )}
                   >
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-center gap-2">
                       <span
                         className={cn(
                           "flex size-6 shrink-0 items-center justify-center rounded-full",
@@ -120,14 +131,9 @@ export function SiteList({
                           aria-hidden
                         />
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                          {SITE_TYPE_LABEL[site.type]}
-                        </p>
-                        <p className="text-sm leading-tight font-semibold text-balance">
-                          {site.name}
-                        </p>
-                      </div>
+                      <p className="min-w-0 flex-1 truncate text-sm leading-tight font-semibold">
+                        {site.name}
+                      </p>
                       <span
                         className={cn(
                           "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
@@ -140,11 +146,12 @@ export function SiteList({
 
                     <p
                       className={cn(
-                        "mt-1 text-[0.7rem]",
+                        "mt-0.5 truncate pl-8 text-[0.7rem]",
                         stale ? "text-claimed" : "text-muted-foreground",
                       )}
                     >
-                      {freshLabel} · {confidenceLabel}
+                      {SITE_TYPE_LABEL[site.type]} · {freshLabel} ·{" "}
+                      {confidenceLabel}
                       {site.neighborhood && ` · ${site.neighborhood}`}
                     </p>
                   </button>

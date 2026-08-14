@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FilterSpecification } from "maplibre-gl";
 
 import { MapGeoJSON, useMap } from "@/components/ui/map";
 import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
@@ -291,21 +292,46 @@ export function BarrioLayer({
      * barrio is being filtered by. Two sets of names on one map is just noise,
      * so the basemap's are hidden while ours are on, and restored on the way
      * out — the style belongs to the map, not to this component.
+     *
+     * This has to key off the OpenMapTiles `class` property, not the layer id:
+     * CARTO's own style buckets `class: "neighbourhood"` into a layer called
+     * `place_hamlet`, shared with `class: "hamlet"` (an actual small rural
+     * settlement, not a barrio). Matching the id against /neighbourhood/ never
+     * matched that layer at all — the id itself says nothing about which
+     * classes it draws. Patching the filter on every symbol layer sourced from
+     * `place` is the only way to remove exactly the classes that mean "barrio"
+     * without also removing classes that share their layer by coincidence.
      */
-    const hidden: string[] = [];
+    const patched: { id: string; filter: FilterSpecification | null }[] = [];
+    const BARRIO_LIKE_CLASSES = ["suburb", "neighbourhood", "quarter"];
 
     const hideBasemapNames = () => {
       for (const layer of map.getStyle()?.layers ?? []) {
-        if (layer.type !== "symbol") continue;
-        if (!/suburb|neighbou?rhood|quarter/i.test(layer.id)) continue;
-        if (map.getLayoutProperty(layer.id, "visibility") === "none") continue;
+        if (layer.type !== "symbol" || layer["source-layer"] !== "place") continue;
+        if (patched.some((p) => p.id === layer.id)) continue;
 
-        map.setLayoutProperty(layer.id, "visibility", "none");
-        hidden.push(layer.id);
+        const original = (layer.filter as FilterSpecification | undefined) ?? null;
+        patched.push({ id: layer.id, filter: original });
+        map.setFilter(layer.id, [
+          "all",
+          ...(original ? [original] : []),
+          ["!in", "class", ...BARRIO_LIKE_CLASSES],
+        ] as FilterSpecification);
       }
     };
 
     const add = () => {
+      /**
+       * `<Map>` renders children as soon as the MapLibre instance exists
+       * (`{mapInstance && children}` — it does not wait for the style),
+       * so this can run before the style has finished loading. Every
+       * style-mutating call below throws "Style is not done loading" in
+       * that window. Bailing out here is safe: "styledata" keeps firing
+       * while the style loads, and `add` is bound to it below, so this
+       * retries on its own the moment the style is actually ready.
+       */
+      if (!map.isStyleLoaded()) return;
+
       hideBasemapNames();
       if (map.getLayer(layerId)) return;
 
@@ -376,8 +402,8 @@ export function BarrioLayer({
       if (map.getLayer(layerId)) map.removeLayer(layerId);
       if (map.getSource(sourceId)) map.removeSource(sourceId);
 
-      for (const id of hidden) {
-        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "visible");
+      for (const { id, filter } of patched) {
+        if (map.getLayer(id)) map.setFilter(id, filter);
       }
     };
   }, [map, data, border, halo]);
@@ -463,9 +489,14 @@ export function BarrioLayer({
         linePaint={{
           "line-color": border,
           "line-width": selected
-            ? ["case", ["==", ["get", "name"], selected], 2.5, 1.2]
-            : 1.5,
-          "line-opacity": 0.28,
+            ? ["case", ["==", ["get", "name"], selected], 2.5, 1.4]
+            : 1.75,
+          // Raised from 0.28: against the dark basemap — the one most
+          // people actually see this on — a near-white line at that
+          // opacity read as barely stronger than the basemap's own road
+          // lines. The fill stays deliberately faint (see above); the line
+          // is the one thing that has to read as a boundary on its own.
+          "line-opacity": 0.42,
           "line-dasharray": [3, 2],
         }}
         onClick={handleClick}

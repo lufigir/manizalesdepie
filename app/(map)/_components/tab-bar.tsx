@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { TABS, type TabId } from "@/lib/tabs";
+import { TABS, tabDef, type TabId } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,45 +28,58 @@ export function TabBar({
   counts: Record<TabId, number>;
 }) {
   return (
-    <nav
-      aria-label="Secciones"
-      className="pointer-events-auto no-scrollbar flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border bg-background/95 p-1 shadow-lg backdrop-blur-md sm:w-max"
-    >
-      {TABS.map(({ id, href, label, hint, icon: Icon }) => {
-        const current = id === active;
-        const count = counts[id];
+    <div className="pointer-events-auto flex flex-col items-start gap-1">
+      <nav
+        aria-label="Secciones"
+        className="no-scrollbar flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border bg-background/95 p-1 shadow-lg backdrop-blur-md sm:w-max"
+      >
+        {TABS.map(({ id, href, label, hint, icon: Icon }) => {
+          const current = id === active;
+          const count = counts[id];
 
-        return (
-          <Link
-            key={id}
-            href={href}
-            aria-current={current ? "page" : undefined}
-            title={hint}
-            className={cn(
-              "focus-visible:ring-ring flex h-10 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-              current
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-foreground hover:bg-accent",
-              // An empty section is dimmed but never hidden: knowing that
-              // nobody has reported animals yet is information.
-              !current && count === 0 && "text-muted-foreground",
-            )}
-          >
-            <Icon className="size-4" aria-hidden />
-            {label}
-            <span
+          return (
+            <Link
+              key={id}
+              href={href}
+              aria-current={current ? "page" : undefined}
+              title={hint}
               className={cn(
-                "rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none tabular-nums",
+                "focus-visible:ring-ring flex h-10 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                 current
-                  ? "bg-primary-foreground/20"
-                  : "bg-muted text-muted-foreground",
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-foreground hover:bg-accent",
+                // An empty section is dimmed but never hidden: knowing that
+                // nobody has reported animals yet is information.
+                !current && count === 0 && "text-muted-foreground",
               )}
             >
-              {count}
-            </span>
-          </Link>
-        );
-      })}
-    </nav>
+              <Icon className="size-4" aria-hidden />
+              {label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none tabular-nums",
+                  current
+                    ? "bg-primary-foreground/20"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                {count}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* A per-pill subtitle measured wider than a 390px phone — two tabs
+          filled the screen and the other two scrolled off with no hint they
+          existed. One caption for whichever section is open fits any width,
+          and it is also the more useful version of the idea: the preview
+          matters most for the section already open, not the ones it isn't
+          on. A tooltip said the same thing before, but only where a hover
+          exists, which a phone does not have. */}
+      <p className="text-muted-foreground max-w-full truncate rounded-md bg-background/95 px-2 py-0.5 text-[0.65rem] shadow-sm backdrop-blur-md">
+        {tabDef(active).subtitle}
+      </p>
+    </div>
   );
 }

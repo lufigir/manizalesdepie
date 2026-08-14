@@ -67,7 +67,7 @@ export function CallList({
         </p>
       </header>
 
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-col gap-0.5">
         {calls.map((call) => {
           const active = call.id === selectedId;
           const state = callState(call);
@@ -83,12 +83,13 @@ export function CallList({
                 }}
                 onClick={() => onSelect(call.id)}
                 aria-current={active}
+                title={call.title}
                 className={cn(
-                  "hover:bg-accent focus-visible:ring-ring w-full rounded-lg border p-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                  "hover:bg-accent focus-visible:ring-ring w-full rounded-lg border p-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   active ? "bg-accent border-primary" : "border-transparent",
                 )}
               >
-                <div className="flex items-start gap-2">
+                <div className="flex items-center gap-2">
                   <span
                     className={cn(
                       "flex size-6 shrink-0 items-center justify-center rounded-md",
@@ -97,14 +98,9 @@ export function CallList({
                   >
                     <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                      {CALL_CATEGORY_LABEL[call.category]}
-                    </p>
-                    <p className="text-sm leading-tight font-semibold text-balance">
-                      {call.title}
-                    </p>
-                  </div>
+                  <p className="min-w-0 flex-1 truncate text-sm leading-tight font-semibold">
+                    {call.title}
+                  </p>
                   <span
                     className={cn(
                       "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
@@ -115,7 +111,10 @@ export function CallList({
                   </span>
                 </div>
 
-                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.7rem] font-medium">
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-8 text-[0.7rem] font-medium">
+                  <span className="text-muted-foreground font-normal">
+                    {CALL_CATEGORY_LABEL[call.category]}
+                  </span>
                   <span className="flex items-center gap-1">
                     <Clock className="size-3" aria-hidden />
                     {callWhen(call)}

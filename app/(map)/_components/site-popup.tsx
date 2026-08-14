@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Navigation, Share2 } from "lucide-react";
+import { Check, ChevronRight, ExternalLink, Navigation, Share2 } from "lucide-react";
 
+import {
+  Sheet,
+  SheetHeader,
+  SheetPanel,
+  SheetPopup,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { confirmSiteStatus } from "@/data/site/site.actions";
 import type { SiteDTO } from "@/data/site/site.dto";
 import {
-  CONFIDENCE_BADGE,
   ITEM_MODE_LABEL,
   SHEET_LABEL,
   SITE_STATUS_LABEL,
@@ -37,7 +44,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
   const [copied, setCopied] = useState(false);
 
   const { label: freshLabel, stale } = freshness(site.confirmedAt);
-  const { level, label: confidenceLabel } = confidence(site);
+  const { label: confidenceLabel } = confidence(site);
   const Icon = SITE_TYPE_ICON[site.type];
 
   const needed = site.items
@@ -45,6 +52,18 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 5);
   const refused = site.items.filter((item) => item.mode === "not_accepted");
+
+  // Confidence, the full schedule, what a site needs, the address, the
+  // description, the source link: all real, all pushed behind "ver más".
+  // The card kept growing every time one more true fact earned a line, and
+  // the fact that mattered least — "hay 6 líneas antes de que aparezca el
+  // botón de cómo llegar" — was never any one of them on its own. `needed`
+  // is the one item that used to live in the summary and moved here: it is
+  // useful, but "no recibe" is the one that is unsafe to miss, so that is
+  // the one that stays.
+  const hasMore = Boolean(
+    site.description || site.address || site.sourceUrl || needed.length > 0,
+  );
 
   async function share() {
     const url = `${window.location.origin}/punto/${site.id}`;
@@ -66,7 +85,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
   }
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       <header className="flex items-start gap-2">
         <span
           className={cn(
@@ -86,24 +105,20 @@ export function SitePopup({ site }: { site: SiteDTO }) {
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-1">
-        <span
-          className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-            SITE_STATUS_STYLE[site.status],
-          )}
-        >
-          {SITE_STATUS_LABEL[site.status]}
-        </span>
-        <span
-          className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-            CONFIDENCE_BADGE[level],
-          )}
-        >
-          {confidenceLabel}
-        </span>
-      </div>
+      {/* Confidence used to ride next to status as a second badge. Cut for
+          the summary, not for the app: it still shows as the marker's
+          solidity on the map itself (CONFIDENCE_MARKER), which is where it
+          was designed to be read at a glance in the first place — the badge
+          here was saying the same thing twice. Full text version is one tap
+          away, in "ver más". */}
+      <span
+        className={cn(
+          "self-start rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
+          SITE_STATUS_STYLE[site.status],
+        )}
+      >
+        {SITE_STATUS_LABEL[site.status]}
+      </span>
 
       <p
         className={cn(
@@ -113,7 +128,91 @@ export function SitePopup({ site }: { site: SiteDTO }) {
       >
         {freshLabel}
         {site.neighborhood && ` · ${site.neighborhood}`}
-        {site.schedule && ` · ${site.schedule}`}
+        {hasMore && (
+          <Sheet>
+            <SheetTrigger
+              render={
+                <button
+                  type="button"
+                  className="text-primary ml-1 inline-flex items-center gap-0.5 align-middle font-semibold"
+                />
+              }
+            >
+              {SHEET_LABEL.moreInfo}
+              <ChevronRight className="size-3" aria-hidden />
+            </SheetTrigger>
+
+            {/* Lateral, not bottom: this is the second attempt at "ver más".
+                A bottom sheet worked but still asked the reader to lose the
+                map — same objection the card itself was built to avoid. From
+                the side, the pin and the map around it stay in view while
+                the detail reads next to them, not over them. */}
+            <SheetPopup side="right">
+              <SheetHeader>
+                <SheetTitle className="text-base">{site.name}</SheetTitle>
+                <p className="text-muted-foreground text-xs">
+                  {confidenceLabel}
+                </p>
+              </SheetHeader>
+              <SheetPanel className="flex flex-col gap-4 text-sm">
+                {site.schedule && (
+                  <div>
+                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {SHEET_LABEL.schedule}
+                    </p>
+                    <p>{site.schedule}</p>
+                  </div>
+                )}
+                {needed.length > 0 && (
+                  <div>
+                    <p className="text-muted-foreground mb-1 text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {ITEM_MODE_LABEL.needed}
+                    </p>
+                    <ul className="flex flex-wrap gap-1">
+                      {needed.map((item) => (
+                        <li
+                          key={item.id}
+                          className="bg-resolved-surface text-resolved border-resolved/25 rounded px-1.5 py-0.5 text-xs font-medium"
+                        >
+                          {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {site.address && (
+                  <div>
+                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {SHEET_LABEL.address}
+                    </p>
+                    <p>{site.address}</p>
+                  </div>
+                )}
+                {site.description && (
+                  <div>
+                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {SHEET_LABEL.description}
+                    </p>
+                    <p className="leading-snug whitespace-pre-line">
+                      {site.description}
+                    </p>
+                  </div>
+                )}
+                {site.sourceUrl && (
+                  <a
+                    href={site.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary flex items-center gap-1.5 text-xs font-semibold"
+                  >
+                    <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+                    {SHEET_LABEL.source}
+                  </a>
+                )}
+              </SheetPanel>
+            </SheetPopup>
+          </Sheet>
+        )}
       </p>
 
       {refused.length > 0 && (
@@ -124,24 +223,6 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           <p className="text-unclaimed text-[0.7rem] leading-snug font-medium">
             {refused.map((item) => item.label).join(" · ")}
           </p>
-        </div>
-      )}
-
-      {needed.length > 0 && (
-        <div>
-          <p className="text-muted-foreground mb-1 text-[0.65rem] font-bold tracking-wide uppercase">
-            {ITEM_MODE_LABEL.needed}
-          </p>
-          <ul className="flex flex-wrap gap-1">
-            {needed.map((item) => (
-              <li
-                key={item.id}
-                className="bg-resolved-surface text-resolved border-resolved/25 rounded px-1.5 py-0.5 text-[0.7rem] font-medium"
-              >
-                {item.label}
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
@@ -169,7 +250,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           type="button"
           onClick={share}
           aria-label={SHEET_LABEL.share}
-          className="bg-secondary text-secondary-foreground flex items-center justify-center rounded-md px-2 py-2"
+          className="bg-secondary text-secondary-foreground flex items-center justify-center rounded-md px-3.5 py-2"
         >
           {copied ? (
             <Check className="size-3.5" aria-hidden />
