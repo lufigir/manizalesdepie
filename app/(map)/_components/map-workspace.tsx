@@ -39,6 +39,8 @@ import { FitToSites, FlyToSelected } from "./map-camera";
 import { ReportMenu } from "./report-menu";
 import { ResourceOfferMarkers } from "./resource-offer-markers";
 import { SightingMarkers } from "./sighting-markers";
+import { WorkOrderItem } from "./work-order-list";
+import { WorkOrderMarkers } from "./work-order-markers";
 import { SiteMarkers } from "./site-markers";
 import { SitePopup } from "./site-popup";
 import { UnifiedPanel } from "./unified-panel";
@@ -224,6 +226,7 @@ export function MapWorkspace({
    */
   const selected = withLiveStatus.find((site) => site.id === selectedId) ?? null;
   const selectedCall = calls.find((call) => call.id === selectedId) ?? null;
+  const selectedOrder = workOrders.find((order) => order.id === selectedId) ?? null;
 
   /**
    * Some chips are not about places at all.
@@ -350,6 +353,7 @@ export function MapWorkspace({
               sites={[
                 ...mapSites,
                 ...calls,
+                ...workOrders,
                 ...animals.filter(
                   (a): a is AnimalDTO & { longitude: number; latitude: number } =>
                     a.longitude !== null && a.latitude !== null,
@@ -360,11 +364,17 @@ export function MapWorkspace({
                 ),
               ]}
             />
-            <FlyToSelected site={selected ?? selectedCall} />
+            <FlyToSelected site={selected ?? selectedCall ?? selectedOrder} />
 
             <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={setSelectedId} />
 
             <CallMarkers calls={calls} selectedId={selectedId} onSelect={setSelectedId} />
+
+            <WorkOrderMarkers
+              workOrders={workOrders}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
 
             <SightingMarkers
               animals={animals}
@@ -413,6 +423,26 @@ export function MapWorkspace({
                 className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
               >
                 <CallPopup call={selectedCall} />
+              </MapPopup>
+            )}
+
+            {/* No dedicated WorkOrderPopup: the card is the same one the
+                panel already draws for "Necesidades", claim/close buttons
+                included — a case's whole detail is that card, so a second
+                component that only reformats it would drift from it over
+                time. */}
+            {selectedOrder && (
+              <MapPopup
+                longitude={selectedOrder.longitude}
+                latitude={selectedOrder.latitude}
+                onClose={() => setSelectedId(null)}
+                closeButton
+                closeOnClick={false}
+                focusAfterOpen={false}
+                offset={22}
+                className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
+              >
+                <WorkOrderItem order={selectedOrder} signedIn={signedIn} />
               </MapPopup>
             )}
           </Map>
