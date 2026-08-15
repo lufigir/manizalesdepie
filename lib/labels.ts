@@ -771,6 +771,11 @@ export const PANEL_LABEL = {
    *  the header so a collapsed panel still says how much is behind it. */
   itemsOne: "1 punto",
   itemsMany: (n: number) => `${n} puntos`,
+  /** Deliberately quiet, in the panel's bottom edge: someone who needs to
+   *  report a mistake in the data has to be able to find a human, and
+   *  anyone else should never notice it is there. */
+  contactPrompt: "Contacto:",
+  contactEmail: "hi@felipego.com",
   /** "Todo" shows only the two most urgent of each family; this opens that
    *  family's own chip, where the rest live. The count is what makes it
    *  worth tapping — "ver 9 más" says how much is behind it. */

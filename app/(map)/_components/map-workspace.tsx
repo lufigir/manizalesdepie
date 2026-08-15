@@ -16,7 +16,7 @@ import type {
 } from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
-import { BARRIO_PANEL } from "@/lib/labels";
+import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
 import {
   ALL_REPORT_ENTRIES,
   CHIP_PRIMARY_ACTION,
@@ -535,6 +535,22 @@ export function MapWorkspace({
             <div className="flex min-h-0 flex-1 flex-col">
               {children}
               <UnifiedPanel />
+
+              {/* The panel's bottom edge — the app's one quiet corner, since
+                  every corner of the map itself is already spoken for (the
+                  clock, the barrio chip, the map controls, "Reportar").
+                  Outside the scrolling region on purpose: a way to reach a
+                  human should not be something you have to scroll a list of
+                  emergencies to the end to find. */}
+              <div className="text-muted-foreground shrink-0 border-t px-3 py-1.5 text-[0.6rem]">
+                {PANEL_LABEL.contactPrompt}{" "}
+                <a
+                  href={`mailto:${PANEL_LABEL.contactEmail}`}
+                  className="hover:text-foreground underline"
+                >
+                  {PANEL_LABEL.contactEmail}
+                </a>
+              </div>
             </div>
           )}
         </aside>
