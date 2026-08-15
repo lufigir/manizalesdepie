@@ -38,6 +38,13 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // The dev server otherwise refuses cross-origin requests for its internal
+  // assets, which is exactly what opening `http://192.168.1.136:3000` from a
+  // phone on the same wifi is. Development only — `next build` ignores it —
+  // and the whole point of this app is how it behaves on a phone, so testing
+  // it on a real one is not optional.
+  allowedDevOrigins: ["192.168.1.136"],
+
   images: {
     // Animal photos live in Supabase Storage. Narrowed to the storage path so
     // the optimizer cannot be pointed at arbitrary URLs on the project host.
