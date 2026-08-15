@@ -136,9 +136,9 @@ export function initialChipForTab(tab: TabId): PanelChip {
  * offering it.
  */
 export const ALL_REPORT_ENTRIES: ReportEntry[] = [
-  { href: "/reportar/necesidad", label: "Reportar una necesidad", icon: LifeBuoy },
-  { href: "/reportar/sitio", label: "Reportar un sitio", icon: MapPin },
-  { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
-  { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
   { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
+  { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
+  { href: "/reportar/sitio", label: "Reportar un sitio", icon: MapPin },
+  { href: "/reportar/necesidad", label: "Reportar una necesidad", icon: LifeBuoy },
+  { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
 ];
