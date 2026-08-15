@@ -93,8 +93,7 @@ export function callUrgency(
   now: number = Date.now(),
 ): number {
   const state = callState(call, now);
-  const statusBand =
-    state === "live" ? 3000 : state === "upcoming" ? 2000 : state === "full" ? 500 : 0;
+  const statusBand = state === "live" ? 3000 : state === "upcoming" ? 2000 : 0;
 
   // Only meaningful before it starts: a shift that starts in one hour pulls
   // ahead of one on Saturday, capped so it can never outweigh a live one.
@@ -116,8 +115,18 @@ export function workOrderUrgency(
   now: number = Date.now(),
 ): number {
   const rollup = workOrderRollup(order.status);
+  // "Atendido" sits below "en proceso" and above closed. Somebody has
+  // already been, so it is the least urgent thing still open — but it IS
+  // still open, and it needs a second pair of hands to close, so it must
+  // not sink out of the feed the way a closed case does.
   const statusBand =
-    rollup === "unclaimed" ? 3000 : rollup === "claimed" ? 1500 : 0;
+    rollup === "unclaimed"
+      ? 3000
+      : rollup === "claimed"
+        ? 1500
+        : rollup === "attended"
+          ? 750
+          : 0;
 
   return (
     priorityBonus(order.neighborhood, needs, order.category) +

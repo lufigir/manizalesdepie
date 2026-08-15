@@ -77,7 +77,7 @@ export class NeighborhoodDAL {
     const { data, error } = await supabase
       .from("neighborhood_status_public")
       .select(
-        "neighborhood_id, neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes, source, source_url, confirmed_at, expires_at",
+        "neighborhood_id, neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes, confirmed_at, expires_at",
       )
       .gt("expires_at", new Date().toISOString());
 
@@ -103,8 +103,6 @@ export class NeighborhoodDAL {
         powerStatus: row.power_status,
         waterStatus: row.water_status,
         notes: row.notes,
-        source: row.source,
-        sourceUrl: row.source_url,
         confirmedAt: row.confirmed_at,
         expiresAt: row.expires_at,
       }),
@@ -125,7 +123,7 @@ export class NeighborhoodDAL {
     const { data, error } = await supabase
       .from("neighborhood_need_public")
       .select(
-        "id, neighborhood_id, neighborhood, municipality, longitude, latitude, category, priority, note, source, confirmed_at, expires_at",
+        "id, neighborhood_id, neighborhood, municipality, longitude, latitude, category, priority, note, confirmed_at, expires_at",
       )
       .gt("expires_at", new Date().toISOString());
 
@@ -150,7 +148,6 @@ export class NeighborhoodDAL {
         category: row.category,
         priority: row.priority,
         note: row.note,
-        source: row.source,
         confirmedAt: row.confirmed_at,
         expiresAt: row.expires_at,
       }),

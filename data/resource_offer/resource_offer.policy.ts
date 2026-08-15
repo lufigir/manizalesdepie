@@ -19,8 +19,3 @@ export function canProposeResourceOffer(): boolean {
 export function canManageResourceOffer(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
-
-/** Only a curator marks an offer as checked against its source. */
-export function canVerifyResourceOffer(user: CurrentUser | null): boolean {
-  return user?.role === "curator";
-}

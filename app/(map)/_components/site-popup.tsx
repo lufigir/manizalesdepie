@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ExternalLink, Navigation, Pencil } from "lucide-react";
+import { Navigation, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import {
   confirmSiteStatus,
   deleteSite,
   setSitePublished,
-  verifySite,
 } from "@/data/site/site.actions";
 import type { SiteDTO } from "@/data/site/site.dto";
 import {
@@ -82,7 +81,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
   }
 
   const { label: freshLabel, stale } = freshness(site.confirmedAt);
-  const { label: confidenceLabel } = confidence(site);
+  const { level, label: confidenceLabel } = confidence(site);
   const Icon = SITE_TYPE_ICON[site.type];
 
   const needed = site.items
@@ -91,9 +90,16 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     .slice(0, 5);
   const refused = site.items.filter((item) => item.mode === "not_accepted");
 
-  /** Freshness, place and confidence: the card's quiet line. Confidence used
-   *  to be the sheet's subtitle behind "ver más"; with nothing folded away
-   *  any more it joins the row it belonged to all along. */
+  /**
+   * Freshness, place and confidence: the card's quiet line.
+   *
+   * Confidence is dropped from it when nobody has confirmed anything, because
+   * `freshness` already opens with the same two words — the line read "Sin
+   * confirmar ayer · Centro · Sin confirmar", saying it twice and sounding
+   * like two separate findings. Once somebody has confirmed, the label
+   * carries a fact the freshness half does not ("3 personas confirmaron")
+   * and earns its place back.
+   */
   const metaLine = (
     <p
       className={cn(
@@ -103,7 +109,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     >
       {freshLabel}
       {site.neighborhood && ` · ${site.neighborhood}`}
-      {` · ${confidenceLabel}`}
+      {level !== "unconfirmed" && ` · ${confidenceLabel}`}
     </p>
   );
 
@@ -129,10 +135,9 @@ export function SitePopup({ site }: { site: SiteDTO }) {
             <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
               {SITE_TYPE_LABEL[site.type]}
             </p>
-            {/* Confidence used to ride next to status as a second badge. Cut
-                for the summary, not for the app: it still shows as the
-                marker's solidity on the map itself (CONFIDENCE_MARKER). Full
-                text version is one tap away, in "ver más". */}
+            {/* Confidence used to ride next to status as a second badge. It
+                lives on the meta line above now; the marker's own solidity
+                (CONFIDENCE_MARKER) still carries it on the map. */}
             <span
               className={cn(
                 "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
@@ -154,8 +159,8 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           behind "ver más" — a lateral sheet beside the map, an accordion in
           the drawer under it. Both surfaces scroll on their own, so the fold
           was buying a shorter card at the price of a tap on facts (the
-          address, what they need, the source) that someone deciding where to
-          drive actually reads. */}
+          address, what they need) that someone deciding where to drive
+          actually reads. */}
       <div className="flex flex-col gap-2.5 text-[0.8rem]">
           {site.schedule && (
             <div>
@@ -199,17 +204,6 @@ export function SitePopup({ site }: { site: SiteDTO }) {
                 {site.description}
               </p>
             </div>
-          )}
-          {site.sourceUrl && (
-            <a
-              href={site.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary flex items-center gap-1.5 text-xs font-semibold"
-            >
-              <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-              {SHEET_LABEL.source}
-            </a>
           )}
       </div>
 
@@ -327,8 +321,6 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           <AdminActions
             published={site.published}
             onSetPublished={(published) => setSitePublished(site.id, published)}
-            verified={site.verified}
-            onVerify={() => verifySite(site.id)}
             onDelete={() => deleteSite(site.id)}
           />
         </div>

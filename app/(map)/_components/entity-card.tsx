@@ -26,7 +26,6 @@ import {
   WORK_ORDER_ROLLUP_MARKER,
   WORK_ORDER_ROLLUP_STYLE,
   callState,
-  callWhen,
   workOrderRollup,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -90,9 +89,10 @@ export function EntityCard({
         <Row
           id={call.id}
           title={call.title}
-          // The hour is the whole point of a grupo — it is the one qualifier
-          // that decides whether the reader can go at all.
-          detail={callWhen(call)}
+          // The barrio, like a sitio's row. There is no hour to qualify a
+          // grupo with any more, and "¿dónde queda?" is the question a list
+          // is scanned with either way.
+          detail={call.neighborhood}
           body={call.description}
           icon={<Icon className="size-3.5" strokeWidth={2.5} aria-hidden />}
           // A corner, not a circle: the same distinction the map markers draw

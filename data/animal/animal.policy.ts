@@ -22,11 +22,6 @@ export function canResolveAnimal(): boolean {
   return true;
 }
 
-/** Only a curator marks a report as checked against its source. */
-export function canVerifyAnimal(user: CurrentUser | null): boolean {
-  return user?.role === "curator";
-}
-
 /** Taking a report off the board is destructive, so it stays with curators. */
 export function canUnpublishAnimal(user: CurrentUser | null): boolean {
   return user?.role === "curator";

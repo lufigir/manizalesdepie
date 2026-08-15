@@ -6,8 +6,6 @@ import {
   CALL_STATE_LABEL,
   OG_LABEL,
   callState,
-  callWhen,
-  slotsLabel,
   type CallState,
 } from "@/lib/labels";
 
@@ -35,11 +33,10 @@ export const contentType = OG_CONTENT_TYPE;
 // analysis. See the caching note in `og-card.tsx` for the hour.
 export const revalidate = 3600;
 
-/** Same colour grammar as a site's status — see `CallState`. */
+/** A grupo's own hue, not the status axis — see `CallState`. */
 const STATE_ACCENT: Record<CallState, OgAccent> = {
-  live: "resolved",
-  upcoming: "claimed",
-  full: "neutral",
+  live: "group",
+  upcoming: "group",
   ended: "neutral",
 };
 
@@ -70,9 +67,8 @@ export default async function Image({
         eyebrow={`${OG_LABEL.call} · ${CALL_CATEGORY_LABEL[call.category]}`}
         title={ogTitle(call.title)}
         badge={CALL_STATE_LABEL[state]}
-        // The hour first: for a shift it is half the identity, and it is the
-        // fact the forwarded message loses.
-        meta={[callWhen(call), call.neighborhood, slotsLabel(call)]
+        // The corner first: it is the fact the forwarded message loses.
+        meta={[call.meetingAddress, call.neighborhood]
           .filter(Boolean)
           .join(" · ")}
         icon={OgMegaphoneIcon}

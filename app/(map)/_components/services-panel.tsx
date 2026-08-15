@@ -10,16 +10,13 @@ import {
   adminUpdateResourceOffer,
   deleteResourceOffer,
   setResourceOfferPublished,
-  verifyResourceOffer,
 } from "@/data/resource_offer/resource_offer.actions";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import {
   ADMIN_LABEL,
-  CONFIDENCE_BADGE,
   RESOURCE_TYPE_ICON,
   RESOURCE_TYPE_LABEL,
   SERVICES_LABEL,
-  confidence,
   freshness,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -85,7 +82,6 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
 
   const Icon = RESOURCE_TYPE_ICON[offer.type];
   const { label: freshLabel, stale } = freshness(offer.confirmedAt);
-  const { label: confidenceLabel, level } = confidence(offer);
 
   return (
     <li>
@@ -103,7 +99,6 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
             <div className="min-w-0 flex-1">
               <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
                 {RESOURCE_TYPE_LABEL[offer.type]}
-                {offer.quantity != null && ` · ${offer.quantity}`}
               </p>
               {/* `area` is barrio text set by the reporter and `neighborhood`
                   is that same barrio, stamped by geometry — the form's point
@@ -120,14 +115,6 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
           <p className="text-sm leading-snug">{offer.description}</p>
 
           <div className="mt-auto flex flex-wrap items-center gap-1 pt-1">
-            <span
-              className={cn(
-                "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-                CONFIDENCE_BADGE[level],
-              )}
-            >
-              {confidenceLabel}
-            </span>
             <span
               className={cn(
                 "text-[0.65rem]",
@@ -183,8 +170,6 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
             <AdminActions
               published={offer.published}
               onSetPublished={(published) => setResourceOfferPublished(offer.id, published)}
-              verified={offer.verified}
-              onVerify={() => verifyResourceOffer(offer.id)}
               onDelete={() => deleteResourceOffer(offer.id)}
             />
           </div>

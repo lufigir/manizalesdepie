@@ -17,7 +17,6 @@ import {
   canManageSite,
   canProposeSite,
   canPublishSite,
-  canVerifySite,
 } from "./site.policy";
 
 /**
@@ -163,7 +162,6 @@ export class SiteDAL {
         location: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
         schedule: data.schedule ?? null,
         whatsapp: data.whatsapp ?? null,
-        source_url: data.sourceUrl ?? null,
         published: true,
         created_by: this.user?.id ?? null,
       })
@@ -195,23 +193,6 @@ export class SiteDAL {
     }
 
     log.info("site published", { siteId: id, byUser: this.user?.id });
-  }
-
-  /** Records that a curator checked this against its source. */
-  async verify(id: string): Promise<void> {
-    if (!canVerifySite(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("site")
-      .update({ verified_by: this.user!.id, verified_at: now, confirmed_at: now })
-      .eq("id", id);
-
-    if (error) {
-      log.error("site.verify failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo verificar el punto");
-    }
   }
 
   /**
@@ -323,8 +304,6 @@ export class SiteDAL {
       status: row.status,
       schedule: row.schedule,
       whatsapp: row.whatsapp,
-      sourceUrl: row.source_url,
-      verified: row.verified,
       confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
       expiresAt: row.expires_at,

@@ -56,8 +56,6 @@ export const neighborhoodStatusSchema = z.object({
   powerStatus: utilityStatusSchema,
   waterStatus: utilityStatusSchema,
   notes: z.string().nullable(),
-  source: z.string(),
-  sourceUrl: z.url().nullable(),
   confirmedAt: z.iso.datetime({ offset: true }),
   expiresAt: z.iso.datetime({ offset: true }),
 });
@@ -92,7 +90,6 @@ export const neighborhoodNeedSchema = z.object({
   category: callCategorySchema,
   priority: needPrioritySchema,
   note: z.string().nullable(),
-  source: z.string().nullable(),
   confirmedAt: z.iso.datetime({ offset: true }),
   expiresAt: z.iso.datetime({ offset: true }),
 });

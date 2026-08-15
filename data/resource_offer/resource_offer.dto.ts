@@ -29,16 +29,11 @@ export const resourceOfferSchema = z.object({
   id: z.uuid(),
   type: resourceTypeSchema,
   description: z.string(),
-  quantity: z.number().int().nullable(),
   area: z.string().nullable(),
   longitude: z.number().nullable(),
   latitude: z.number().nullable(),
   neighborhood: z.string().nullable(),
   whatsapp: z.string(),
-  availableFrom: z.iso.datetime({ offset: true }).nullable(),
-  availableUntil: z.iso.datetime({ offset: true }).nullable(),
-  verified: z.boolean(),
-  confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
   expiresAt: z.iso.datetime({ offset: true }),
   createdById: z.uuid().nullable(),
@@ -62,7 +57,6 @@ export type ResourceOfferDTO = z.infer<typeof resourceOfferSchema>;
 export const createResourceOfferSchema = z.object({
   type: resourceTypeSchema,
   description: z.string().trim().min(5).max(500),
-  quantity: z.number().int().min(1).max(9999).optional(),
   area: z.string().trim().max(120),
   longitude: z.number().min(-76.2).max(-74.8).optional(),
   latitude: z.number().min(4.6).max(5.6).optional(),
@@ -70,8 +64,6 @@ export const createResourceOfferSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{10,15}$/, "Debe ser solo dígitos, con indicativo del país"),
-  availableFrom: z.iso.datetime({ offset: true }).optional(),
-  availableUntil: z.iso.datetime({ offset: true }).optional(),
 });
 
 export type CreateResourceOfferInput = z.infer<
@@ -84,15 +76,12 @@ export const adminUpdateResourceOfferSchema = z.object({
   id: z.uuid(),
   type: resourceTypeSchema.optional(),
   description: z.string().trim().min(5).max(500).optional(),
-  quantity: z.number().int().min(1).max(9999).optional(),
   area: z.string().trim().max(120).optional(),
   whatsapp: z
     .string()
     .trim()
     .regex(/^\d{10,15}$/, "Debe ser solo dígitos, con indicativo del país")
     .optional(),
-  availableFrom: z.iso.datetime({ offset: true }).optional(),
-  availableUntil: z.iso.datetime({ offset: true }).optional(),
 });
 
 export type AdminUpdateResourceOfferInput = z.infer<

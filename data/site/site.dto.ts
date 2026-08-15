@@ -53,10 +53,6 @@ export const siteSchema = z.object({
   status: siteStatusSchema,
   schedule: z.string().nullable(),
   whatsapp: z.string().nullable(),
-  sourceUrl: z.url().nullable(),
-  /** A curator checked this against the source. The top confidence level, and
-   *  now a signal that lifts a row rather than a gate that holds it back. */
-  verified: z.boolean(),
   /** How many people have stood in front of this and said it is still true.
    *  Drives the confidence level the map draws; "no longer valid" reports do
    *  not increment it, because saying a place is gone is not evidence that it
@@ -122,7 +118,6 @@ export const createSiteSchema = z.object({
     .trim()
     .regex(/^\d{10,15}$/, "Debe ser solo dígitos, con indicativo del país")
     .optional(),
-  sourceUrl: z.url().optional(),
 });
 
 export type CreateSiteInput = z.infer<typeof createSiteSchema>;

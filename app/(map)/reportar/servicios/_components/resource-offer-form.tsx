@@ -18,7 +18,13 @@ import { cn } from "@/lib/utils";
 import { BarrioPicker } from "../../_components/barrio-picker";
 
 /**
- * "Tengo con qué ayudar." Anonymous, one screen, no pin to drag.
+ * "Tengo con qué ayudar." Anonymous, one screen, no pin to drag, four
+ * fields.
+ *
+ * It used to have seven. "¿Cuántos?" and a pair of datetime pickers came back
+ * empty 46 times out of 46, so the count now lives in the description where
+ * somebody types it in words if it matters, and how long the offer stands is
+ * `expiresAt`'s job rather than a question.
  *
  * No PinPicker, unlike the site and grupo forms: a truck someone can drive
  * anywhere in the city has no one corner to mark, so the barrio it starts
@@ -34,12 +40,9 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
 
   const [type, setType] = useState<ResourceType>("dump_truck");
   const [description, setDescription] = useState("");
-  const [quantity, setQuantity] = useState("");
   const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(null);
   const [wholeCity, setWholeCity] = useState(false);
   const [whatsapp, setWhatsapp] = useState("");
-  const [availableFromLocal, setAvailableFromLocal] = useState("");
-  const [availableUntilLocal, setAvailableUntilLocal] = useState("");
 
   async function submit() {
     setError(null);
@@ -60,17 +63,10 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
       await proposeResourceOffer({
         type,
         description,
-        quantity: quantity ? Number(quantity) : undefined,
         area,
         longitude: barrio?.longitude ?? undefined,
         latitude: barrio?.latitude ?? undefined,
         whatsapp,
-        availableFrom: availableFromLocal
-          ? new Date(availableFromLocal).toISOString()
-          : undefined,
-        availableUntil: availableUntilLocal
-          ? new Date(availableUntilLocal).toISOString()
-          : undefined,
       });
       router.push("/");
     } catch (cause) {
@@ -125,17 +121,6 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         />
       </Field>
 
-      <Field label={SERVICES_FORM.quantity} hint={SERVICES_FORM.quantityHint}>
-        <Input
-          type="number"
-          min={1}
-          max={9999}
-          inputMode="numeric"
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
-        />
-      </Field>
-
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <label className="text-sm font-semibold">
@@ -173,23 +158,6 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={SERVICES_FORM.availableFrom} hint={SERVICES_FORM.availableHint}>
-          <Input
-            type="datetime-local"
-            value={availableFromLocal}
-            onChange={(event) => setAvailableFromLocal(event.target.value)}
-          />
-        </Field>
-        <Field label={SERVICES_FORM.availableUntil}>
-          <Input
-            type="datetime-local"
-            value={availableUntilLocal}
-            onChange={(event) => setAvailableUntilLocal(event.target.value)}
-          />
-        </Field>
-      </div>
-
       {error && (
         <p role="alert" className="text-unclaimed text-sm font-medium">
           {error}
@@ -199,6 +167,10 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
       <Button type="submit" loading={pending}>
         {pending ? SERVICES_FORM.submitting : SERVICES_FORM.submit}
       </Button>
+
+      <p className="text-muted-foreground text-center text-xs">
+        {SERVICES_FORM.hint}
+      </p>
     </form>
   );
 }

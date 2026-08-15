@@ -7,10 +7,7 @@ import {
   CALL_CATEGORY_LABEL,
   CALL_STATE_LABEL,
   CALL_STATE_MARKER,
-  CONFIDENCE_MARKER,
   callState,
-  callWhen,
-  confidence,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +38,6 @@ export function CallMarkers({
       {calls.map((call) => {
         const Icon = CALL_CATEGORY_ICON[call.category];
         const state = callState(call);
-        const { level, label: confidenceLabel } = confidence(call);
 
         return (
           <MapMarker
@@ -55,25 +51,22 @@ export function CallMarkers({
                 className={cn(
                   "ring-background flex size-7 items-center justify-center rounded-md shadow-md ring-2 transition-transform",
                   CALL_STATE_MARKER[state],
-                  CONFIDENCE_MARKER[level],
                   selectedId === call.id && "scale-125",
                 )}
                 aria-label={`Grupo de ${CALL_CATEGORY_LABEL[call.category]}: ${
                   call.title
-                }. ${CALL_STATE_LABEL[state]}. ${confidenceLabel}`}
+                }. ${CALL_STATE_LABEL[state]}.`}
               >
                 <Icon className="size-4" strokeWidth={2.5} aria-hidden />
               </span>
             </MarkerContent>
-            {/* The hour rides in the tooltip. For a shift it is half the
-                identity, and it saves a tap for the reader deciding between
-                two of them. Suppressed once selected, same reason as the
-                site pins: the popup opens right under a cursor that never
-                left the marker. */}
+            {/* The barrio rides beside the name. It is what tells two
+                grupos of the same kind apart in a list of pins, and it saves
+                a tap for the reader deciding between them. Suppressed once
+                selected, same reason as the site pins: the popup opens right
+                under a cursor that never left the marker. */}
             {selectedId !== call.id && (
-              <MarkerTooltip offset={20}>
-                {[call.title, callWhen(call)].filter(Boolean).join(" · ")}
-              </MarkerTooltip>
+              <MarkerTooltip offset={20}>{call.title}</MarkerTooltip>
             )}
           </MapMarker>
         );

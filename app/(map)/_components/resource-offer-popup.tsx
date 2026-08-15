@@ -1,21 +1,17 @@
 "use client";
 
-import { Clock, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 import {
   deleteResourceOffer,
   setResourceOfferPublished,
-  verifyResourceOffer,
 } from "@/data/resource_offer/resource_offer.actions";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import {
-  CONFIDENCE_BADGE,
   RESOURCE_TYPE_ICON,
   RESOURCE_TYPE_LABEL,
   SERVICES_LABEL,
-  confidence,
   freshness,
-  offerAvailability,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -29,9 +25,8 @@ import { useWorkspace } from "./workspace-context";
  *
  * Not the grid's tile. That one is a browsing surface: a wall of everything
  * on offer, where the whole tile is one big link to WhatsApp. This one
- * answers a narrower question — "¿esto sigue en pie y me sirve hoy?" — so
- * the availability window is promoted out of the fine print and given its own
- * line next to the place.
+ * answers a narrower question — "¿esto sigue en pie?" — so how long ago
+ * anybody vouched for it rides beside the place instead of in fine print.
  *
  * There is no "Cómo llegar" and there should not be. An offer's point is the
  * barrio's own centroid, not a doorway: "tengo una volqueta" is a
@@ -42,7 +37,6 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
 
   const Icon = RESOURCE_TYPE_ICON[offer.type];
   const { label: freshLabel, stale } = freshness(offer.confirmedAt);
-  const { short: confidenceShort, level } = confidence(offer);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -51,22 +45,10 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
           <Icon className="size-4" strokeWidth={2.5} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          {/* `short`, not the full sentence: "3 personas confirmaron" beside
-              a title is three wrapped lines of badge on a phone. The long
-              form still exists for surfaces with room for it. */}
           <div className="flex items-center gap-1.5">
             <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
               {RESOURCE_TYPE_LABEL[offer.type]}
-              {offer.quantity != null && ` · ${offer.quantity}`}
             </p>
-            <span
-              className={cn(
-                "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
-                CONFIDENCE_BADGE[level],
-              )}
-            >
-              {confidenceShort}
-            </span>
           </div>
           <h2 className="text-sm leading-tight font-bold text-balance">
             {offer.description}
@@ -74,18 +56,16 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         </div>
       </header>
 
-      {/* When and where, then how long ago anybody vouched for it. The window
-          leads at full weight: an offer is only worth a call while it is
-          still open, and that is the fact this card exists to carry. */}
+      {/* Where, then how long ago anybody vouched for it. There used to be an
+          availability window at full weight above this row; the form asked
+          for it 46 times and got an answer none of them, so what an offer
+          actually promises is `expiresAt` and what a reader actually wants
+          is how stale this is. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-        <span className="flex items-center gap-1.5 text-xs font-semibold">
-          <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-          {offerAvailability(offer)}
-        </span>
         {/* `area` is barrio text the offerer typed and `neighborhood` is that
             same barrio stamped by geometry; shown once, preferring the
             stamped one, exactly as the grid tile does. */}
-        <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
+        <span className="flex items-center gap-1.5 text-xs font-semibold">
           <MapPin className="size-3.5 shrink-0" aria-hidden />
           {offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide}
         </span>
@@ -123,8 +103,6 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
             onSetPublished={(published) =>
               setResourceOfferPublished(offer.id, published)
             }
-            verified={offer.verified}
-            onVerify={() => verifyResourceOffer(offer.id)}
             onDelete={() => deleteResourceOffer(offer.id)}
           />
         </div>

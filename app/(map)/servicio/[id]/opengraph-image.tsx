@@ -5,7 +5,6 @@ import {
   OG_LABEL,
   RESOURCE_TYPE_LABEL,
   SERVICES_LABEL,
-  offerAvailability,
 } from "@/lib/labels";
 
 import {
@@ -60,16 +59,11 @@ export default async function Image({
     );
   }
 
-  const eyebrow = `${RESOURCE_TYPE_LABEL[offer.type]}${
-    offer.quantity != null ? ` · ${offer.quantity}` : ""
-  }`;
-
   return new ImageResponse(
     (
       <OgCard
-        eyebrow={eyebrow}
+        eyebrow={RESOURCE_TYPE_LABEL[offer.type]}
         title={ogTitle(offer.description)}
-        badge={offerAvailability(offer)}
         meta={offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide}
         icon={OgTruckIcon}
         logo={logo}

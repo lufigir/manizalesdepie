@@ -11,7 +11,6 @@ import {
   OG_LABEL,
   RESOURCE_TYPE_LABEL,
   SERVICES_LABEL,
-  offerAvailability,
 } from "@/lib/labels";
 
 import { MapWorkspace } from "../../_components/map-workspace";
@@ -38,13 +37,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   if (!offer) return { title: OG_LABEL.notFound };
 
-  const title = `${RESOURCE_TYPE_LABEL[offer.type]}${
-    offer.quantity != null ? ` · ${offer.quantity}` : ""
-  }`;
+  const title = RESOURCE_TYPE_LABEL[offer.type];
   const description = [
     offer.description,
     offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide,
-    offerAvailability(offer),
   ]
     .filter(Boolean)
     .join(" · ");

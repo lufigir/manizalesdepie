@@ -51,12 +51,6 @@ export async function resolveAnimal(id: string) {
   revalidatePath("/");
 }
 
-export async function verifyAnimal(id: string) {
-  const dal = await AnimalDAL.create();
-  await dal.verify(id);
-  revalidatePath("/");
-}
-
 export async function adminUpdateAnimal(input: {
   id: string;
   kind?: string;

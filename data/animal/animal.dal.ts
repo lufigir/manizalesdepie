@@ -16,7 +16,6 @@ import {
   canManageAnimal,
   canReportAnimal,
   canResolveAnimal,
-  canVerifyAnimal,
 } from "./animal.policy";
 
 const BUCKET = "animals";
@@ -184,23 +183,6 @@ export class AnimalDAL {
     }
   }
 
-  /** Records that a curator checked this against its source. */
-  async verify(id: string): Promise<void> {
-    if (!canVerifyAnimal(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("animal_report")
-      .update({ verified_by: this.user!.id, verified_at: now, confirmed_at: now })
-      .eq("id", id);
-
-    if (error) {
-      log.error("animal.verify failed", { code: error.code, animalId: id });
-      throw new Error("No se pudo verificar el reporte");
-    }
-  }
-
   /** A curator corrects any of a report's own fields — never the photo or
    *  the coordinate, see `adminUpdateAnimalSchema`. */
   async adminUpdate(input: unknown): Promise<void> {
@@ -283,8 +265,6 @@ export class AnimalDAL {
       zone: row.zone,
       whatsapp: row.whatsapp,
       resolvedAt: row.resolved_at,
-      verified: row.verified,
-      confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
       published: row.published,
     });

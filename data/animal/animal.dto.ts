@@ -34,8 +34,6 @@ export const animalSchema = z.object({
   /** Set once the animal is home. The row stays: a closed story tells the
    *  next reader that this one ended well. */
   resolvedAt: z.iso.datetime({ offset: true }).nullable(),
-  verified: z.boolean(),
-  confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
   /** Read by `AdminActions` for the "Ocultar"/"Publicar" toggle — a
    *  curator-only fact; `listPublished` only returns a hidden row at all

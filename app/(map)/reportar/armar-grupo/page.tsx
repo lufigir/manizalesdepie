@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
-import { getCurrentUser } from "@/data/user/require-user";
 import { CALL_FORM } from "@/lib/labels";
 
 import { ReportLayout } from "../_components/report-layout";
@@ -11,22 +10,17 @@ import { CallForm } from "./_components/call-form";
 export const metadata: Metadata = { title: CALL_FORM.title };
 
 /**
- * "Ayudar"'s second form: a time and a place where hands are needed.
+ * "Ayudar"'s second form: dónde hay gente trabajando.
  *
- * The only route in this app that ends at a sign-in. Not because the
- * information is less trusted than an anonymous report of an acopio — it is not
- * — but because from the moment this row exists, other people rearrange a
- * Saturday around it and hand their phone numbers to whoever convened it. If
- * others depend on you, you show your face.
- *
- * The session is resolved here, in the Server Component, and passed down as a
- * boolean. The form never asks the browser who is signed in.
+ * This was the only route in the app that ended at a sign-in. The account was
+ * never about trusting the information — an anonymous report of an acopio is
+ * accepted without argument — it was about the phone numbers an organiser
+ * collected from whoever signed up. Nobody signs up any more (one person did,
+ * ever), so nobody is a custodian of anything, and the wall came down with
+ * the roster it was guarding.
  */
-export default async function ConveneCallPage() {
-  const [user, barrios] = await Promise.all([
-    getCurrentUser(),
-    NeighborhoodDAL.public().list(),
-  ]);
+export default async function ReportCallPage() {
+  const barrios = await NeighborhoodDAL.public().list();
 
   return (
     <ReportLayout
@@ -34,7 +28,7 @@ export default async function ConveneCallPage() {
       subtitle={CALL_FORM.subtitle}
       backHref="/"
     >
-      <CallForm signedIn={user !== null} barrios={barrios} />
+      <CallForm barrios={barrios} />
     </ReportLayout>
   );
 }

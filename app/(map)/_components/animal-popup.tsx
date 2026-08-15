@@ -8,7 +8,6 @@ import {
   deleteAnimal,
   resolveAnimal,
   setAnimalPublished,
-  verifyAnimal,
 } from "@/data/animal/animal.actions";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import {
@@ -142,8 +141,6 @@ export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
           <AdminActions
             published={animal.published}
             onSetPublished={(published) => setAnimalPublished(animal.id, published)}
-            verified={animal.verified}
-            onVerify={() => verifyAnimal(animal.id)}
             onDelete={() => deleteAnimal(animal.id)}
           />
         </div>

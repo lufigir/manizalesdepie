@@ -25,7 +25,6 @@ export async function proposeSite(formData: FormData) {
     latitude: Number(formData.get("latitude")),
     schedule: formData.get("schedule") || undefined,
     whatsapp: formData.get("whatsapp") || undefined,
-    sourceUrl: formData.get("sourceUrl") || undefined,
   });
 
   // Since publication is open, a proposal is on the map the moment it lands.
@@ -58,13 +57,6 @@ export async function confirmSiteStatus(id: string, status: string) {
 export async function publishSite(id: string) {
   const dal = await SiteDAL.create();
   await dal.publish(id);
-  revalidatePath("/");
-  revalidatePath("/admin");
-}
-
-export async function verifySite(id: string) {
-  const dal = await SiteDAL.create();
-  await dal.verify(id);
   revalidatePath("/");
   revalidatePath("/admin");
 }

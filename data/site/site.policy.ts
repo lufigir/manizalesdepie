@@ -17,11 +17,6 @@ export function canPublishSite(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
 
-/** Only a curator marks a site as checked against its source. */
-export function canVerifySite(user: CurrentUser | null): boolean {
-  return user?.role === "curator";
-}
-
 /** Merging duplicates is destructive to one of the two rows, so it stays with
  *  curators even though anyone can flag a duplicate. */
 export function canMergeSite(user: CurrentUser | null): boolean {

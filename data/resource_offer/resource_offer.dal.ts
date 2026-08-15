@@ -14,7 +14,6 @@ import {
 import {
   canManageResourceOffer,
   canProposeResourceOffer,
-  canVerifyResourceOffer,
 } from "./resource_offer.policy";
 
 /** An offer with no stated end is worth showing for a while, not forever —
@@ -118,20 +117,18 @@ export class ResourceOfferDAL {
       .insert({
         type: data.type,
         description: data.description,
-        quantity: data.quantity ?? null,
         area: data.area,
         location: hasPoint
           ? `SRID=4326;POINT(${data.longitude} ${data.latitude})`
           : null,
         whatsapp: data.whatsapp,
-        available_from: data.availableFrom ?? null,
-        available_until: data.availableUntil ?? null,
         published: true,
-        expires_at:
-          data.availableUntil ??
-          new Date(
-            Date.now() + DEFAULT_AVAILABILITY_DAYS * 24 * 60 * 60 * 1000,
-          ).toISOString(),
+        // The form used to ask "¿hasta cuándo?" and take the answer as the
+        // expiry. Nobody answered it, 46 times out of 46, so the window is
+        // the only thing left setting it.
+        expires_at: new Date(
+          Date.now() + DEFAULT_AVAILABILITY_DAYS * 24 * 60 * 60 * 1000,
+        ).toISOString(),
         created_by: this.user?.id ?? null,
       })
       .select("id")
@@ -149,23 +146,6 @@ export class ResourceOfferDAL {
     return { id: row.id };
   }
 
-  /** Records that a curator checked this against its source. */
-  async verify(id: string): Promise<void> {
-    if (!canVerifyResourceOffer(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("resource_offer")
-      .update({ verified_by: this.user!.id, verified_at: now, confirmed_at: now })
-      .eq("id", id);
-
-    if (error) {
-      log.error("resourceOffer.verify failed", { code: error.code, resourceOfferId: id });
-      throw new Error("No se pudo verificar el servicio");
-    }
-  }
-
   /** A curator corrects any of an offer's own fields — never the point,
    *  see `adminUpdateResourceOfferSchema`. */
   async adminUpdate(input: unknown): Promise<void> {
@@ -176,11 +156,8 @@ export class ResourceOfferDAL {
     const patch: Record<string, unknown> = {};
     if (data.type !== undefined) patch.type = data.type;
     if (data.description !== undefined) patch.description = data.description;
-    if (data.quantity !== undefined) patch.quantity = data.quantity;
     if (data.area !== undefined) patch.area = data.area;
     if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
-    if (data.availableFrom !== undefined) patch.available_from = data.availableFrom;
-    if (data.availableUntil !== undefined) patch.available_until = data.availableUntil;
     if (Object.keys(patch).length === 0) return;
 
     const supabase = createAdminSupabase();
@@ -244,16 +221,11 @@ export class ResourceOfferDAL {
       id: row.id,
       type: row.type,
       description: row.description,
-      quantity: row.quantity,
       area: row.area,
       longitude: row.longitude,
       latitude: row.latitude,
       neighborhood: row.neighborhood,
       whatsapp: row.whatsapp,
-      availableFrom: row.available_from,
-      availableUntil: row.available_until,
-      verified: row.verified,
-      confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
       expiresAt: row.expires_at,
       createdById: row.created_by,

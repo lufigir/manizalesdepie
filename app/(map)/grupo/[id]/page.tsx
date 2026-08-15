@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
-import { canSeeAttendees } from "@/data/call/call.policy";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
 import { clientEnv } from "@/lib/env";
@@ -11,22 +10,17 @@ import {
   CALL_CATEGORY_LABEL,
   CALL_STATE_LABEL,
   callState,
-  callWhen,
-  slotsLabel,
 } from "@/lib/labels";
 
 import { MapWorkspace } from "../../_components/map-workspace";
 
-import { CallAttendees } from "./_components/call-attendees";
-
 /**
  * A shared grupo.
  *
- * This is the route the whole feature is built around. A shift is organised in
- * a WhatsApp group, and what circulates there is a line of text that always
- * loses the same two facts: the exact corner and the hour. This link carries
- * both, unfurls into a card in the thread, and ends in a button that signs
- * somebody up without an account.
+ * This is the route the whole feature is built around. What circulates in a
+ * WhatsApp thread is a line of text that always loses the same fact: the
+ * exact corner. This link carries it, unfurls into a card in the thread, and
+ * lands the reader on the pin.
  */
 
 type Params = { params: Promise<{ id: string }> };
@@ -38,13 +32,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!call) return { title: "Grupo no encontrado" };
 
   // Everything someone in the group needs before deciding to tap: what kind of
-  // work, when, where, and whether there is still room.
+  // work, where, and whether it is still going.
   const description = [
     CALL_CATEGORY_LABEL[call.category],
-    callWhen(call),
+    call.meetingAddress,
     call.neighborhood,
     CALL_STATE_LABEL[callState(call)],
-    slotsLabel(call),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -82,13 +75,6 @@ export default async function SharedCallPage({ params }: Params) {
     ? calls
     : [call, ...calls];
 
-  // The volunteers' phone numbers, and only for the person who convened this.
-  // The policy is checked here so the DAL is not even asked for a list nobody
-  // is allowed to read; the DAL checks it again, and so does row-level security.
-  const attendees = canSeeAttendees(user, call)
-    ? await (await CallDAL.create()).listAttendees(call.id)
-    : null;
-
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
@@ -100,9 +86,7 @@ export default async function SharedCallPage({ params }: Params) {
         // "Ayudar" whatever the reader was looking at last.
         tab="help"
         isAdmin={user?.role === "curator"}
-      >
-        {attendees && <CallAttendees attendees={attendees} />}
-      </MapWorkspace>
+      />
     </main>
   );
 }

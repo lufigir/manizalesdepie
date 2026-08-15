@@ -12,20 +12,19 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { relocateInformalCall } from "@/data/call/call.actions";
+import { relocateCall } from "@/data/call/call.actions";
 import type { CallDTO } from "@/data/call/call.dto";
 import { RELOCATE_LABEL } from "@/lib/labels";
 
 import { PinPicker } from "../reportar/_components/pin-picker";
 
 /**
- * "Sigue por aquí, no allá" — anyone may nudge an informal pin, never a
- * formal one. See `canRelocateInformalCall`: there is no organiser here to
- * contradict, so this is closer to fixing a wiki entry than moving someone
- * else's meeting point.
+ * "Sigue por aquí, no allá" — anyone may nudge a pin. See
+ * `canRelocateCall`: nobody committed to this spot, so it is closer to
+ * fixing a wiki entry than moving someone else's meeting point.
  *
  * Constrained to the pin's own barrio, but only server-side (see
- * `CallDAL.relocateInformal`) — dragging past the edge is not blocked here,
+ * `CallDAL.relocate`) — dragging past the edge is not blocked here,
  * it is rejected on save, with the error the DAL sends back.
  *
  * The picker opens in its own bottom sheet rather than inline in the card:
@@ -47,8 +46,6 @@ export function RelocateCall({ call }: { call: CallDTO }) {
     [],
   );
 
-  if (!call.informal) return null;
-
   if (done) {
     return (
       <p className="text-resolved flex items-center gap-1.5 text-xs font-medium">
@@ -62,7 +59,7 @@ export function RelocateCall({ call }: { call: CallDTO }) {
     setError(null);
     startTransition(async () => {
       try {
-        await relocateInformalCall({
+        await relocateCall({
           callId: call.id,
           longitude: point.lng,
           latitude: point.lat,

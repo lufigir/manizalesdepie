@@ -12,7 +12,6 @@ import {
   deleteAnimal,
   resolveAnimal,
   setAnimalPublished,
-  verifyAnimal,
 } from "@/data/animal/animal.actions";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import {
@@ -230,8 +229,6 @@ function AnimalCard({
           <AdminActions
             published={animal.published}
             onSetPublished={(published) => setAnimalPublished(animal.id, published)}
-            verified={animal.verified}
-            onVerify={() => verifyAnimal(animal.id)}
             onDelete={() => deleteAnimal(animal.id)}
           />
         </div>

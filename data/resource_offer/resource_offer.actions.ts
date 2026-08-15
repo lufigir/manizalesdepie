@@ -13,13 +13,10 @@ import { ResourceOfferDAL } from "./resource_offer.dal";
 export async function proposeResourceOffer(input: {
   type: string;
   description: string;
-  quantity?: number;
   area: string;
   longitude?: number;
   latitude?: number;
   whatsapp: string;
-  availableFrom?: string;
-  availableUntil?: string;
 }) {
   const dal = await ResourceOfferDAL.create();
   const { id } = await dal.propose(input);
@@ -29,22 +26,12 @@ export async function proposeResourceOffer(input: {
   return { id };
 }
 
-export async function verifyResourceOffer(id: string) {
-  const dal = await ResourceOfferDAL.create();
-  await dal.verify(id);
-  revalidatePath("/");
-  revalidatePath("/admin");
-}
-
 export async function adminUpdateResourceOffer(input: {
   id: string;
   type?: string;
   description?: string;
-  quantity?: number;
   area?: string;
   whatsapp?: string;
-  availableFrom?: string;
-  availableUntil?: string;
 }) {
   const dal = await ResourceOfferDAL.create();
   await dal.adminUpdate(input);
