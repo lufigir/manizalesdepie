@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil } from "lucide-react";
+import { Check, Pencil, Share2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,32 @@ import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
 import { useWorkspace } from "./workspace-context";
+
+/** The share control, in both the places a card can put it — beside
+ *  "Yo puedo atender" while the case is open, alone once it is closed. */
+function ShareButton({
+  copied,
+  onShare,
+}: {
+  copied: boolean;
+  onShare: () => void;
+}) {
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={onShare}
+      aria-label={WORK_ORDER_LABEL.share}
+      title={copied ? WORK_ORDER_LABEL.shareCopied : WORK_ORDER_LABEL.share}
+    >
+      {copied ? (
+        <Check className="size-3.5" aria-hidden />
+      ) : (
+        <Share2 className="size-3.5" aria-hidden />
+      )}
+    </Button>
+  );
+}
 
 /** What `confirmingClose` names, quoted back in the confirm prompt so
  *  "¿Seguro?" always says seguro of what. */
@@ -130,6 +156,31 @@ export function WorkOrderItem({
   const [confirmingClose, setConfirmingClose] = useState<
     "closed_completed" | "closed_by_others" | "closed_rejected" | null
   >(null);
+
+  const [copied, setCopied] = useState(false);
+
+  /** Same flow a site and a grupo already have: the native sheet where
+   *  there is one — it puts WhatsApp first on Android, one tap back into
+   *  the group the case came from — and the clipboard everywhere else. */
+  async function share() {
+    const url = `${window.location.origin}/necesidad/${order.id}`;
+    const title = `${WORK_ORDER_CATEGORY_LABEL[order.category]}${
+      order.neighborhood ? ` · ${order.neighborhood}` : ""
+    }`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text: order.description, url });
+      } catch {
+        // Dismissed. Not an error.
+      }
+      return;
+    }
+
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const rollup = workOrderRollup(order.status);
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
@@ -344,11 +395,28 @@ export function WorkOrderItem({
               </div>
             </div>
           ) : (
-            <Button size="sm" className="mt-2 w-full" onClick={() => setAttendOpen(true)}>
-              {WORK_ORDER_LABEL.attend}
-            </Button>
+            // Sharing sits beside attending, not down among the text links:
+            // forwarding a case to the group with the volqueta in it is a
+            // real way of helping, often the only one a given reader has.
+            // Icon-only so "Yo puedo atender" keeps the width and stays
+            // unambiguously the primary action.
+            <div className="mt-2 flex gap-1.5">
+              <Button size="sm" className="flex-1" onClick={() => setAttendOpen(true)}>
+                {WORK_ORDER_LABEL.attend}
+              </Button>
+              <ShareButton copied={copied} onShare={share} />
+            </div>
           )}
         </>
+      )}
+
+      {/* A closed case has no "atender" button to sit next to, so its share
+          control goes here instead — the link still resolves, and "ya se
+          resolvió" is a useful thing to be able to forward. */}
+      {!editOpen && rollup === "closed" && (
+        <div className="mt-2 flex">
+          <ShareButton copied={copied} onShare={share} />
+        </div>
       )}
 
       {/* Every secondary action for the case, one row: correct it, or say
@@ -356,7 +424,7 @@ export function WorkOrderItem({
           reads as more official than the others. A close outcome asks twice
           before it runs — it is what takes the case off the map, so a
           mistap here is worse than one on "Editar". */}
-      {!editOpen && rollup !== "closed" && (
+      {!editOpen && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           {confirmingClose ? (
             <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.65rem]">
@@ -381,37 +449,39 @@ export function WorkOrderItem({
               </button>
             </span>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditOpen(true)}
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
-              >
-                <Pencil className="size-2.5" aria-hidden />
-                {WORK_ORDER_LABEL.edit}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingClose("closed_completed")}
-                className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
-              >
-                {WORK_ORDER_LABEL.closeCompleted}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingClose("closed_by_others")}
-                className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
-              >
-                {WORK_ORDER_LABEL.closeByOthers}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingClose("closed_rejected")}
-                className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
-              >
-                {WORK_ORDER_LABEL.closeRejected}
-              </button>
-            </>
+            rollup !== "closed" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
+                >
+                  <Pencil className="size-2.5" aria-hidden />
+                  {WORK_ORDER_LABEL.edit}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingClose("closed_completed")}
+                  className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
+                >
+                  {WORK_ORDER_LABEL.closeCompleted}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingClose("closed_by_others")}
+                  className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
+                >
+                  {WORK_ORDER_LABEL.closeByOthers}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingClose("closed_rejected")}
+                  className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
+                >
+                  {WORK_ORDER_LABEL.closeRejected}
+                </button>
+              </>
+            )
           )}
         </div>
       )}

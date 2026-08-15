@@ -741,6 +741,26 @@ export const BARRIO_PICKER = {
  * own module already exports (`CALL_LABEL.heading`, `SERVICES_LABEL.title`,
  * and so on) instead of duplicating a title here.
  */
+/**
+ * What a shared link says about itself — the card in a WhatsApp thread, the
+ * search result, the browser tab. Here rather than inline in each route for
+ * the reason every other string is: two screens drifting apart is how a
+ * product starts describing itself two different ways.
+ */
+export const OG_LABEL = {
+  siteName: "Manizales de Pie",
+  tagline: "Mapa de ayuda · Manizales y Villamaría",
+  /** The eyebrow over each card — the kind of thing behind the link. */
+  site: "Punto",
+  call: "Grupo",
+  workOrder: "Necesidad",
+  /** The home card: no one entity, so it states what the map is for. */
+  homeTitle: "¿Dónde ayudo hoy?",
+  homeMeta:
+    "Acopios, albergues, donación de sangre, grupos y necesidades, en un solo mapa.",
+  notFound: "No encontrado",
+} as const;
+
 export const PANEL_LABEL = {
   all: "Todo",
   sites: "Sitios",
@@ -953,6 +973,8 @@ export const WORK_ORDER_LABEL = {
   closeConfirmYes: "Sí",
   closeConfirmCancel: "No",
   closed: "Cerrado",
+  share: "Compartir",
+  shareCopied: "Enlace copiado",
   failed: "No se pudo completar. Intenta otra vez.",
 } as const;
 

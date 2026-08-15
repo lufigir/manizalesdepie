@@ -82,6 +82,30 @@ export class WorkOrderDAL {
   }
 
   /**
+   * One case, or null. What a shared link resolves to.
+   *
+   * Not filtered by `expires_at`, unlike `listPublished`: a link posted in a
+   * WhatsApp group outlives the case it points at, and "ya se resolvió" on
+   * the card is a better answer than a 404 for someone arriving late.
+   */
+  async findById(id: string): Promise<WorkOrderDTO | null> {
+    const supabase = await createServerSupabase();
+
+    const { data, error } = await supabase
+      .from("work_order_public")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      log.error("workOrder.findById failed", { code: error.code, workOrderId: id });
+      throw new Error("No se pudo cargar la necesidad");
+    }
+
+    return data ? this.toDTO(data) : null;
+  }
+
+  /**
    * Reports debris, a structural risk, whatever needs a volqueta or a pair
    * of hands. Anonymous, on the map immediately.
    *
