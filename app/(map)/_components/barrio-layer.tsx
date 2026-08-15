@@ -6,9 +6,13 @@ import type { FilterSpecification } from "maplibre-gl";
 import { MapGeoJSON, useMap } from "@/components/ui/map";
 import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
 import { contains } from "@/lib/geo";
+import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 
 /**
  * The barrios of Manizales and Villamaría, as areas to hover and to stand in.
+ *
+ * On a phone they are areas to stand in only, and mostly invisible ones — see
+ * `isDesktop` below.
  *
  * These replaced the comunas because a comuna is not how anyone here describes
  * where they are. Nobody says "estoy en la Comuna 4"; they say "estoy en
@@ -123,6 +127,23 @@ export function BarrioLayer({
   statuses?: NeighborhoodStatusDTO[];
 }) {
   const { map } = useMap();
+  /**
+   * Below `lg` the boundaries and the status shading are not drawn at all.
+   *
+   * The wash and the dashed outline pay for themselves on a desktop because a
+   * cursor can point at them: hovering names a barrio, and the shading is a
+   * legend you read by moving across it. A phone has no cursor, so all the
+   * same ink arrives with none of the affordance — 114 dashed polygons over a
+   * five-inch map, competing with the pins that are the actual answer to
+   * "¿dónde ayudo hoy?".
+   *
+   * What survives is everything that works by touch: the names from zoom 14
+   * up (see the label effect below), tapping a barrio to filter by it, the
+   * "estás en X" chip, and the solid fill on the one being filtered by — that
+   * last one is not decoration, it is the only on-map feedback that the
+   * filter is on.
+   */
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   // --foreground rather than a fixed grey: it is light on the dark basemap and
   // dark on the light one, so the outline keeps contrast in both themes. A grey
   // token disappeared into the basemap's own road lines.
@@ -431,41 +452,51 @@ export function BarrioLayer({
            return`), so without a fill there is no highlight at all — a 1.5px
            dashed line is not something anyone can point at. */
         fillPaint={{
-          "fill-color": [
-            "case",
-            ["in", ["get", "name"], ["literal", evacuatedNames]],
-            evacuatedColor,
-            ["in", ["get", "name"], ["literal", utilityNames]],
-            utilityColor,
-            border,
-          ],
+          "fill-color": isDesktop
+            ? [
+                "case",
+                ["in", ["get", "name"], ["literal", evacuatedNames]],
+                evacuatedColor,
+                ["in", ["get", "name"], ["literal", utilityNames]],
+                utilityColor,
+                border,
+              ]
+            : border,
           // The one being filtered by is drawn solid, so the filter is visible
           // on the map and not only as a chip in the corner. A status barrio
           // gets a floor above the uniform wash even unselected, so the signal
           // survives closing the filter.
-          "fill-opacity": [
-            "case",
-            ["==", ["get", "name"], selected ?? ""],
-            0.22,
-            ["in", ["get", "name"], ["literal", evacuatedNames]],
-            0.16,
-            ["in", ["get", "name"], ["literal", utilityNames]],
-            0.1,
-            selected ? 0.02 : 0.03,
-          ],
+          // Zero, not `visibility: none`, on the unselected ones below `lg`:
+          // a hidden layer stops hit-testing and takes tap-to-filter with it.
+          // A transparent fill still answers a tap.
+          "fill-opacity": isDesktop
+            ? [
+                "case",
+                ["==", ["get", "name"], selected ?? ""],
+                0.22,
+                ["in", ["get", "name"], ["literal", evacuatedNames]],
+                0.16,
+                ["in", ["get", "name"], ["literal", utilityNames]],
+                0.1,
+                selected ? 0.02 : 0.03,
+              ]
+            : ["case", ["==", ["get", "name"], selected ?? ""], 0.22, 0],
         }}
         fillHoverPaint={{ "fill-opacity": 0.12 }}
         linePaint={{
           "line-color": border,
-          "line-width": selected
-            ? ["case", ["==", ["get", "name"], selected], 2.5, 1.4]
-            : 1.75,
+          "line-width": isDesktop
+            ? selected
+              ? ["case", ["==", ["get", "name"], selected], 2.5, 1.4]
+              : 1.75
+            : // Only the selected barrio keeps an outline on a phone.
+              ["case", ["==", ["get", "name"], selected ?? ""], 2.5, 0],
           // Raised from 0.28: against the dark basemap — the one most
           // people actually see this on — a near-white line at that
           // opacity read as barely stronger than the basemap's own road
           // lines. The fill stays deliberately faint (see above); the line
           // is the one thing that has to read as a boundary on its own.
-          "line-opacity": 0.42,
+          "line-opacity": isDesktop ? 0.42 : 0.6,
           "line-dasharray": [3, 2],
         }}
         onClick={handleClick}

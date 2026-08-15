@@ -42,9 +42,11 @@
     --color-resolved-surface: var(--resolved-surface);
 
     /* Freshness. A datum nobody has confirmed is not hidden, it is labelled. */
+    --color-group: var(--group);
+    --color-group-foreground: var(--group-foreground);
+    --color-group-surface: var(--group-surface);
     --color-stale: var(--stale);
     --color-stale-surface: var(--stale-surface);
-    --color-verified: var(--verified);
 
     /* Map layers. One hue per site type so the legend is learnable. */
     --color-layer-collection: var(--layer-collection);
@@ -124,9 +126,20 @@
     --resolved-foreground: oklch(0.985 0 0);
     --resolved-surface: oklch(0.955 0.028 162);
 
+    /* Grupos, and only grupos. The three above are a status axis — verde
+       ayuda ya, ámbar todavía no, rojo no vayas — shared by every family on
+       the map so it teaches one grammar. A grupo answers a different
+       question ("¿hay gente ahí ahora?"), and sharing the axis made a grupo
+       en curso and an acopio abierto the same green dot at map scale, where
+       colour resolves long before a circle can be told from a square.
+       Violet is also the one hue in this palette a deuteranope can separate
+       from all three at a glance. */
+    --group: oklch(0.52 0.19 300);
+    --group-foreground: oklch(0.985 0 0);
+    --group-surface: oklch(0.958 0.035 300);
+
     --stale: oklch(0.58 0.028 250);
     --stale-surface: oklch(0.955 0.008 250);
-    --verified: oklch(0.5 0.1 210);
 
     --layer-collection: oklch(0.5 0.11 240);
     --layer-shelter: oklch(0.51 0.13 290);
@@ -184,9 +197,12 @@
     --resolved-foreground: oklch(0.16 0.02 162);
     --resolved-surface: oklch(0.27 0.05 162);
 
+    --group: oklch(0.7 0.17 300);
+    --group-foreground: oklch(0.16 0 0);
+    --group-surface: oklch(0.29 0.07 300);
+
     --stale: oklch(0.66 0.024 250);
     --stale-surface: oklch(0.28 0.012 250);
-    --verified: oklch(0.72 0.09 210);
 
     --layer-collection: oklch(0.71 0.1 240);
     --layer-shelter: oklch(0.72 0.115 290);

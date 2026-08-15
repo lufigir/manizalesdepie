@@ -84,6 +84,17 @@ row into a response.
   between an affected person and a published address is the warning in
   `WORK_ORDER_FORM.contactHint`. Weaken that copy and the decision above
   stops being defensible — treat it as load-bearing, not as a nicety.
+- **No single person closes a `work_order`.** Closing used to be one
+  anonymous tap that wrote a terminal status, so one bad actor could empty
+  the map and "no es un caso real" could be recorded about a household that
+  would never find out. Since 15 August `status` is not writable by the
+  application at all: entries go into `work_order_update` — *voy*, *ya
+  ayudé*, *sigue haciendo falta*, *no es real* — and `sync_work_order_state`
+  derives the status from them. Two "ya ayudé" from two distinct phones
+  close a case; one "sigue haciendo falta" after the last of them reopens
+  it. `closed_rejected` is a curator's, because it is the outcome that calls
+  somebody a liar. If a feature ever needs to set a status directly, it is
+  the feature that is wrong.
 - **Realtime goes browser → Postgres directly, so RLS is the guard there, not
   the DAL.** Any new sensitive column must live in a table that no channel
   subscribes to. Do not "temporarily" add one to a published table.
@@ -146,9 +157,16 @@ go looking for the endpoint; it isn't there.
 
 `supabase/seed.sql` carries real names, needs and closures from press reporting,
 but **the coordinates are approximate and unverified**. Everything is seeded
-`published = false` on purpose. A curator geocodes and confirms each row before
+`published = false` on purpose. Somebody geocodes and confirms each row before
 it becomes visible. Sending someone to the wrong shelter is worse than having no
 pin at all.
+
+There is no "verificado por un curador" any more, on any table: the column and
+the badge were removed on 15 August because this project will not have a
+curator team, and a confidence level nobody can ever reach does not read as
+"not yet" — it reads as a judgement that was made. What survives is
+`confirmed_count` on `site` (anyone, one tap, no account) and `published`
+(hiding spam, which needs no roster).
 
 ## Deliberately out of scope
 

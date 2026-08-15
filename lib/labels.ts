@@ -22,14 +22,12 @@ import {
 
 import type { CallCategory, CallDTO } from "@/data/call/call.dto";
 import type { NeedPriority } from "@/data/neighborhood/neighborhood.dto";
-import type {
-  ResourceOfferDTO,
-  ResourceType,
-} from "@/data/resource_offer/resource_offer.dto";
+import type { ResourceType } from "@/data/resource_offer/resource_offer.dto";
 import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
 import type {
   WorkOrderCategory,
   WorkOrderStatus,
+  WorkOrderUpdateKind,
 } from "@/data/work_order/work_order.dto";
 import type { PanelChip } from "@/lib/tabs";
 
@@ -130,15 +128,11 @@ export const ITEM_MODE_LABEL: Record<ItemMode, string> = {
 export const AUTH_LABEL = {
   title: "Entra para ayudar",
   subtitle:
-    "Solo necesitas cuenta para apuntarte a un grupo o hacerte cargo de un caso. Ver el mapa nunca la pide.",
+    "Solo necesitas cuenta para hacerte cargo de un caso. Reportar y ver el mapa nunca la piden.",
   google: "Continuar con Google",
   signOut: "Cerrar sesión",
   back: "Volver al mapa",
   failed: "No se pudo iniciar sesión. Vuelve a intentarlo.",
-  /** Shown at the publish gate. Says WHY the account is needed, at the moment
-   *  it is asked for — not as a rule in the abstract. */
-  gateReason:
-    "Guardamos lo que escribiste. Solo pedimos cuenta para armar grupos, porque otras personas se apuntan contando contigo y recibes sus contactos.",
   errorTitle: "No pudimos completar el ingreso",
   errorBody:
     "El enlace pudo haber vencido o ya se usó. Intenta entrar otra vez desde el mapa.",
@@ -161,7 +155,6 @@ export const SHEET_LABEL = {
    *  that already say what they do. */
   confirmPrompt: "¿Estás ahí? Confirma cómo está:",
   description: "Descripción",
-  source: "Fuente",
 } as const;
 
 /**
@@ -196,22 +189,21 @@ export const SHARED_LINK = {
  * The old model held a report back until a curator approved it, which in a fast
  * emergency makes the reviewer the bottleneck and the information arrives too
  * late to matter. Ushahidi's own guidance is the opposite: publish, label the
- * uncertainty, and let the reader judge — leaving something "unverified" beats
+ * uncertainty, and let the reader judge — leaving something unconfirmed beats
  * hiding it, and beats deleting it.
+ *
+ * There used to be a third level above these two, "verificado por un curador".
+ * It was removed the 15th along with the column behind it: this project is not
+ * going to have a curator team, so that rung was never going to be reached,
+ * and a level nobody can climb to does not read as "not yet" — it reads as a
+ * judgement that was made. Two levels that people can actually produce beat
+ * three where the top one is decorative.
  */
-export type Confidence = "unconfirmed" | "confirmed" | "verified";
+export type Confidence = "unconfirmed" | "confirmed";
 
 export function confidence(site: {
-  verified: boolean;
   confirmedCount: number;
 }): { level: Confidence; label: string; short: string } {
-  if (site.verified) {
-    return {
-      level: "verified",
-      label: "Verificado por un curador",
-      short: "Verificado",
-    };
-  }
   if (site.confirmedCount > 0) {
     return {
       level: "confirmed",
@@ -238,14 +230,22 @@ export function confidence(site: {
 export const CONFIDENCE_MARKER: Record<Confidence, string> = {
   unconfirmed: "opacity-55",
   confirmed: "",
-  verified: "ring-verified ring-[3px]",
 };
 
 export const CONFIDENCE_BADGE: Record<Confidence, string> = {
   unconfirmed: "bg-stale-surface text-stale border-stale/30",
   confirmed: "bg-resolved-surface text-resolved border-resolved/30",
-  verified: "bg-verified/10 text-verified border-verified/30",
 };
+
+/*
+ * A `verification()` helper lived here for exactly one afternoon.
+ *
+ * It reported the one confidence signal the four non-sitio families could
+ * carry, now that their `confirmed_count` was gone: whether a curator had
+ * checked the row. Removing verification removed the only thing it had left
+ * to say, so those families carry no confidence badge at all — just how long
+ * ago somebody last touched them, which `freshness` already answers.
+ */
 
 /**
  * The public report form.
@@ -420,147 +420,57 @@ export const CALL_CATEGORY_ICON: Record<CallCategory, LucideIcon> = {
 };
 
 /**
- * What a call is doing right now, which is the only question a reader has about
- * one. Deliberately the same four colours as a site's status, carrying the same
- * meaning — green helps you right now, amber not yet, red do not go, grey over —
- * so the map teaches one grammar instead of two.
+ * What a call is doing right now, which is the only question a reader has
+ * about one.
+ *
+ * This used to borrow a site's status colours outright, so the map would
+ * teach one grammar instead of two. It taught one grammar and lost one
+ * distinction: at map scale colour resolves several hundred milliseconds
+ * before shape does, so a grupo en curso and an acopio abierto were the same
+ * green dot until you looked twice. A grupo now carries its own hue
+ * (`--group`) and states its state by weight instead — solid en curso,
+ * softened próxima, grey once it is over. The status axis stays untouched
+ * for the families that are actually on it.
  */
-export type CallState = "live" | "upcoming" | "full" | "ended";
+export type CallState = "live" | "upcoming" | "ended";
 
 export function callState(
-  call: Pick<CallDTO, "startsAt" | "expiresAt" | "slotsTotal" | "slotsTaken">,
+  call: Pick<CallDTO, "startsAt" | "expiresAt">,
   now: number = Date.now(),
 ): CallState {
   if (now >= Date.parse(call.expiresAt)) return "ended";
-  if (call.slotsTotal !== null && call.slotsTaken >= call.slotsTotal) {
-    return "full";
-  }
   return now >= Date.parse(call.startsAt) ? "live" : "upcoming";
 }
 
 export const CALL_STATE_LABEL: Record<CallState, string> = {
   live: "En curso",
   upcoming: "Próxima",
-  full: "Cupos llenos",
   ended: "Ya terminó",
 };
 
 export const CALL_STATE_MARKER: Record<CallState, string> = {
-  live: "bg-resolved text-resolved-foreground",
-  upcoming: "bg-claimed text-claimed-foreground",
-  full: "bg-unclaimed text-unclaimed-foreground",
+  live: "bg-group text-group-foreground",
+  // Softened rather than recoloured: the hue is the identity and must not
+  // move between states, so weight is the only axis left to carry them.
+  upcoming: "bg-group/70 text-group-foreground",
   ended: "bg-stale text-background",
 };
 
 export const CALL_STATE_STYLE: Record<CallState, string> = {
-  live: "bg-resolved-surface text-resolved border-resolved/30",
-  upcoming: "bg-claimed-surface text-claimed border-claimed/30",
-  full: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  live: "bg-group-surface text-group border-group/30",
+  upcoming: "bg-group-surface/70 text-group border-group/20",
   ended: "bg-stale-surface text-stale border-stale/30",
 };
 
-/**
- * How many people said they would come, or null when nobody has yet.
- *
- * Without a stated total the count is still shown, because "ya somos ocho" is
- * what makes the ninth person go. An empty grupo says nothing at all: it used
- * to read "Sé la primera persona en apuntarte", which is a pitch rather than a
- * fact, and it sat in the row where every other card states one.
- */
-export function slotsLabel(
-  call: Pick<CallDTO, "slotsTotal" | "slotsTaken">,
-): string | null {
-  if (call.slotsTotal !== null) {
-    return `${call.slotsTaken} de ${call.slotsTotal} cupos`;
-  }
-  if (call.slotsTaken === 0) return null;
-  return call.slotsTaken === 1 ? "1 persona apuntada" : `${call.slotsTaken} personas apuntadas`;
-}
-
-/**
- * When a shift is, written the way it is spoken in Colombia.
- *
- * Built from `formatToParts` with the period normalised, and that is not
- * cosmetic: es-CO renders "p. m." with a narrow no-break space in the browser
- * and an ordinary one in Node, so the same timestamp produces two different
- * strings and React tears the tree down on hydration. Normalising both to "PM"
- * makes the server and the client agree by construction.
- */
-const bogotaClock = new Intl.DateTimeFormat("es-CO", {
-  timeZone: "America/Bogota",
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
-
-const bogotaCalendar = new Intl.DateTimeFormat("es-CO", {
-  timeZone: "America/Bogota",
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
-
-/** The civil date in Bogotá as YYYY-MM-DD, only ever compared to another one. */
-const bogotaDate = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Bogota",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-function clock(at: Date): string {
-  const found = bogotaClock.formatToParts(at);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    found.find((part) => part.type === type)?.value ?? "";
-
-  return `${get("hour")}:${get("minute")} ${get("dayPeriod")
-    .replace(/\s|\./g, "")
-    .toUpperCase()}`;
-}
-
-function day(at: Date, now: Date): string {
-  const today = bogotaDate.format(now);
-  const tomorrow = bogotaDate.format(new Date(now.getTime() + 86_400_000));
-  const target = bogotaDate.format(at);
-
-  if (target === today) return "Hoy";
-  if (target === tomorrow) return "Mañana";
-  return bogotaCalendar.format(at).replace(/\.$/, "");
-}
-
-/**
- * "Hoy 8:00 AM – 12:00 PM". The day comes first because during an emergency
- * the wrong day is the mistake that costs someone a morning.
- *
- * An informal call has no hour at all, so this returns null for one: its
- * `startsAt` is the instant somebody reported it, not a time anyone chose
- * (see `CallDAL.gather`), and printing it as a clock time would be the one
- * claim this kind of pin cannot back up. It used to say "Actualmente hay
- * gente ayudando" instead, which is a claim of its own — nobody checked
- * whether they were still there. Saying nothing is the honest version, and
- * the card's state badge ("En curso") already carries what is known.
- */
-export function callWhen(
-  call: Pick<CallDTO, "startsAt" | "endsAt" | "informal">,
-  now: Date = new Date(),
-): string | null {
-  if (call.informal) return null;
-
-  const starts = new Date(call.startsAt);
-  const head = `${day(starts, now)} ${clock(starts)}`;
-  if (!call.endsAt) return head;
-  return `${head} – ${clock(new Date(call.endsAt))}`;
-}
 
 /** The grupos block at the top of "Ayudar", and the card on the map. */
 export const CALL_LABEL = {
   heading: "Grupos",
-  headingHint: "Cuadrillas y horas donde se necesitan manos",
+  headingHint: "Dónde hay gente trabajando ahora mismo",
   empty:
-    "Todavía no hay grupos armados. Si estás organizando uno, publícalo y la ciudad lo ve hoy mismo.",
+    "Todavía no hay grupos reportados. Si viste uno, o estás en uno, publícalo y la ciudad lo ve hoy mismo.",
   meetingPoint: "Punto de encuentro",
-  bring: "Lleva",
-  organiser: "Escribir al organizador",
+  organiser: "Escribir a quien reportó",
   directions: "Cómo llegar",
   share: "Compartir",
   ended: "Este grupo ya terminó.",
@@ -570,7 +480,7 @@ export const CALL_LABEL = {
   countMany: (n: number) => `${n} grupos`,
 } as const;
 
-/** Moving an informal pin. See `RelocateCall` and `CallDAL.relocateInformal`. */
+/** Moving a pin. See `RelocateCall` and `CallDAL.relocate`. */
 export const RELOCATE_LABEL = {
   open: "Ajustar el punto",
   title: "¿Dónde exactamente?",
@@ -583,90 +493,42 @@ export const RELOCATE_LABEL = {
 } as const;
 
 /**
- * "Quiero participar".
+ * The form that reports a grupo.
  *
- * The number is optional and the copy says why in the same breath, because a
- * field that looks required and is not gets filled with a fake number, which is
- * worse than a blank: the organiser then thinks they can reach that person.
- */
-export const JOIN_LABEL = {
-  join: "Quiero participar",
-  joinTomorrow: "Apuntarme para mañana",
-  whatsapp: "Tu WhatsApp",
-  whatsappHint:
-    "Opcional. Solo lo ve quien armó el grupo, y es como te avisa si se cancela o se cambia la hora.",
-  submit: "Apuntarme",
-  submitting: "Apuntando…",
-  joined: "Listo, quedaste apuntado",
-  joinedHint: "Llega al punto de encuentro a la hora. Si no puedes, avísale al organizador.",
-  already: "Ya estabas apuntado a este grupo",
-  full: "Ya se llenaron los cupos",
-  failed: "No se pudo apuntar. Intenta otra vez.",
-  cancel: "Ahora no",
-  attendees: "Quién se apuntó",
-  attendeesHint:
-    "Solo tú ves esta lista, porque tú armaste el grupo. Escríbeles antes de la hora.",
-  attendeesEmpty: "Todavía nadie se ha apuntado.",
-  noContact: "Sin número",
-  tomorrowTag: "Para mañana",
-} as const;
-
-/**
- * The form that arms a grupo.
- *
- * It is the only form in this app that ends at a sign-in wall, and the copy
- * says why at that exact moment rather than as a rule at the door — see
- * AUTH_LABEL.gateReason.
+ * It used to be two: a scheduled shift with an hour, a roster and a cap, and
+ * a bare pin for "alguien se está juntando ahí". Ten of the first thirteen
+ * grupos took the second path and one person in total ever signed up, so the
+ * scheduled half is gone and this copy asks only what somebody walking past
+ * can actually answer.
  */
 export const CALL_FORM = {
-  title: "Armar un grupo",
+  title: "Reportar un grupo",
   subtitle:
-    "Sale al mapa de una vez. Quien quiera ir se apunta con un toque y tú recibes sus contactos.",
-  category: "¿Qué se va a hacer?",
-  callTitle: "¿Cómo se llama el grupo?",
-  callTitlePlaceholder: "Limpieza de escombros en la calle 24",
-  description: "¿Qué hay que hacer?",
-  descriptionPlaceholder:
-    "Sacar escombros de dos casas y despejar el andén. Somos vecinos del barrio.",
-  barrio: "¿En qué barrio se encuentran?",
-  where: "Ajusta el punto de encuentro",
+    "Sale al mapa de una vez, sin cuenta. Gente que ya está trabajando, o que se está juntando ahora.",
+  category: "¿Qué están haciendo?",
+  description: "¿Qué está pasando ahí?",
+  descriptionPlaceholder: "Un grupo de vecinos recogiendo escombros en la cuadra.",
+  barrio: "¿En qué barrio?",
+  where: "Ajusta el punto",
   whereHint:
     "El mapa ya está en el barrio. Arrastra unos metros hasta la esquina exacta.",
   whereLocked: "Elige el barrio y el mapa se abre ahí.",
   barrioRequired:
-    "Elige primero el barrio. Sin eso el punto de encuentro queda en el centro de la ciudad.",
-  meetingAddress: "¿Dónde exactamente se ven?",
+    "Elige primero el barrio. Sin eso el punto queda en el centro de la ciudad.",
+  meetingAddress: "¿Dónde exactamente?",
   meetingAddressPlaceholder: "Frente a la tienda, portería del conjunto…",
-  meetingAddressHint:
-    "Diez personas tienen que llegar al mismo sitio a la misma hora. La esquina importa.",
-  starts: "¿Cuándo empieza?",
-  ends: "¿A qué hora termina?",
-  endsHint: "Opcional. Si no lo pones, el grupo sale del mapa seis horas después de empezar.",
-  slots: "¿Cuánta gente necesitas?",
-  slotsHint: "Opcional. Déjalo vacío si entre más manos mejor.",
-  bring: "¿Qué hay que llevar?",
-  bringPlaceholder: "Guantes, pala, tapabocas, agua.",
+  meetingAddressHint: "Opcional. Si sabes la esquina, ayuda a quien va llegando.",
   whatsapp: "Tu WhatsApp",
   whatsappHint:
-    "Opcional, y visible para todos: es para que te pregunten si el grupo sigue en pie.",
+    "Opcional, y visible para todos: es para que te pregunten si el grupo sigue ahí.",
   submit: "Publicar el grupo",
   submitting: "Publicando…",
+  hint: "Sale del mapa solo, al terminar el día.",
   nearbyTitle: "Ya hay un grupo parecido",
   nearbyBody:
-    "Está muy cerca y casi a la misma hora. Si es el mismo, apúntate en vez de partir el grupo en dos.",
+    "Está muy cerca y se reportó hace poco. Si es el mismo, no lo publiques dos veces.",
   nearbyIgnore: "No es el mismo, publicar igual",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
-  // The informal path: no title, no hour, no account. See
-  // createInformalCallSchema — this is a sighting, not a commitment, so the
-  // copy asks a different question than the formal form above it.
-  modeFormal: "Grupo formal",
-  modeFormalHint: "Con hora y responsable. Quien vaya se apunta y le llegan sus contactos.",
-  modeInformal: "Solo el punto",
-  modeInformalHint: "Sin cuenta, sin hora fija — gente que ya se está juntando en un barrio.",
-  informalDescription: "¿Qué está pasando ahí?",
-  informalDescriptionPlaceholder: "Un grupo de vecinos recogiendo escombros en la cuadra.",
-  informalSubmit: "Publicar el punto",
-  informalHint: "Sale del mapa solo, al terminar el día.",
 } as const;
 
 /**
@@ -713,47 +575,19 @@ export const SERVICES_LABEL = {
   availableNow: "Disponible ahora",
 } as const;
 
-/**
- * When an offer can actually be taken up: "Hoy 8:00 AM – Mañana 5:00 PM".
- *
- * Both ends are optional in the data and the string says only what is known —
- * an offer with no window at all reads as available now, which is what
- * `expiresAt` already promises for the week it stays published. Calling
- * somebody who stopped lending their truck yesterday wastes the one thing
- * nobody has here, so the window earns its line on the card.
- */
-export function offerAvailability(
-  offer: Pick<ResourceOfferDTO, "availableFrom" | "availableUntil">,
-  now: Date = new Date(),
-): string {
-  const from = offer.availableFrom ? new Date(offer.availableFrom) : null;
-  const until = offer.availableUntil ? new Date(offer.availableUntil) : null;
-
-  if (!from && !until) return SERVICES_LABEL.availableNow;
-
-  const parts: string[] = [];
-  if (from) parts.push(`${day(from, now)} ${clock(from)}`);
-  if (until) parts.push(`${day(until, now)} ${clock(until)}`);
-
-  return parts.join(" – ");
-}
-
 export const SERVICES_FORM = {
   title: "Ofrecer un servicio",
   subtitle:
     "Sale al mapa de una vez, sin cuenta. Publica solo lo que ya tienes, no una promesa.",
   type: "¿Qué ofreces?",
   description: "Cuéntalo en pocas palabras",
-  descriptionPlaceholder: "Volqueta doble troque, disponible fines de semana.",
-  quantity: "¿Cuántos?",
-  quantityHint: "Opcional. Solo si ofreces más de uno.",
+  descriptionPlaceholder:
+    "Volqueta doble troque, disponible fines de semana. Tengo dos.",
   barrio: "¿Desde qué barrio?",
   wholeCity: "Toda la ciudad",
   whatsapp: "Tu WhatsApp",
   whatsappHint: "Para que te escriban directamente. Queda visible para todos.",
-  availableFrom: "¿Desde cuándo?",
-  availableUntil: "¿Hasta cuándo?",
-  availableHint: "Opcional. Sin fecha, el servicio sigue visible una semana.",
+  hint: "El servicio sigue visible una semana.",
   submit: "Publicar el servicio",
   submitting: "Publicando…",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
@@ -990,17 +824,26 @@ export const WORK_ORDER_CATEGORY_ICON: Record<WorkOrderCategory, LucideIcon> = {
  * in the database for whoever claimed it; it was never hidden, just not
  * asked of a stranger scanning the map.
  */
-export type WorkOrderRollup = "unclaimed" | "claimed" | "closed";
+export type WorkOrderRollup =
+  | "unclaimed"
+  | "claimed"
+  | "attended"
+  | "closed";
 
 export function workOrderRollup(status: WorkOrderStatus): WorkOrderRollup {
   if (status === "unclaimed") return "unclaimed";
   if (status === "claimed") return "claimed";
+  if (status === "attended") return "attended";
   return "closed";
 }
 
 export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
   unclaimed: "Necesita atención",
   claimed: "En proceso",
+  // Says both halves on purpose. The word people reach for here is
+  // "atendido", and alone it reads as finished — which is exactly the
+  // mistake the old one-tap close institutionalised.
+  attended: "Atendido, sigue abierto",
   closed: "Cerrado",
 };
 
@@ -1011,12 +854,16 @@ export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
 export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
   unclaimed: "bg-unclaimed text-unclaimed-foreground",
   claimed: "bg-claimed text-claimed-foreground",
+  // Green, because somebody did turn up and that is worth seeing from across
+  // the map. Still a live pin, not a grey one: the case is open.
+  attended: "bg-resolved text-resolved-foreground",
   closed: "bg-stale text-background",
 };
 
 export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
   unclaimed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
   claimed: "bg-claimed-surface text-claimed border-claimed/30",
+  attended: "bg-resolved-surface text-resolved border-resolved/30",
   closed: "bg-stale-surface text-stale border-stale/30",
 };
 
@@ -1037,8 +884,9 @@ export const WORK_ORDER_LABEL = {
   // shape `JOIN_LABEL` already uses for a grupo.
   attend: "Yo puedo atender",
   attending: "Enviando…",
-  attendName: "Tu nombre",
-  attendPhone: "Tu WhatsApp",
+  attendName: "Tu nombre (opcional)",
+  attendPhone: "Tu WhatsApp (opcional)",
+  anonymous: "Anónimo",
   attendSubmit: "Confirmar",
   attendCancel: "Ahora no",
   attendedThanks: "Listo, quedaste registrado.",
@@ -1059,26 +907,56 @@ export const WORK_ORDER_LABEL = {
   /** Said where the fields are typed, not here — see WORK_ORDER_FORM. This
    *  is the reader's side of the same fact. */
   contactPublicNote: "Estos datos los dejó quien reportó el caso.",
-  attendNote: "Nota para los demás (opcional)",
+  attendNote: "¿Qué pasó o qué vas a hacer?",
+  attendNoteRequired: "Cuenta qué pasó, en pocas palabras.",
   attendNotePlaceholder: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
-  attendeesShow: "Ver quién va",
   attendeesHide: "Ocultar",
   attendeesLoading: "Cargando…",
-  attendeesEmpty: "Nadie se ha registrado todavía.",
+  attendeesEmpty: "Nadie ha escrito nada todavía.",
   attendeeCountOne: "1 persona va a atenderlo",
   attendeeCountMany: (n: number) => `${n} personas van a atenderlo`,
   attendeeCountNone: "Nadie ha dicho que puede atenderlo todavía",
+  helpedCountOne: "1 persona ya ayudó",
+  helpedCountMany: (n: number) => `${n} personas ya ayudaron`,
+  /**
+   * Said under the entry buttons, once, in plain words.
+   *
+   * People need to know that saying "ya ayudé" is safe — that it records
+   * what they did instead of switching the case off for everybody else.
+   * Without this line the honest thing to do looks like the destructive one,
+   * and the whole design depends on people using it.
+   *
+   * Two short sentences, not the four-line paragraph it started as: at
+   * 0.65rem in a 20rem popup that was a grey wall nobody reads, which is the
+   * same as not saying it.
+   */
+  updateHint:
+    "Un caso se cierra solo cuando dos personas distintas dicen que ya ayudaron. Cualquiera puede reabrirlo.",
+  /**
+   * The section headings.
+   *
+   * The card had nine controls stacked at the same weight — atender,
+   * ayudé, sigue haciendo falta, no es real, llegar, compartir, editar y dos
+   * de cierre — so the eye had to read every label to find the one thing it
+   * came for. These split them by the question each answers, which is also
+   * how they differ in consequence: helping, going, fixing the listing,
+   * curating.
+   */
+  sectionHelp: "¿Puedes ayudar?",
+  sectionBeenThere: "¿Ya fuiste, o pasaste por ahí?",
+  sectionWrong: "¿Algo está mal en este caso?",
+  sectionCuration: "Curaduría",
+  threadCount: (n: number) => `Ver qué ha pasado (${n})`,
   edit: "Editar",
   editCategory: "Categoría",
   editDescription: "Descripción",
   editSave: "Guardar",
   editSaving: "Guardando…",
   editCancel: "Cancelar",
-  closeCompleted: "Ya se resolvió",
-  closeByOthers: "Ya lo habían resuelto",
-  closeRejected: "No es un caso real",
-  // Cerrar un caso lo saca del mapa en unas horas — no algo para un toque
-  // accidental. El segundo tap confirma, igual que borrar en `AdminActions`.
+  // Cerrar a mano es de curadores — ver `canCloseWorkOrder`. El camino
+  // normal es el umbral que calcula la base.
+  closeCompleted: "Cerrar como resuelto",
+  closeRejected: "Marcar como no real",
   closeConfirm: "¿Seguro?",
   closeConfirmYes: "Sí",
   closeConfirmCancel: "No",
@@ -1087,6 +965,46 @@ export const WORK_ORDER_LABEL = {
   shareCopied: "Enlace copiado",
   failed: "No se pudo completar. Intenta otra vez.",
 } as const;
+
+/**
+ * The four things somebody can say about a case.
+ *
+ * Written as first-person statements of fact, not as commands that change
+ * something: "Ya ayudé" reports what the person did, where "Ya se resolvió"
+ * — the old label — asked them to rule on the case on everyone's behalf.
+ * That difference in grammar is the whole redesign in two words.
+ */
+export const WORK_ORDER_UPDATE_KIND_LABEL: Record<WorkOrderUpdateKind, string> = {
+  on_the_way: "Yo puedo atender",
+  helped: "Ya ayudé",
+  still_needed: "Sigue haciendo falta",
+  not_real: "Esto no es un caso real",
+};
+
+/** What the thread prints beside each entry — shorter, because the name and
+ *  the note are the line's content and this is only its kind. */
+export const WORK_ORDER_UPDATE_KIND_TAG: Record<WorkOrderUpdateKind, string> = {
+  on_the_way: "Va a atenderlo",
+  helped: "Ya ayudó",
+  still_needed: "Sigue haciendo falta",
+  not_real: "Dice que no es real",
+};
+
+export const WORK_ORDER_UPDATE_KIND_STYLE: Record<WorkOrderUpdateKind, string> = {
+  on_the_way: "bg-claimed-surface text-claimed border-claimed/30",
+  helped: "bg-resolved-surface text-resolved border-resolved/30",
+  still_needed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  not_real: "bg-stale-surface text-stale border-stale/30",
+};
+
+/** What each entry asks for in its own words, so one composer can serve all
+ *  four without the placeholder ever being generic. */
+export const WORK_ORDER_UPDATE_PLACEHOLDER: Record<WorkOrderUpdateKind, string> = {
+  on_the_way: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
+  helped: "Saqué dos volquetadas. Falta despejar el andén.",
+  still_needed: "Pasé hoy y sigue igual, no ha ido nadie.",
+  not_real: "Es la misma casa que ya está reportada más arriba.",
+};
 
 export const WORK_ORDER_FORM = {
   // The menu entry, the route segment and this title used to be three
@@ -1147,9 +1065,6 @@ export const ADMIN_LABEL = {
   visible: "Visible",
   publish: "Publicar",
   publishing: "Publicando…",
-  verify: "Verificar",
-  verifying: "Verificando…",
-  verified: "Verificado",
   delete: "Eliminar",
   deleteConfirm: "¿Seguro? Se borra para siempre",
   deleteConfirmShort: "Sí, borrar",

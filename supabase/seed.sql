@@ -10,7 +10,7 @@
 -- Every row is therefore seeded with published = false. Sending someone to the
 -- wrong shelter during an emergency is worse than having no pin at all, so a
 -- curator must geocode and confirm each row before it becomes visible. Use the
--- /admin queue: verify the address, fix the point, then publish.
+-- /admin queue: check the address, fix the point, then publish.
 
 -- ------------------------------------------------------- neighborhoods -----
 --
@@ -42,10 +42,10 @@ on conflict (name, municipality) do nothing;
 
 -- ---------------------------------------------------------------- sites ----
 
-insert into site (type, name, description, address, location, neighborhood_id, status, schedule, source_url, published, expires_at)
+insert into site (type, name, description, address, location, neighborhood_id, status, schedule, published, expires_at)
 select v.type, v.name, v.description, v.address, v.location,
        (select id from neighborhood n where n.name = v.neighborhood and n.municipality = v.municipality),
-       v.status, v.schedule, v.source_url, false, now() + interval '24 hours'
+       v.status, v.schedule, false, now() + interval '24 hours'
 from (values
   ('shelter'::site_type,
    'Coliseo Mayor',
@@ -54,8 +54,7 @@ from (values
    st_point(-75.4930, 5.0651)::geography,
    'Palogrande', 'manizales'::municipality,
    'open'::site_status,
-   'Abierto 24 horas',
-   'https://www.lapatria.com'),
+   'Abierto 24 horas'),
 
   ('shelter'::site_type,
    'Coliseo Menor',
@@ -64,8 +63,7 @@ from (values
    st_point(-75.4938, 5.0644)::geography,
    'Palogrande', 'manizales'::municipality,
    'open'::site_status,
-   'Abierto 24 horas',
-   'https://www.lapatria.com'),
+   'Abierto 24 horas'),
 
   ('shelter'::site_type,
    'CIC Aranjuez',
@@ -74,8 +72,7 @@ from (values
    st_point(-75.4880, 5.0480)::geography,
    'Aranjuez', 'manizales'::municipality,
    'open'::site_status,
-   'Abierto 24 horas',
-   'https://www.lapatria.com'),
+   'Abierto 24 horas'),
 
   ('blood_donation'::site_type,
    'Donación de sangre — Canchas auxiliares de Palogrande',
@@ -84,8 +81,7 @@ from (values
    st_point(-75.4941, 5.0656)::geography,
    'Palogrande', 'manizales'::municipality,
    'open'::site_status,
-   'Consultar horario del día',
-   'https://www.lapatria.com'),
+   'Consultar horario del día'),
 
   ('blood_donation'::site_type,
    'Hemocentro del Café',
@@ -94,8 +90,7 @@ from (values
    st_point(-75.5010, 5.0670)::geography,
    'Avenida Santander', 'manizales'::municipality,
    'open'::site_status,
-   'Consultar horario del día',
-   'https://www.lapatria.com'),
+   'Consultar horario del día'),
 
   ('medical_post'::site_type,
    'Puesto de Mando Unificado — Bomberos Manizales',
@@ -104,8 +99,7 @@ from (values
    st_point(-75.5120, 5.0682)::geography,
    'Centro', 'manizales'::municipality,
    'open'::site_status,
-   'Abierto 24 horas',
-   'https://www.lapatria.com'),
+   'Abierto 24 horas'),
 
   ('collection_point'::site_type,
    'Centro de acopio Cruz Roja Caldas',
@@ -114,8 +108,7 @@ from (values
    st_point(-75.5100, 5.0695)::geography,
    'Centro', 'manizales'::municipality,
    'open'::site_status,
-   'Consultar horario del día',
-   'https://www.cruzrojacolombiana.org'),
+   'Consultar horario del día'),
 
   -- Added on 14 August after checking mapadelterremoto.com for Manizales and
   -- Villamaría (see docs/PLAN.md §9).
@@ -127,8 +120,7 @@ from (values
    st_point(-75.4938881, 5.0556000)::geography,
    'La Estrella', 'manizales'::municipality,
    'open'::site_status,
-   'Consultar horario del día',
-   'https://www.mapadelterremoto.com'),
+   'Consultar horario del día'),
 
   ('shelter'::site_type,
    'Coliseo de Villamaría',
@@ -137,8 +129,7 @@ from (values
    st_point(-75.5115, 5.0460)::geography,
    'Villamaría centro', 'villamaria'::municipality,
    'open'::site_status,
-   'Consultar horario del día',
-   'https://www.mapadelterremoto.com'),
+   'Consultar horario del día'),
 
   ('collection_point'::site_type,
    'Banco de Alimentos de Manizales',
@@ -147,9 +138,8 @@ from (values
    st_point(-75.4990, 5.0660)::geography,
    'Avenida Santander', 'manizales'::municipality,
    'unknown'::site_status,
-   null,
-   'https://www.mapadelterremoto.com')
-) as v(type, name, description, address, location, neighborhood, municipality, status, schedule, source_url);
+   null)
+) as v(type, name, description, address, location, neighborhood, municipality, status, schedule);
 
 -- ---------------------------------------------------- neighborhood status --
 -- Utility or Alcaldía announcements named these barrios specifically. Rows are
@@ -162,8 +152,6 @@ insert into neighborhood_status (
   power_status,
   water_status,
   notes,
-  source,
-  source_url,
   confirmed_at,
   expires_at
 )
@@ -173,24 +161,16 @@ select n.id,
        v.power_status,
        v.water_status,
        v.notes,
-       v.source,
-       v.source_url,
        now(),
        now() + interval '24 hours'
 from (values
   ('La Estrella', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
-   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.',
-   'Caracol Radio / Efigas',
-   'https://caracol.com.co/2026/08/11/servicio-de-gas-se-restablece-por-sectores-efigas-envia-recomendaciones-de-seguridad-tras-terremoto/'),
+   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.'),
   ('Milán', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
-   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.',
-   'Caracol Radio / Efigas',
-   'https://caracol.com.co/2026/08/11/servicio-de-gas-se-restablece-por-sectores-efigas-envia-recomendaciones-de-seguridad-tras-terremoto/'),
+   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.'),
   ('Centro', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
-   'Efigas reportó afectación/intermitencia del servicio de gas en la zona centro.',
-   'Caracol Radio / Efigas',
-   'https://caracol.com.co/2026/08/11/servicio-de-gas-se-restablece-por-sectores-efigas-envia-recomendaciones-de-seguridad-tras-terremoto/')
-) as v(neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes, source, source_url)
+   'Efigas reportó afectación/intermitencia del servicio de gas en la zona centro.')
+) as v(neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes)
 join neighborhood n
   on n.name = v.neighborhood
  and n.municipality = v.municipality
@@ -200,8 +180,6 @@ on conflict (neighborhood_id) do update set
   power_status = excluded.power_status,
   water_status = excluded.water_status,
   notes = excluded.notes,
-  source = excluded.source,
-  source_url = excluded.source_url,
   confirmed_at = excluded.confirmed_at,
   expires_at = excluded.expires_at;
 
