@@ -71,6 +71,35 @@ export class AnimalDAL {
   }
 
   /**
+   * One report, or null.
+   *
+   * What a shared link resolves to — `/mascota/[id]`. It reads through the
+   * same session-bound client as the board, so a link to something a curator
+   * hid is a 404 for a stranger and still visible to that curator: the link
+   * carries no more authority than the person opening it.
+   *
+   * No `resolved_at` filter. A link to a dog that turned up should say so
+   * rather than 404 — "ya está en casa" is the answer the group was waiting
+   * for, and it is the card's job to deliver it.
+   */
+  async findById(id: string): Promise<AnimalDTO | null> {
+    const supabase = await createServerSupabase();
+
+    const { data, error } = await supabase
+      .from("animal_report_public")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      log.error("animal.findById failed", { code: error.code, animalId: id });
+      throw new Error("No se pudo cargar el reporte");
+    }
+
+    return data ? this.toDTO(data) : null;
+  }
+
+  /**
    * Uploads a photo and returns its storage path.
    *
    * Through the service role rather than from the browser: the bucket carries

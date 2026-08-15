@@ -71,6 +71,35 @@ export class ResourceOfferDAL {
   }
 
   /**
+   * One offer, or null.
+   *
+   * What a shared link resolves to — `/servicio/[id]`. Session-bound like
+   * every other `findById` here, so a hidden offer is a 404 for a stranger
+   * and still reachable by the curator who hid it.
+   *
+   * Deliberately not filtered by `expires_at`, unlike `listPublished`. A link
+   * outlives the week the offer was published for, and "esta volqueta ya no
+   * está disponible" is a better landing than an empty map — the card says
+   * how stale it is (see `freshness`) and the reader decides.
+   */
+  async findById(id: string): Promise<ResourceOfferDTO | null> {
+    const supabase = await createServerSupabase();
+
+    const { data, error } = await supabase
+      .from("resource_offer_public")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      log.error("resourceOffer.findById failed", { code: error.code, offerId: id });
+      throw new Error("No se pudo cargar el servicio");
+    }
+
+    return data ? this.toDTO(data) : null;
+  }
+
+  /**
    * Offers a resource. On the map immediately, like a site report.
    *
    * Order, in every mutation, without exception:
