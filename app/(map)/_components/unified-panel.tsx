@@ -23,7 +23,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { AnimalPanel } from "./animal-panel";
-import { BarrioHeader } from "./barrio-header";
 import { EntityCard } from "./entity-card";
 import {
   EntityList,
@@ -219,8 +218,6 @@ export function UnifiedPanel() {
 
   return (
     <>
-      <BarrioHeader />
-
       {/* Wraps onto a second line rather than scrolling sideways. A hidden
           scrollbar (`overflow-x-auto` plus a no-scrollbar utility) reads
           fine on a phone, where a swipe is the everyday gesture — on a

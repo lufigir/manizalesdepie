@@ -747,6 +747,10 @@ export const PANEL_LABEL = {
   pets: "Mascotas",
   collapse: "Minimizar panel",
   expand: "Mostrar panel",
+  /** Everything the panel is currently listing, across families — shown in
+   *  the header so a collapsed panel still says how much is behind it. */
+  itemsOne: "1 punto",
+  itemsMany: (n: number) => `${n} puntos`,
   /** "Todo" shows only the two most urgent of each family; this opens that
    *  family's own chip, where the rest live. The count is what makes it
    *  worth tapping — "ver 9 más" says how much is behind it. */

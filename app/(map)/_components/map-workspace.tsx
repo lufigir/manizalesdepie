@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Map, MapControls, MapPopup } from "@/components/ui/map";
 
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
@@ -17,7 +16,7 @@ import type {
 } from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
-import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
+import { BARRIO_PANEL } from "@/lib/labels";
 import {
   ALL_REPORT_ENTRIES,
   CHIP_PRIMARY_ACTION,
@@ -31,6 +30,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
+import { BarrioHeader } from "./barrio-header";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
 import { CallMarkers } from "./call-markers";
 import { CallPopup } from "./call-popup";
@@ -306,28 +306,12 @@ export function MapWorkspace({
           side-by-side waits for a screen wide enough that both halves still
           have space once split. */}
       <div className="flex h-full w-full flex-col lg:flex-row">
-        <div
-          className={cn(
-            "relative min-h-0 transition-[flex-grow] duration-300",
-            // Non-panelLeads chips are always flex-1 already, narrow and
-            // wide alike — the aside next to it carries a fixed height, so
-            // shrinking that height (collapsed) already hands this the freed
-            // space with no extra class needed here.
-            //
-            // panelLeads chips invert that today (map fixed, aside grows)
-            // because the panel is the product there. Collapsing has to
-            // invert it back below `lg`: the map takes the freed space
-            // instead — but only there: lg: always restores the normal 38%
-            // share, since there is room to spare there and the toggle that
-            // sets `panelCollapsed` is hidden at that breakpoint.
-            panelLeads
-              ? cn(
-                  panelCollapsed ? "flex-1" : "h-[32dvh]",
-                  "lg:h-auto lg:flex-[0_0_38%]",
-                )
-              : "flex-1",
-          )}
-        >
+        {/* The map takes whatever the panel does not, at every width and in
+            both states — it is the one element here that is happy at any
+            size. All the sizing decisions live on the aside below, which
+            replaced a pair of mirrored rules that had the map fixed and the
+            panel growing for some chips and the reverse for others. */}
+        <div className="relative min-h-0 flex-1">
           <Map
             className="h-full w-full"
             center={[MANIZALES.longitude, MANIZALES.latitude]}
@@ -521,56 +505,37 @@ export function MapWorkspace({
           )}
         </div>
 
-        {/* Below the map until `lg`, beside it from there. Which of the two
-            gets the space depends on the chip: for places the map is the
-            product, for animals and services the panel is. */}
+        {/* Below the map until `lg`, beside it from there, and the only
+            element that states a size — height while stacked, width while
+            side by side. Collapsing now works at both widths: a bar on a
+            phone, a rail on a desktop, and either way the map takes back
+            everything it gives up. */}
         <aside
           className={cn(
-            "bg-background flex min-h-0 flex-col border-t lg:border-t-0 lg:border-l",
+            "bg-background flex min-h-0 shrink-0 flex-col overflow-hidden border-t transition-[height,width] duration-300 lg:h-auto lg:border-t-0 lg:border-l",
             panelCollapsed
-              ? cn(
-                  "h-12 shrink-0 overflow-hidden",
-                  panelLeads
-                    ? "lg:h-auto lg:flex-1 lg:overflow-y-auto"
-                    : "lg:h-auto lg:w-96 xl:w-[26rem]",
-                )
+              ? "h-12 lg:w-11"
               : panelLeads
-                ? "flex-1 overflow-y-auto"
-                : // Just over half the screen on a phone, up from 38dvh. The
-                  // panel is where every action lives now — the map beside
-                  // it only has to stay big enough to keep its bearings, and
-                  // a third of a phone screen was not enough panel to read
-                  // a card and its buttons without scrolling for each one.
-                  // Unchanged from `lg` up, where the two sit side by side.
-                  "h-[55dvh] shrink-0 lg:h-auto lg:w-96 xl:w-[26rem]",
+                ? // A photo board and a card grid read badly in a column
+                  // sized for one-line rows, so those two chips get a wider
+                  // panel — a wider panel, not the inverted layout this used
+                  // to do, where the map shrank to a fixed 38% and the panel
+                  // grew. The map stays the bigger half; it is still a map.
+                  "h-[62dvh] lg:w-[32rem] xl:w-[40rem]"
+                : // Just over half the screen on a phone. The panel is where
+                  // every action lives now, and a third of a phone screen was
+                  // not enough to read a card and its buttons without
+                  // scrolling for each one.
+                  "h-[58dvh] lg:w-[22rem] xl:w-[26rem]",
           )}
         >
-          {/* Only below `lg`: from there the panel sits beside a map with
-              room to spare, and there is nowhere for this to free up. Its
-              own small header rather than folded into BarrioHeader, because
-              collapsing has to work identically whichever chip is active,
-              including the two ("pets", "services") that render their own
-              board instead of a list. */}
-          <div className="flex shrink-0 items-center justify-end border-b p-1 lg:hidden">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => setPanelCollapsed(!panelCollapsed)}
-              aria-label={panelCollapsed ? PANEL_LABEL.expand : PANEL_LABEL.collapse}
-              aria-expanded={!panelCollapsed}
-            >
-              {panelCollapsed ? (
-                <ChevronUp className="size-4" aria-hidden />
-              ) : (
-                <ChevronDown className="size-4" aria-hidden />
-              )}
-            </Button>
-          </div>
+          {/* The header is the collapse control at every width now — see
+              `BarrioHeader`, which renders the shut states too. */}
+          <BarrioHeader />
 
-          {/* Collapsed on mobile means the aside has already shrunk to just
-              the header above; not rendering the content avoids a clipped,
-              still-scrollable panel sitting invisibly underneath it. */}
+          {/* Collapsed, the aside is only as tall (or wide) as that header;
+              not rendering the rest avoids a clipped, still-scrollable panel
+              sitting invisibly underneath it. */}
           {!panelCollapsed && (
             <div className="flex min-h-0 flex-1 flex-col">
               {children}
