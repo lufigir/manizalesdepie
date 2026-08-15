@@ -939,6 +939,11 @@ export const WORK_ORDER_LABEL = {
   closeCompleted: "Ya se resolvió",
   closeByOthers: "Ya lo habían resuelto",
   closeRejected: "No es un caso real",
+  // Cerrar un caso lo saca del mapa en unas horas — no algo para un toque
+  // accidental. El segundo tap confirma, igual que borrar en `AdminActions`.
+  closeConfirm: "¿Seguro?",
+  closeConfirmYes: "Sí",
+  closeConfirmCancel: "No",
   closed: "Cerrado",
   failed: "No se pudo completar. Intenta otra vez.",
 } as const;

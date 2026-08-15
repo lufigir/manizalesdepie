@@ -35,6 +35,17 @@ import { cn } from "@/lib/utils";
 import { AdminActions } from "./admin-actions";
 import { useWorkspace } from "./workspace-context";
 
+/** What `confirmingClose` names, quoted back in the confirm prompt so
+ *  "¿Seguro?" always says seguro of what. */
+const CLOSE_ACTION_LABEL: Record<
+  "closed_completed" | "closed_by_others" | "closed_rejected",
+  string
+> = {
+  closed_completed: WORK_ORDER_LABEL.closeCompleted,
+  closed_by_others: WORK_ORDER_LABEL.closeByOthers,
+  closed_rejected: WORK_ORDER_LABEL.closeRejected,
+};
+
 /**
  * Debris and damage, in "Ayudar" — its own chip in `UnifiedPanel`, same
  * reasoning as a grupo: this is a thing with a lifecycle, not a place with
@@ -113,6 +124,13 @@ export function WorkOrderItem({
   const [category, setCategory] = useState<WorkOrderCategory>(order.category);
   const [description, setDescription] = useState(order.description);
 
+  // A close is what takes a case off the map — worth a second tap, the same
+  // rule `AdminActions` already follows for delete. Holds which of the three
+  // outcomes is waiting on that second tap, or null when none is.
+  const [confirmingClose, setConfirmingClose] = useState<
+    "closed_completed" | "closed_by_others" | "closed_rejected" | null
+  >(null);
+
   const rollup = workOrderRollup(order.status);
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
   const { label: freshLabel } = freshness(order.confirmedAt);
@@ -137,6 +155,8 @@ export function WorkOrderItem({
         await closeWorkOrder(order.id, result);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : WORK_ORDER_LABEL.failed);
+      } finally {
+        setConfirmingClose(null);
       }
     });
   }
@@ -154,13 +174,21 @@ export function WorkOrderItem({
   }
 
   return (
-    <div className={cn("rounded-lg border p-2", selected && "border-primary bg-accent")}>
+    <div
+      className={cn(
+        "rounded-lg border p-2 transition-colors",
+        // The whole card is one hover target, not just the header button
+        // sitting inside it — a highlight that only covers the top third of
+        // a card this tall reads as broken, not as an affordance.
+        selected ? "border-primary bg-accent" : "hover:bg-accent",
+      )}
+    >
       <button
         type="button"
         onClick={() => onSelect?.(order.id)}
         aria-current={selected}
         disabled={!onSelect}
-        className="hover:bg-accent focus-visible:ring-ring w-full rounded-md text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring w-full rounded-md text-left disabled:cursor-default focus-visible:ring-2 focus-visible:outline-none"
       >
         <div className="flex items-center gap-2">
           <span
@@ -205,8 +233,12 @@ export function WorkOrderItem({
 
       {/* Correcting the case's own details — category, description — never
           the contact, which is not editable from here at all. Anonymous,
-          same rule as reporting one; see `canUpdateWorkOrder`. */}
-      {editOpen ? (
+          same rule as reporting one; see `canUpdateWorkOrder`. The toggle
+          that opens this lives in the footer below, next to the close
+          actions — every secondary action for the case in one row, instead
+          of "Editar" sitting on its own between the header and the primary
+          "Yo puedo atender" button. */}
+      {editOpen && (
         <div className="mt-2 flex flex-col gap-1.5">
           <div className="flex flex-wrap gap-1">
             {WORK_ORDER_CATEGORIES.map((option) => {
@@ -252,23 +284,12 @@ export function WorkOrderItem({
             </Button>
           </div>
         </div>
-      ) : (
-        rollup !== "closed" && (
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="text-muted-foreground hover:text-foreground mt-1.5 inline-flex items-center gap-1 text-[0.65rem] underline"
-          >
-            <Pencil className="size-2.5" aria-hidden />
-            {WORK_ORDER_LABEL.edit}
-          </button>
-        )
       )}
 
       {/* "Yo puedo atender" — anonymous, several people can do this for the
           same case. Reveals the contact right in this same flow, once; see
           `WorkOrderDAL.attend`. */}
-      {rollup !== "closed" && (
+      {!editOpen && rollup !== "closed" && (
         <>
           {attended ? (
             <div className="border-claimed/25 bg-claimed-surface mt-2 flex flex-col gap-1.5 rounded-md border p-2">
@@ -330,32 +351,68 @@ export function WorkOrderItem({
         </>
       )}
 
-      {rollup !== "closed" && (
-        <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => close("closed_completed")}
-            className="text-muted-foreground hover:text-foreground text-[0.65rem] underline disabled:opacity-50"
-          >
-            {WORK_ORDER_LABEL.closeCompleted}
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => close("closed_by_others")}
-            className="text-muted-foreground hover:text-foreground text-[0.65rem] underline disabled:opacity-50"
-          >
-            {WORK_ORDER_LABEL.closeByOthers}
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => close("closed_rejected")}
-            className="text-muted-foreground hover:text-foreground text-[0.65rem] underline disabled:opacity-50"
-          >
-            {WORK_ORDER_LABEL.closeRejected}
-          </button>
+      {/* Every secondary action for the case, one row: correct it, or say
+          what happened to it. Same text-link weight for all four so none
+          reads as more official than the others. A close outcome asks twice
+          before it runs — it is what takes the case off the map, so a
+          mistap here is worse than one on "Editar". */}
+      {!editOpen && rollup !== "closed" && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {confirmingClose ? (
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.65rem]">
+              <span className="text-muted-foreground">
+                {WORK_ORDER_LABEL.closeConfirm} {CLOSE_ACTION_LABEL[confirmingClose]}
+              </span>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => close(confirmingClose)}
+                className="text-unclaimed font-semibold underline disabled:opacity-50"
+              >
+                {WORK_ORDER_LABEL.closeConfirmYes}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setConfirmingClose(null)}
+                className="text-muted-foreground hover:text-foreground underline disabled:opacity-50"
+              >
+                {WORK_ORDER_LABEL.closeConfirmCancel}
+              </button>
+            </span>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
+              >
+                <Pencil className="size-2.5" aria-hidden />
+                {WORK_ORDER_LABEL.edit}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingClose("closed_completed")}
+                className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
+              >
+                {WORK_ORDER_LABEL.closeCompleted}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingClose("closed_by_others")}
+                className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
+              >
+                {WORK_ORDER_LABEL.closeByOthers}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingClose("closed_rejected")}
+                className="text-muted-foreground hover:text-foreground text-[0.65rem] underline"
+              >
+                {WORK_ORDER_LABEL.closeRejected}
+              </button>
+            </>
+          )}
         </div>
       )}
 
