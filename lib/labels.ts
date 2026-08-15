@@ -747,6 +747,10 @@ export const PANEL_LABEL = {
   pets: "Mascotas",
   collapse: "Minimizar panel",
   expand: "Mostrar panel",
+  /** "Todo" shows only the two most urgent of each family; this opens that
+   *  family's own chip, where the rest live. The count is what makes it
+   *  worth tapping — "ver 9 más" says how much is behind it. */
+  seeMore: (n: number) => `Ver ${n} más`,
 } as const;
 
 /**
@@ -988,7 +992,10 @@ export const ADMIN_LABEL = {
   cancel: "Cancelar",
   hide: "Ocultar",
   hiding: "Ocultando…",
+  /** The state a row is IN, shown as a badge — distinct from `hide`/
+   *  `publish`, which are the actions that change it. */
   hidden: "Oculto",
+  visible: "Visible",
   publish: "Publicar",
   publishing: "Publicando…",
   verify: "Verificar",

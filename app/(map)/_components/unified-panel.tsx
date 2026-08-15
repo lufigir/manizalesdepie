@@ -25,10 +25,20 @@ import { cn } from "@/lib/utils";
 import { AnimalPanel } from "./animal-panel";
 import { BarrioHeader } from "./barrio-header";
 import { EntityCard } from "./entity-card";
-import { EntityList, type PanelListItem } from "./entity-list";
+import {
+  EntityList,
+  SectionedEntityList,
+  type PanelSection,
+} from "./entity-list";
 import { ServicesPanel } from "./services-panel";
 import { WorkOrderItem, WorkOrderList } from "./work-order-list";
 import { useWorkspace } from "./workspace-context";
+
+/** How many rows of each family "Todo" previews before handing off to that
+ *  family's own chip. Two: enough to show what the family looks like and
+ *  what its most urgent case is, few enough that every family fits on one
+ *  phone screen. */
+const PREVIEW_PER_SECTION = 2;
 
 /**
  * The one panel every route renders now — what `SitePanel` was for
@@ -92,86 +102,109 @@ export function UnifiedPanel() {
     ? "Nadie ha reportado nada en este barrio todavía. Que esté vacío no quiere decir que no haga falta ayuda."
     : SECTION_EMPTY.all;
 
-  const mixedItems: PanelListItem[] = useMemo(() => {
+  /**
+   * "Todo" as an index, not a queue: each family leads with its two most
+   * urgent and hands the rest to its own chip. See `SectionedEntityList` for
+   * why the fully interleaved list this replaces stopped working.
+   */
+  const sections: PanelSection[] = useMemo(() => {
     // Only the ones still missing: a reunited pet is good news, not an open
     // case, the same rule the section's own count already follows.
     const openAnimals = animals.filter((animal) => animal.resolvedAt === null);
 
+    /** Most urgent first, then the top `PREVIEW_PER_SECTION` of those. The
+     *  sort is per family now rather than across all of them, which is what
+     *  lets every family show something however busy its neighbours are. */
+    function section<T extends { id: string }>(
+      key: PanelChip,
+      label: string,
+      rows: T[],
+      score: (row: T) => number,
+      render: (row: T) => React.ReactNode,
+    ): PanelSection {
+      const ordered = [...rows].sort((a, b) => score(b) - score(a));
+      return {
+        key,
+        label,
+        items: ordered.slice(0, PREVIEW_PER_SECTION).map((row) => ({
+          id: row.id,
+          node: render(row),
+        })),
+        hiddenCount: Math.max(0, ordered.length - PREVIEW_PER_SECTION),
+        onSeeMore: () => setActiveChip(key),
+      };
+    }
+
     // `now` defaults inside each `*Urgency` function rather than being read
     // once here — `Date.now()` is impure, and reading it directly in a
     // render/useMemo body is exactly the pattern React's purity rule flags.
-    const scored = [
-      ...sites.map((site) => ({
-        id: site.id,
-        groupKey: "sites",
-        groupLabel: PANEL_LABEL.sites,
-        score: siteUrgency(site, neighborhoodNeeds),
-        node: (
-          <EntityCard
-            entity={{ kind: "site", site }}
-            selected={site.id === selectedId}
-            onSelect={select}
-          />
-        ),
-      })),
-      ...calls.map((call) => ({
-        id: call.id,
-        groupKey: "calls",
-        groupLabel: CALL_LABEL.heading,
-        score: callUrgency(call, neighborhoodNeeds),
-        node: (
-          <EntityCard
-            entity={{ kind: "call", call }}
-            selected={call.id === selectedId}
-            onSelect={select}
-          />
-        ),
-      })),
-      ...workOrders.map((order) => ({
-        id: order.id,
-        groupKey: "workOrders",
-        groupLabel: WORK_ORDER_LABEL.heading,
-        score: workOrderUrgency(order, neighborhoodNeeds),
-        node: (
+    return [
+      section(
+        "workOrders",
+        WORK_ORDER_LABEL.heading,
+        workOrders,
+        (order) => workOrderUrgency(order, neighborhoodNeeds),
+        (order) => (
           <WorkOrderItem
             order={order}
             selected={order.id === selectedId}
             onSelect={select}
           />
         ),
-      })),
-      ...openAnimals.map((animal) => ({
-        id: animal.id,
-        groupKey: "animals",
-        groupLabel: PANEL_LABEL.pets,
-        score: animalUrgency(animal),
-        node: (
+      ),
+      section(
+        "calls",
+        CALL_LABEL.heading,
+        calls,
+        (call) => callUrgency(call, neighborhoodNeeds),
+        (call) => (
+          <EntityCard
+            entity={{ kind: "call", call }}
+            selected={call.id === selectedId}
+            onSelect={select}
+          />
+        ),
+      ),
+      section(
+        "sites",
+        PANEL_LABEL.sites,
+        sites,
+        (site) => siteUrgency(site, neighborhoodNeeds),
+        (site) => (
+          <EntityCard
+            entity={{ kind: "site", site }}
+            selected={site.id === selectedId}
+            onSelect={select}
+          />
+        ),
+      ),
+      section(
+        "pets",
+        PANEL_LABEL.pets,
+        openAnimals,
+        (animal) => animalUrgency(animal),
+        (animal) => (
           <EntityCard
             entity={{ kind: "animal", animal }}
             selected={animal.id === selectedId}
             onSelect={select}
           />
         ),
-      })),
-      ...resourceOffers.map((offer) => ({
-        id: offer.id,
-        groupKey: "resourceOffers",
-        groupLabel: SERVICES_LABEL.title,
-        score: resourceOfferUrgency(offer),
-        node: (
+      ),
+      section(
+        "services",
+        SERVICES_LABEL.title,
+        resourceOffers,
+        (offer) => resourceOfferUrgency(offer),
+        (offer) => (
           <EntityCard
             entity={{ kind: "resourceOffer", offer }}
             selected={offer.id === selectedId}
             onSelect={select}
           />
         ),
-      })),
+      ),
     ];
-
-    // Not destructured to drop `score`: PanelListItem tolerates the extra
-    // field structurally, and stripping it here would need a name for the
-    // dropped binding that lint would then flag as unused.
-    return scored.sort((a, b) => b.score - a.score);
   }, [
     sites,
     calls,
@@ -181,6 +214,7 @@ export function UnifiedPanel() {
     neighborhoodNeeds,
     selectedId,
     select,
+    setActiveChip,
   ]);
 
   return (
@@ -246,7 +280,11 @@ export function UnifiedPanel() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {activeChip === "all" && (
-          <EntityList items={mixedItems} selectedId={selectedId} emptyLabel={emptyMessage} />
+          <SectionedEntityList
+            sections={sections}
+            selectedId={selectedId}
+            emptyLabel={emptyMessage}
+          />
         )}
 
         {activeChip === "calls" && (

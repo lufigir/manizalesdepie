@@ -536,7 +536,13 @@ export function MapWorkspace({
                 )
               : panelLeads
                 ? "flex-1 overflow-y-auto"
-                : "h-[38dvh] shrink-0 lg:h-auto lg:w-96 xl:w-[26rem]",
+                : // Just over half the screen on a phone, up from 38dvh. The
+                  // panel is where every action lives now — the map beside
+                  // it only has to stay big enough to keep its bearings, and
+                  // a third of a phone screen was not enough panel to read
+                  // a card and its buttons without scrolling for each one.
+                  // Unchanged from `lg` up, where the two sit side by side.
+                  "h-[55dvh] shrink-0 lg:h-auto lg:w-96 xl:w-[26rem]",
           )}
         >
           {/* Only below `lg`: from there the panel sits beside a map with

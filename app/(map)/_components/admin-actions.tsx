@@ -35,7 +35,45 @@ export function AdminActions({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
-    <div className="border-primary/30 bg-primary/5 mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-1.5">
+    <div
+      className={cn(
+        "mt-2 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-1.5",
+        // A hidden row is the one state a curator has to be able to spot
+        // while scrolling — it looks identical to a live one from the
+        // public half of the card, since hiding changes nothing a visitor
+        // would ever see. So the strip itself carries the colour: amber
+        // means "this is off the public map", neutral means it is live.
+        published ? "border-primary/30 bg-primary/5" : "border-claimed/40 bg-claimed-surface",
+      )}
+    >
+      {/* State first, actions after: what this row IS matters more to
+          someone auditing a list than what can be done to it. */}
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded px-1.5 py-1 text-[0.65rem] font-bold",
+          published ? "text-muted-foreground" : "text-claimed",
+        )}
+      >
+        {published ? (
+          <>
+            <Eye className="size-3" aria-hidden />
+            {ADMIN_LABEL.visible}
+          </>
+        ) : (
+          <>
+            <EyeOff className="size-3" aria-hidden />
+            {ADMIN_LABEL.hidden}
+          </>
+        )}
+      </span>
+
+      {verified && (
+        <span className="border-verified/30 bg-verified/10 text-verified inline-flex items-center gap-1 rounded border px-1.5 py-1 text-[0.65rem] font-semibold">
+          <BadgeCheck className="size-3" aria-hidden />
+          {ADMIN_LABEL.verified}
+        </span>
+      )}
+
       {onVerify && !verified && (
         <button
           type="button"
@@ -66,12 +104,6 @@ export function AdminActions({
           </>
         )}
       </button>
-
-      {!published && (
-        <span className="text-muted-foreground text-[0.65rem]">
-          {ADMIN_LABEL.hidden}
-        </span>
-      )}
 
       <div className="ml-auto flex items-center gap-1">
         {confirmingDelete ? (

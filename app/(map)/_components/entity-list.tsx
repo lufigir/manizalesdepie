@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { PANEL_LABEL } from "@/lib/labels";
+
 /**
  * One list, several families mixed by urgency (see `lib/urgency.ts`).
  *
@@ -20,6 +22,96 @@ export type PanelListItem = {
   groupLabel: string;
   node: React.ReactNode;
 };
+
+/**
+ * One family's slice of the "Todo" view: its own header, its two most
+ * urgent rows, and the way through to the rest.
+ */
+export type PanelSection = {
+  key: string;
+  label: string;
+  items: { id: string; node: React.ReactNode }[];
+  /** How many more of this family exist beyond the ones shown. Zero hides
+   *  the "ver más" button entirely — there is nothing behind it. */
+  hiddenCount: number;
+  onSeeMore: () => void;
+};
+
+/**
+ * "Todo", sectioned.
+ *
+ * The mixed urgency-interleaved list this replaces answered "what is most
+ * urgent in the whole city" — true, but it also meant one busy family could
+ * fill the panel and bury every other one, so the reader had to scroll a
+ * long way to find out grupos even existed. Two per family and a way
+ * through to the rest keeps "Todo" as an index of what exists rather than a
+ * queue: each family still leads with its most urgent, and the depth lives
+ * one tap away in that family's own chip.
+ */
+export function SectionedEntityList({
+  sections,
+  selectedId,
+  emptyLabel,
+}: {
+  sections: PanelSection[];
+  selectedId: string | null;
+  emptyLabel: string;
+}) {
+  const refs = useRef(new Map<string, HTMLLIElement>());
+
+  useEffect(() => {
+    if (!selectedId) return;
+    refs.current
+      .get(selectedId)
+      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedId]);
+
+  const populated = sections.filter((section) => section.items.length > 0);
+
+  if (populated.length === 0) {
+    return (
+      <p className="text-muted-foreground p-6 text-center text-sm text-balance">
+        {emptyLabel}
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 p-1.5">
+      {populated.map((section) => (
+        <section key={section.key} className="flex flex-col gap-0.5">
+          <p className="text-muted-foreground bg-background/95 sticky top-0 z-1 px-1 py-1 text-[0.65rem] font-semibold tracking-wide uppercase backdrop-blur-sm">
+            {section.label}
+          </p>
+
+          <ul className="flex flex-col gap-1.5">
+            {section.items.map((item) => (
+              <li
+                key={item.id}
+                ref={(el) => {
+                  if (el) refs.current.set(item.id, el);
+                  else refs.current.delete(item.id);
+                }}
+              >
+                {item.node}
+              </li>
+            ))}
+          </ul>
+
+          {section.hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={section.onSeeMore}
+              className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring mt-0.5 rounded-md px-2 py-1.5 text-left text-[0.7rem] font-semibold underline transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              {PANEL_LABEL.seeMore(section.hiddenCount)}
+            </button>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
 
 export function EntityList({
   items,
