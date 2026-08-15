@@ -50,9 +50,9 @@ export function ReportMenu({
                 iconStyle = "text-group";
                 break;
               case "/reportar/sitio":
-                // Sitios: Solid border-layer-collection (blue)
-                borderStyle = "border-layer-collection/70 text-layer-collection bg-background/95 hover:bg-accent rounded-full border-2";
-                iconStyle = "text-layer-collection";
+                // Sitios: Solid border-resolved (green)
+                borderStyle = "border-resolved/70 text-resolved bg-background/95 hover:bg-resolved-surface/50 rounded-full border-2";
+                iconStyle = "text-resolved";
                 break;
               case "/reportar/animal":
                 // Mascotas: Dashed red border (sighting trace)
