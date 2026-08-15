@@ -14,9 +14,12 @@ import {
   OG_CONTENT_TYPE,
   OG_SIZE,
   OgCard,
+  ogFonts,
+  ogLogo,
   ogTitle,
   type OgAccent,
 } from "../../../_components/og-card";
+import { OgHardHatIcon } from "../../../_components/og-icons";
 
 /**
  * The card for a shared necesidad.
@@ -29,6 +32,9 @@ import {
 export const alt = OG_LABEL.siteName;
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
+// A literal, not the shared constant: Next reads segment config by static
+// analysis. See the caching note in `og-card.tsx` for the hour.
+export const revalidate = 3600;
 
 /** Same grammar as everywhere else: red needs someone, amber has someone,
  *  grey is over. */
@@ -44,12 +50,16 @@ export default async function Image({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = await WorkOrderDAL.public().findById(id);
+  const [order, fonts, logo] = await Promise.all([
+    WorkOrderDAL.public().findById(id),
+    ogFonts(),
+    ogLogo(),
+  ]);
 
   if (!order) {
     return new ImageResponse(
-      <OgCard eyebrow={OG_LABEL.workOrder} title={OG_LABEL.notFound} />,
-      size,
+      <OgCard eyebrow={OG_LABEL.workOrder} title={OG_LABEL.notFound} logo={logo} />,
+      { ...size, fonts },
     );
   }
 
@@ -63,9 +73,11 @@ export default async function Image({
         title={ogTitle(order.description)}
         badge={WORK_ORDER_ROLLUP_LABEL[rollup]}
         meta={[order.neighborhood, freshLabel].filter(Boolean).join(" · ")}
+        icon={OgHardHatIcon}
+        logo={logo}
         accent={ROLLUP_ACCENT[rollup]}
       />
     ),
-    size,
+    { ...size, fonts },
   );
 }

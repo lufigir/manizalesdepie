@@ -15,9 +15,12 @@ import {
   OG_CONTENT_TYPE,
   OG_SIZE,
   OgCard,
+  ogFonts,
+  ogLogo,
   ogTitle,
   type OgAccent,
 } from "../../../_components/og-card";
+import { OgMegaphoneIcon } from "../../../_components/og-icons";
 
 /**
  * The card for a shared grupo — the route the whole feature was built
@@ -28,6 +31,9 @@ import {
 export const alt = OG_LABEL.siteName;
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
+// A literal, not the shared constant: Next reads segment config by static
+// analysis. See the caching note in `og-card.tsx` for the hour.
+export const revalidate = 3600;
 
 /** Same colour grammar as a site's status — see `CallState`. */
 const STATE_ACCENT: Record<CallState, OgAccent> = {
@@ -43,12 +49,16 @@ export default async function Image({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const call = await CallDAL.public().findById(id);
+  const [call, fonts, logo] = await Promise.all([
+    CallDAL.public().findById(id),
+    ogFonts(),
+    ogLogo(),
+  ]);
 
   if (!call) {
     return new ImageResponse(
-      <OgCard eyebrow={OG_LABEL.call} title={OG_LABEL.notFound} />,
-      size,
+      <OgCard eyebrow={OG_LABEL.call} title={OG_LABEL.notFound} logo={logo} />,
+      { ...size, fonts },
     );
   }
 
@@ -65,9 +75,11 @@ export default async function Image({
         meta={[callWhen(call), call.neighborhood, slotsLabel(call)]
           .filter(Boolean)
           .join(" · ")}
+        icon={OgMegaphoneIcon}
+        logo={logo}
         accent={STATE_ACCENT[state]}
       />
     ),
-    size,
+    { ...size, fonts },
   );
 }

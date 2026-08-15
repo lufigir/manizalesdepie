@@ -22,7 +22,10 @@ import {
 
 import type { CallCategory, CallDTO } from "@/data/call/call.dto";
 import type { NeedPriority } from "@/data/neighborhood/neighborhood.dto";
-import type { ResourceType } from "@/data/resource_offer/resource_offer.dto";
+import type {
+  ResourceOfferDTO,
+  ResourceType,
+} from "@/data/resource_offer/resource_offer.dto";
 import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
 import type {
   WorkOrderCategory,
@@ -153,10 +156,42 @@ export const SHEET_LABEL = {
   whatsapp: "WhatsApp",
   share: "Compartir",
   copied: "Enlace copiado",
-  confirmPrompt: "¿Estás ahí ahora? Dinos cómo lo encontraste:",
+  /** Short on purpose: on a phone the long version ("¿Estás ahí ahora? Dinos
+   *  cómo lo encontraste:") wrapped onto a second line above three buttons
+   *  that already say what they do. */
+  confirmPrompt: "¿Estás ahí? Confirma cómo está:",
   moreInfo: "Ver más",
+  /** The way back out of the inline expansion the card grows on a phone,
+   *  where there is no lateral sheet to close instead. */
+  lessInfo: "Ver menos",
   description: "Descripción",
   source: "Fuente",
+} as const;
+
+/**
+ * The card the map opens on a selected pin, as a surface rather than as any
+ * one family's content.
+ *
+ * Below `lg` it is a drawer along the bottom edge of the map and these are
+ * the strings it needs; from `lg` up the same content rides MapLibre's own
+ * anchored popup, which has no chrome of its own to name.
+ */
+export const MAP_CARD = {
+  close: "Cerrar la tarjeta",
+  /** Named for a screen reader, which cannot see which pin it belongs to. */
+  region: "Detalle del punto seleccionado",
+} as const;
+
+/**
+ * Arriving from a link somebody pasted into a group.
+ *
+ * The chip this labels is the only explicit way out of a shared route, and it
+ * says where it goes rather than "volver": whoever tapped the link came from
+ * WhatsApp, not from our home page, so "atrás" would name a place they have
+ * never been.
+ */
+export const SHARED_LINK = {
+  exit: "Ver todo el mapa",
 } as const;
 
 /**
@@ -173,9 +208,13 @@ export type Confidence = "unconfirmed" | "confirmed" | "verified";
 export function confidence(site: {
   verified: boolean;
   confirmedCount: number;
-}): { level: Confidence; label: string } {
+}): { level: Confidence; label: string; short: string } {
   if (site.verified) {
-    return { level: "verified", label: "Verificado por un curador" };
+    return {
+      level: "verified",
+      label: "Verificado por un curador",
+      short: "Verificado",
+    };
   }
   if (site.confirmedCount > 0) {
     return {
@@ -184,9 +223,18 @@ export function confidence(site: {
         site.confirmedCount === 1
           ? "1 persona confirmó"
           : `${site.confirmedCount} personas confirmaron`,
+      // `short` exists because the sentence above is a badge on a card two
+      // hundred pixels wide, where it wraps onto three lines and pushes the
+      // name of the place off the row. The full sentence survives in the
+      // detail sheet, where there is room to say who confirmed and how many.
+      short: `${site.confirmedCount} ✓`,
     };
   }
-  return { level: "unconfirmed", label: "Sin confirmar" };
+  return {
+    level: "unconfirmed",
+    label: "Sin confirmar",
+    short: "Sin confirmar",
+  };
 }
 
 /** How solid the marker looks. Faint is not hidden: an unconfirmed report is
@@ -664,7 +712,37 @@ export const SERVICES_LABEL = {
     "Todavía no hay servicios publicados. Si tienes con qué ayudar, sé el primero.",
   countOne: "1 servicio",
   countMany: (n: number) => `${n} servicios`,
+  contact: "Escribir por WhatsApp",
+  /** The card on the map says whether the offer is anchored anywhere at all.
+   *  Most are not: "tengo una volqueta" is a barrio, not a corner. */
+  cityWide: "Toda la ciudad",
+  availableNow: "Disponible ahora",
 } as const;
+
+/**
+ * When an offer can actually be taken up: "Hoy 8:00 AM – Mañana 5:00 PM".
+ *
+ * Both ends are optional in the data and the string says only what is known —
+ * an offer with no window at all reads as available now, which is what
+ * `expiresAt` already promises for the week it stays published. Calling
+ * somebody who stopped lending their truck yesterday wastes the one thing
+ * nobody has here, so the window earns its line on the card.
+ */
+export function offerAvailability(
+  offer: Pick<ResourceOfferDTO, "availableFrom" | "availableUntil">,
+  now: Date = new Date(),
+): string {
+  const from = offer.availableFrom ? new Date(offer.availableFrom) : null;
+  const until = offer.availableUntil ? new Date(offer.availableUntil) : null;
+
+  if (!from && !until) return SERVICES_LABEL.availableNow;
+
+  const parts: string[] = [];
+  if (from) parts.push(`${day(from, now)} ${clock(from)}`);
+  if (until) parts.push(`${day(until, now)} ${clock(until)}`);
+
+  return parts.join(" – ");
+}
 
 export const SERVICES_FORM = {
   title: "Ofrecer un servicio",
@@ -754,10 +832,24 @@ export const OG_LABEL = {
   site: "Punto",
   call: "Grupo",
   workOrder: "Necesidad",
+  animal: "Animal",
+  resourceOffer: "Servicio",
   /** The home card: no one entity, so it states what the map is for. */
   homeTitle: "¿Dónde ayudo hoy?",
   homeMeta:
     "Acopios, albergues, donación de sangre, grupos y necesidades, en un solo mapa.",
+  /** The home card counts what is on the map instead of describing it. A
+   *  live map is proved by numbers; "en un solo mapa" is a claim, and after
+   *  a disaster there are plenty of abandoned sites making it. */
+  homeCounts: (sites: number, calls: number, orders: number) =>
+    [
+      sites === 1 ? "1 punto" : `${sites} puntos`,
+      calls === 1 ? "1 grupo abierto" : `${calls} grupos abiertos`,
+      orders === 1 ? "1 necesidad" : `${orders} necesidades`,
+    ].join(" · "),
+  /** The one line telling somebody who has never opened this that the image
+   *  in their chat is a link to something. */
+  cta: "Abrir en el mapa →",
   notFound: "No encontrado",
 } as const;
 
