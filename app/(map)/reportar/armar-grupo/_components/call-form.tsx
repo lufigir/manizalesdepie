@@ -51,12 +51,21 @@ export function CallForm({
   // that just says "gente juntándose aquí".
   const [mode, setMode] = useState<"formal" | "informal">("formal");
 
-  // The barrio tapped on the main map, carried in the URL. See the note in
-  // report-form.tsx: the map lives in another route, so state cannot travel.
-  const fromMap = useSearchParams().get("barrio");
+  // The barrio tapped on the main map, and the category a Frentes row already
+  // named, both carried in the URL. See the note in report-form.tsx: the map
+  // lives in another route, so state cannot travel any other way.
+  const searchParams = useSearchParams();
+  const fromMap = searchParams.get("barrio");
   const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(
     () => barrios.find((option) => option.name === fromMap) ?? null,
   );
+
+  const fromCategory = searchParams.get("category");
+  const initialCategory: CallCategory = (
+    CALL_CATEGORIES as readonly string[]
+  ).includes(fromCategory ?? "")
+    ? (fromCategory as CallCategory)
+    : "debris_removal";
 
   /**
    * The whole form is a draft, including the pin.
@@ -68,7 +77,7 @@ export function CallForm({
    * than losing the text, because nobody re-reads a map they already placed.
    */
   const { value: draft, setValue: setDraft, clear } = useDraft("report:call", {
-    category: "debris_removal" as CallCategory,
+    category: initialCategory,
     title: "",
     description: "",
     meetingAddress: "",
@@ -134,7 +143,7 @@ export function CallForm({
         latitude: draft.lat,
       });
       clear();
-      router.push(`/jornada/${id}`);
+      router.push(`/grupo/${id}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : CALL_FORM.failed);
     }
@@ -182,7 +191,7 @@ export function CallForm({
     try {
       const { id } = await conveneCall(formData);
       clear();
-      router.push(`/jornada/${id}`);
+      router.push(`/grupo/${id}`);
     } catch (cause) {
       // The DAL surfaces the schema's own messages, which carry the useful
       // ones: out of area, and the end hour before the start.
@@ -295,7 +304,7 @@ export function CallForm({
         <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
       </div>
 
-      {/* Required for a formal jornada — ten people have to find the same
+      {/* Required for a formal grupo — ten people have to find the same
           corner — optional here: an informal pin already has the barrio and
           the dragged point, and asking for a third way of saying "where"
           fights the whole reason this mode exists. */}
@@ -386,7 +395,7 @@ export function CallForm({
                 {nearby.map((call) => (
                   <li key={call.id}>
                     <a
-                      href={`/jornada/${call.id}`}
+                      href={`/grupo/${call.id}`}
                       className="font-medium underline underline-offset-4"
                     >
                       {call.title}

@@ -259,8 +259,8 @@ export function BarrioLayer({
           [west, south],
           [east, north],
         ],
-        // Padding so the barrio does not end up under the section switcher at
-        // the top or the report button at the bottom.
+        // Padding so the barrio does not end up under the clock/barrio chip
+        // at the top or the report button at the bottom.
         { padding: { top: 96, bottom: 72, left: 40, right: 40 }, maxZoom: 16 },
       );
     },

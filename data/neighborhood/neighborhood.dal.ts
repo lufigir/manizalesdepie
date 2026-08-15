@@ -4,9 +4,11 @@ import { log } from "@/lib/log";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
+  neighborhoodNeedSchema,
   neighborhoodSchema,
   neighborhoodStatusSchema,
   type NeighborhoodDTO,
+  type NeighborhoodNeedDTO,
   type NeighborhoodStatusDTO,
 } from "./neighborhood.dto";
 
@@ -103,6 +105,52 @@ export class NeighborhoodDAL {
         notes: row.notes,
         source: row.source,
         sourceUrl: row.source_url,
+        confirmedAt: row.confirmed_at,
+        expiresAt: row.expires_at,
+      }),
+    );
+  }
+
+  /**
+   * Every frente still on record — "este barrio necesita X" — soonest
+   * expiring first within the same priority, so a critical declaration about
+   * to lapse surfaces before a normal one that just renewed.
+   *
+   * Curated by hand, like `statuses()` above: no policy, no actions, this is
+   * our own prioritisation rather than a claim the app writes.
+   */
+  async needs(): Promise<NeighborhoodNeedDTO[]> {
+    const supabase = await createServerSupabase();
+
+    const { data, error } = await supabase
+      .from("neighborhood_need_public")
+      .select(
+        "id, neighborhood_id, neighborhood, municipality, longitude, latitude, category, priority, note, source, confirmed_at, expires_at",
+      )
+      .gt("expires_at", new Date().toISOString());
+
+    if (error) {
+      // Same tolerance as statuses(): the view can lag a migration reaching a
+      // given environment, and a missing table of frentes is a valid empty
+      // state, not a reason to take the map down.
+      if (error.code !== "PGRST205") {
+        log.error("neighborhood.needs failed", { code: error.code });
+      }
+      return [];
+    }
+
+    return (data ?? []).map((row) =>
+      neighborhoodNeedSchema.parse({
+        id: row.id,
+        neighborhoodId: row.neighborhood_id,
+        name: row.neighborhood,
+        municipality: row.municipality,
+        longitude: row.longitude,
+        latitude: row.latitude,
+        category: row.category,
+        priority: row.priority,
+        note: row.note,
+        source: row.source,
         confirmedAt: row.confirmed_at,
         expiresAt: row.expires_at,
       }),

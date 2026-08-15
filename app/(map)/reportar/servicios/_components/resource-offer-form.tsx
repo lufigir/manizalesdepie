@@ -20,7 +20,7 @@ import { BarrioPicker } from "../../_components/barrio-picker";
 /**
  * "Tengo con qué ayudar." Anonymous, one screen, no pin to drag.
  *
- * No PinPicker, unlike the site and jornada forms: a truck someone can drive
+ * No PinPicker, unlike the site and grupo forms: a truck someone can drive
  * anywhere in the city has no one corner to mark, so the barrio it starts
  * from — the same picker those forms use — is both the question and the
  * answer here. Its centroid becomes the offer's point, close enough to sort
@@ -44,7 +44,7 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   async function submit() {
     setError(null);
 
-    // Optional, unlike the site and jornada forms: a fixed collection point
+    // Optional, unlike the site and grupo forms: a fixed collection point
     // has to be somewhere, but "llevo gente a donde sea" or "presto mi
     // volqueta en cualquier barrio" is a real, common answer for exactly the
     // types this section exists for (free_transport most of all). No barrio

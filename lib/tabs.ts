@@ -1,13 +1,4 @@
-import {
-  HandHeart,
-  LifeBuoy,
-  MapPin,
-  Megaphone,
-  PawPrint,
-  Shovel,
-  Truck,
-  type LucideIcon,
-} from "lucide-react";
+import { LifeBuoy, MapPin, Megaphone, PawPrint, Truck, type LucideIcon } from "lucide-react";
 
 import type { SiteType } from "@/data/site/site.dto";
 
@@ -30,78 +21,34 @@ import type { SiteType } from "@/data/site/site.dto";
  *
  * Each section owns its own report form. The section already says what is being
  * reported, so no form has to open by asking what kind of thing this is.
+ *
+ * What changed once the map became unified (see `MapWorkspace`): these four
+ * no longer gate what is DRAWN — the map always shows everything now — nor
+ * do they have a switcher of their own any more. `UnifiedPanel`'s own row of
+ * chips (see `PanelChip` below) is the one control surface for filtering;
+ * all four routes do today is decide which chip a fresh visit opens on (see
+ * `initialChipForTab`) — enough to keep `/mascotas` a real, shareable URL,
+ * not enough to need a button anywhere once the app is already open.
  */
 
 export type TabId = "help" | "need" | "pets" | "services";
 
-export type TabDef = {
-  id: TabId;
-  /** The URL segment. Spanish, because it is user-visible. */
-  segment: string;
-  href: string;
-  label: string;
-  /** The full sentence, for the hover title on desktop — where a tooltip
-   *  actually works. */
-  hint: string;
-  /** The same content, cut to a few words. This is what is actually drawn
-   *  under the label: a hover-only hint said nothing on a phone, which is
-   *  most of this app's readers, so the tab itself carries a short preview
-   *  of what's inside instead of asking someone to open it to find out. */
-  subtitle: string;
-  icon: LucideIcon;
-};
+type TabRoute = { id: TabId; segment: string; href: string };
 
-/** Declaration order is display order. "Ayudar" is first because it is where
- *  most people who open this app are going. */
-export const TABS: readonly TabDef[] = [
-  {
-    id: "help",
-    segment: "ayudar",
-    href: "/ayudar",
-    label: "Ayudar",
-    hint: "Acopios, sangre, jornadas y familias que piden",
-    subtitle: "Acopios, sangre, jornadas",
-    icon: HandHeart,
-  },
-  {
-    id: "need",
-    segment: "necesito",
-    href: "/necesito",
-    label: "Necesito",
-    hint: "Albergues, censo y entrega de ayudas",
-    subtitle: "Albergues, censo, ayudas",
-    icon: LifeBuoy,
-  },
-  {
-    id: "pets",
-    segment: "mascotas",
-    href: "/mascotas",
-    label: "Mascotas",
-    hint: "Perdidos, encontrados y avistados",
-    subtitle: "Perdidos y encontrados",
-    icon: PawPrint,
-  },
-  {
-    id: "services",
-    segment: "servicios",
-    href: "/servicios",
-    label: "Servicios",
-    hint: "Volqueta, carro, herramienta, bodega, hogar de paso",
-    subtitle: "Volqueta, herramienta, transporte",
-    icon: Truck,
-  },
-] as const;
+const TAB_ROUTES: readonly TabRoute[] = [
+  { id: "help", segment: "ayudar", href: "/ayudar" },
+  { id: "need", segment: "necesito", href: "/necesito" },
+  { id: "pets", segment: "mascotas", href: "/mascotas" },
+  { id: "services", segment: "servicios", href: "/servicios" },
+];
 
-export const DEFAULT_TAB = TABS[0];
+export const DEFAULT_TAB_ID: TabId = "help";
+export const DEFAULT_TAB_HREF: string = TAB_ROUTES[0].href;
 
 /** Resolves the segment Next reports for the active child route. Falls back to
  *  "Ayudar" so an unknown segment lands somewhere useful instead of blank. */
 export function tabFromSegment(segment: string | null): TabId {
-  return TABS.find((tab) => tab.segment === segment)?.id ?? DEFAULT_TAB.id;
-}
-
-export function tabDef(id: TabId): TabDef {
-  return TABS.find((tab) => tab.id === id) ?? DEFAULT_TAB;
+  return TAB_ROUTES.find((tab) => tab.segment === segment)?.id ?? DEFAULT_TAB_ID;
 }
 
 /**
@@ -116,6 +63,10 @@ export function tabDef(id: TabId): TabDef {
  * `medical_post` is the PMU — the unified command post. It is not a hospital,
  * it is where somebody who shows up wanting to help gets told where to go, so
  * it belongs in "Ayudar" with the rest of that answer.
+ *
+ * Still used for classification (counts, which route seeds which chip) even
+ * though the map itself no longer hides a site for belonging to the "wrong"
+ * one — see `UnifiedPanel`'s "Sitios" chip, which shows every type at once.
  */
 export const SITE_TYPE_TAB: Record<SiteType, TabId | null> = {
   collection_point: "help",
@@ -133,42 +84,78 @@ export const TAB_SITE_TYPES: Record<"help" | "need", SiteType[]> = {
   need: ["shelter", "census_point"],
 };
 
+export type ReportEntry = { href: string; label: string; icon: LucideIcon };
+
 /**
- * Where the write buttons go from each section, and what they promise.
- *
- * One form per thing, never a generic one that opens by asking what this is:
- * the button the reporter pressed already answered that. Services has no entity
- * yet, so it has nowhere to point and shows nothing — an offer to report
- * something we cannot store is worse than no offer.
- *
- * "Ayudar" is the only section with two, and they are two because a place and a
- * shift are not the same kind of thing: an acopio is somewhere you can go, a
- * jornada is somewhere you have to be at an hour. Collapsing them into one form
- * with a first question would put the choice nobody came to make at the top of
- * the screen. Declaration order is display order, and the first one listed is
- * the one drawn as the primary button.
- *
- * "Necesito" says "reportar un punto" and not "pedir ayuda" on purpose: what it
- * creates today is a shelter or a census desk, and the household request that
- * would earn the second wording does not exist yet. A button that promises more
- * than the form delivers is read once and never trusted again.
+ * `UnifiedPanel`'s own chips — the one filter surface the app has now, always
+ * on screen together, wrapping onto a second row rather than hiding any of
+ * them behind a scroll or a section of their own. "fronts" (the
+ * neighborhood_need dashboard, see `FrontsList`) is deliberately not one of
+ * these yet: the table and the component both exist and work, but with
+ * nothing declared in it today a chip for it would open on an empty screen.
+ * Add it back once the curator team starts declaring frentes.
  */
-export const REPORT_ENTRY: Record<
-  TabId,
-  { href: string; label: string; icon: LucideIcon }[]
-> = {
-  help: [
-    { href: "/reportar/ayudar", label: "Reportar un punto", icon: MapPin },
-    // Megaphone rather than a calendar: "convocar" is calling people, not
-    // scheduling an event — the icon should say who this button is for.
-    { href: "/reportar/jornada", label: "Convocar una jornada", icon: Megaphone },
-  ],
-  need: [
-    { href: "/reportar/necesito", label: "Reportar un punto", icon: MapPin },
-    { href: "/reportar/escombros", label: "Reportar escombros o un daño", icon: Shovel },
-  ],
-  pets: [{ href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint }],
-  services: [
-    { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
+export type PanelChip = "all" | "calls" | "workOrders" | "sites" | "pets" | "services";
+
+/** Which chip a fresh visit to each route opens the panel on. "Ayudar" seeds
+ *  "all" — it is the section most people arrive at, and now that the map
+ *  draws everything at once, "Todo" is the truer answer to "¿dónde ayudo
+ *  hoy?" than any single chip would be. */
+export function initialChipForTab(tab: TabId): PanelChip {
+  switch (tab) {
+    case "help":
+      return "all";
+    case "need":
+      return "sites";
+    case "pets":
+      return "pets";
+    case "services":
+      return "services";
+  }
+}
+
+
+/**
+ * The one filled, prominent action for a chip — what someone who opened the
+ * app to DO something taps, not what they tap to describe something. Chips
+ * with no entity of their own to report ("all", "sites") get none: "all" is
+ * a survey, and "Sitios" mixes two report forms with no single obvious one
+ * to promote (see `CHIP_REPORT_MENU`).
+ */
+export const CHIP_PRIMARY_ACTION: Partial<Record<PanelChip, ReportEntry>> = {
+  calls: { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
+  // "Pedir ayuda", not "Reportar un punto": what this form actually creates —
+  // a work order someone with volqueta or manos can claim — is a household's
+  // own request, not a place someone else built.
+  workOrders: { href: "/reportar/escombros", label: "Pedir ayuda", icon: LifeBuoy },
+  pets: { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
+  services: { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
+};
+
+/**
+ * Everything else worth reporting from a chip — reached through the
+ * secondary "+" beside the primary button. Empty where the primary already
+ * covers the chip's only entity, or where — "all" — the "+" carries every
+ * form in the app instead (see `ALL_REPORT_ENTRIES`).
+ */
+export const CHIP_REPORT_MENU: Partial<Record<PanelChip, ReportEntry[]>> = {
+  sites: [
+    { href: "/reportar/ayudar", label: "Reportar dónde ayudar", icon: MapPin },
+    { href: "/reportar/necesito", label: "Reportar un punto de ayuda", icon: MapPin },
   ],
 };
+
+/**
+ * Every report form in the app, flattened into one list — what "Todo" opens
+ * behind its own "+" instead of a single primary action. "Todo" has no one
+ * obvious next step (it is a survey, not an intent), so it gets the full menu
+ * rather than a guess at which form matters most.
+ */
+export const ALL_REPORT_ENTRIES: ReportEntry[] = [
+  { href: "/reportar/ayudar", label: "Reportar dónde ayudar", icon: MapPin },
+  { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
+  { href: "/reportar/necesito", label: "Reportar un punto de ayuda", icon: MapPin },
+  { href: "/reportar/escombros", label: "Pedir ayuda", icon: LifeBuoy },
+  { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
+  { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
+];

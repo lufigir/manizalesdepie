@@ -177,7 +177,7 @@ export function AnimalForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         </label>
         {usePin && (
           <>
-            {/* Aimed at the chosen barrio, same as the site and jornada
+            {/* Aimed at the chosen barrio, same as the site and grupo
                 pickers — one less thing to drag across the whole city to
                 find. */}
             <PinPicker

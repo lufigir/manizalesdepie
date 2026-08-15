@@ -97,7 +97,7 @@ export async function joinCall(input: {
   // The counter on the card is server-rendered, so the number the next reader
   // sees has to move with the signup.
   revalidatePath("/ayudar");
-  revalidatePath(`/jornada/${input.callId}`);
+  revalidatePath(`/grupo/${input.callId}`);
   return result;
 }
 

@@ -32,7 +32,7 @@ import { JoinCall } from "./join-call";
 import { RelocateCall } from "./relocate-call";
 
 /**
- * The card that opens on a jornada's pin.
+ * The card that opens on a grupo's pin.
  *
  * Same anchoring as a site's card and for the same reason — the answer and its
  * place on the map have to stay on screen together — but the order inside is
@@ -49,10 +49,10 @@ export function CallPopup({ call }: { call: CallDTO }) {
   const { level, label: confidenceLabel } = confidence(call);
 
   async function share() {
-    const url = `${window.location.origin}/jornada/${call.id}`;
+    const url = `${window.location.origin}/grupo/${call.id}`;
 
     // The native sheet puts WhatsApp first on Android — one tap back into the
-    // group the jornada is being organised in.
+    // group the grupo is being organised in.
     if (navigator.share) {
       try {
         await navigator.share({ title: call.title, text: call.title, url });

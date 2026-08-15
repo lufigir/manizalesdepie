@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 
-import { AnimalPanel } from "../../_components/animal-panel";
-
 export const metadata: Metadata = {
   title: "Mascotas",
   description:
@@ -9,9 +7,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * The one section where the map is not the product: you recognise a dog by its
- * face, so the photographs get the space and the map shrinks to a reference.
+ * See `HelpPage` for why this route renders nothing itself — it only seeds
+ * "Mascotas" as the filter `UnifiedPanel` opens on.
  */
 export default function PetsPage() {
-  return <AnimalPanel />;
+  return null;
 }

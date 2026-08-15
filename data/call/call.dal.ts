@@ -31,7 +31,7 @@ import {
 const CHECK_VIOLATION = "23514";
 
 /** A shift with no stated end. Long enough to cover a working day, short enough
- *  that a jornada convened this morning is off the map by tonight. */
+ *  that a grupo armed this morning is off the map by tonight. */
 const DEFAULT_SHIFT_HOURS = 6;
 
 /**
@@ -77,7 +77,7 @@ export class CallDAL {
 
     if (error) {
       log.error("call.listPublished failed", { code: error.code });
-      throw new Error("No se pudieron cargar las jornadas");
+      throw new Error("No se pudieron cargar los grupos");
     }
 
     return (data ?? []).map((row) => this.toDTO(row));
@@ -87,7 +87,7 @@ export class CallDAL {
    * One call, or null. What a shared link resolves to.
    *
    * Not filtered by `expires_at`: a link posted in a WhatsApp group outlives the
-   * shift it points at, and "esa jornada ya terminó" is a better answer than a
+   * shift it points at, and "ese grupo ya terminó" is a better answer than a
    * 404 for someone who arrives late.
    */
   async findById(id: string): Promise<CallDTO | null> {
@@ -101,7 +101,7 @@ export class CallDAL {
 
     if (error) {
       log.error("call.findById failed", { code: error.code, callId: id });
-      throw new Error("No se pudo cargar la jornada");
+      throw new Error("No se pudo cargar el grupo");
     }
 
     return data ? this.toDTO(data) : null;
@@ -135,7 +135,7 @@ export class CallDAL {
 
     if (error) {
       log.error("call.findNearby failed", { code: error.code });
-      throw new Error("No se pudo verificar si ya hay una jornada parecida");
+      throw new Error("No se pudo verificar si ya hay un grupo parecido");
     }
 
     return (data ?? []).map(
@@ -168,7 +168,7 @@ export class CallDAL {
     const data = createCallSchema.parse(input);
 
     if (!canCreateCall(this.user)) {
-      throw new Error("Necesitas una cuenta para convocar una jornada");
+      throw new Error("Necesitas una cuenta para armar un grupo");
     }
 
     const supabase = createAdminSupabase();
@@ -197,7 +197,7 @@ export class CallDAL {
 
     if (error || !row) {
       log.error("call.convene failed", { code: error?.code });
-      throw new Error("No se pudo publicar la jornada");
+      throw new Error("No se pudo publicar el grupo");
     }
 
     log.info("call convened", { callId: row.id, byUser: this.user!.id });
@@ -243,7 +243,7 @@ export class CallDAL {
 
     if (error || !row) {
       log.error("call.gather failed", { code: error?.code });
-      throw new Error("No se pudo publicar la convocatoria");
+      throw new Error("No se pudo publicar el punto");
     }
 
     log.info("informal call gathered", {
@@ -254,7 +254,7 @@ export class CallDAL {
   }
 
   /**
-   * Moves an informal pin. Anyone; never a formal jornada — see
+   * Moves an informal pin. Anyone; never a formal grupo — see
    * `canRelocateInformalCall`.
    *
    * There is no `neighborhood_at` RPC call here on purpose: that function is
@@ -283,12 +283,12 @@ export class CallDAL {
         code: fetchError?.code,
         callId: data.callId,
       });
-      throw new Error("No se encontró la convocatoria");
+      throw new Error("No se encontró el punto");
     }
 
     if (!canRelocateInformalCall(before)) {
       throw new Error(
-        "Solo el punto de una convocatoria informal se puede reubicar así",
+        "Solo el punto de un grupo informal se puede reubicar así",
       );
     }
 
@@ -359,7 +359,7 @@ export class CallDAL {
     }
 
     if (error?.code === CHECK_VIOLATION) {
-      throw new Error("Ya se llenaron los cupos de esta jornada");
+      throw new Error("Ya se llenaron los cupos de este grupo");
     }
 
     if (error) {
@@ -423,7 +423,7 @@ export class CallDAL {
 
     if (error) {
       log.error("call.verify failed", { code: error.code, callId: id });
-      throw new Error("No se pudo verificar la jornada");
+      throw new Error("No se pudo verificar el grupo");
     }
   }
 

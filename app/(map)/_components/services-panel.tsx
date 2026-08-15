@@ -1,10 +1,8 @@
 "use client";
 
-import { CONFIDENCE_BADGE, PANEL_LABEL, RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL, SERVICES_LABEL, confidence, freshness } from "@/lib/labels";
+import { CONFIDENCE_BADGE, RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL, SERVICES_LABEL, confidence, freshness } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { BalanceTab } from "./balance-tab";
-import { PanelTabs, type PanelTabDef } from "./panel-tabs";
 import { useWorkspace } from "./workspace-context";
 
 /**
@@ -16,17 +14,7 @@ import { useWorkspace } from "./workspace-context";
 export function ServicesPanel() {
   const { resourceOffers } = useWorkspace();
 
-  const tabs: PanelTabDef[] = [
-    { id: "balance", label: PANEL_LABEL.balance, content: <BalanceTab /> },
-    {
-      id: "services",
-      label: SERVICES_LABEL.title,
-      count: resourceOffers.length,
-      content: <ServicesGrid resourceOffers={resourceOffers} />,
-    },
-  ];
-
-  return <PanelTabs tabs={tabs} />;
+  return <ServicesGrid resourceOffers={resourceOffers} />;
 }
 
 function ServicesGrid({

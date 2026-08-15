@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 
-import { SitePanel } from "../../_components/site-panel";
-
 export const metadata: Metadata = {
   title: "Necesito",
   description:
@@ -10,9 +8,9 @@ export const metadata: Metadata = {
 
 /**
  * The section for someone who was hit by the earthquake, not for someone who
- * came to help. A request is written here and read in "Ayudar": one map, one
- * question, and neither audience has to read past the other's screen.
+ * came to help. See `HelpPage` for why this route renders nothing itself —
+ * it only seeds "Necesito" as the filter `UnifiedPanel` opens on.
  */
 export default function NeedPage() {
-  return <SitePanel />;
+  return null;
 }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The contract for a convocatoria — a shift, a brigade, a jornada — in both
+ * The contract for a grupo — a shift, a brigade, a cuadrilla — in both
  * directions.
  *
  * A call differs from a site in the one way that shapes everything downstream:
@@ -113,7 +113,7 @@ export type CreateCallInput = z.infer<typeof createCallSchema>;
  * "Alguien ya se está juntando aquí" — the informal version.
  *
  * Not a shorter form of `createCallSchema`, a different promise. A formal
- * jornada is a commitment someone made and other people are trusting; this is
+ * grupo is a commitment someone made and other people are trusting; this is
  * a sighting. No title (there is often no name for it yet), no hour (see
  * `CallDAL.gather` — it is stamped "starting now" and left to expire at the
  * end of the day on its own), no slots, no organiser's WhatsApp — there is no

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { callCategorySchema } from "@/data/call/call.dto";
+
 /**
  * A barrio, as the report forms need it: a name to pick and a coordinate to
  * fly the map to.
@@ -61,3 +63,38 @@ export const neighborhoodStatusSchema = z.object({
 });
 
 export type NeighborhoodStatusDTO = z.infer<typeof neighborhoodStatusSchema>;
+
+/**
+ * A frente: "este barrio necesita X", declared by the curator team so that
+ * armar un grupo starts from a problem already on record instead of someone
+ * inventing the category, the priority and the barrio from nothing.
+ *
+ * `category` is `CallCategory`, not a category of its own — a frente's
+ * category IS the kind of work a grupo there does, and reusing the type is
+ * what lets "Armar un grupo aquí" prefill the form without translating
+ * between two vocabularies for the same idea.
+ */
+export const NEED_PRIORITIES = ["critical", "high", "normal"] as const;
+
+export const needPrioritySchema = z.enum(NEED_PRIORITIES);
+
+export type NeedPriority = z.infer<typeof needPrioritySchema>;
+
+export const neighborhoodNeedSchema = z.object({
+  id: z.uuid(),
+  neighborhoodId: z.uuid(),
+  /** Matches `NeighborhoodDTO.name`, same convention as
+   *  `NeighborhoodStatusDTO.name`. */
+  name: z.string(),
+  municipality: municipalitySchema,
+  longitude: z.number(),
+  latitude: z.number(),
+  category: callCategorySchema,
+  priority: needPrioritySchema,
+  note: z.string().nullable(),
+  source: z.string().nullable(),
+  confirmedAt: z.iso.datetime({ offset: true }),
+  expiresAt: z.iso.datetime({ offset: true }),
+});
+
+export type NeighborhoodNeedDTO = z.infer<typeof neighborhoodNeedSchema>;

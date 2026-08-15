@@ -3,22 +3,29 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
-import { X } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Map, MapControls, MapPopup } from "@/components/ui/map";
 
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type { CallDTO } from "@/data/call/call.dto";
-import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
+import type {
+  NeighborhoodNeedDTO,
+  NeighborhoodStatusDTO,
+} from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
-import type { SituationReportDTO } from "@/data/situation/situation.dto";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
-import { BARRIO_TOGGLE } from "@/lib/labels";
+import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
 import {
-  REPORT_ENTRY,
+  ALL_REPORT_ENTRIES,
+  CHIP_PRIMARY_ACTION,
+  CHIP_REPORT_MENU,
   SITE_TYPE_TAB,
+  initialChipForTab,
   tabFromSegment,
+  type PanelChip,
   type TabId,
 } from "@/lib/tabs";
 import { createClient } from "@/lib/supabase/client";
@@ -29,10 +36,12 @@ import { CallMarkers } from "./call-markers";
 import { CallPopup } from "./call-popup";
 import { LiveClock } from "./live-clock";
 import { FitToSites, FlyToSelected } from "./map-camera";
+import { ReportMenu } from "./report-menu";
+import { ResourceOfferMarkers } from "./resource-offer-markers";
 import { SightingMarkers } from "./sighting-markers";
 import { SiteMarkers } from "./site-markers";
 import { SitePopup } from "./site-popup";
-import { TabBar } from "./tab-bar";
+import { UnifiedPanel } from "./unified-panel";
 import { WorkspaceContext } from "./workspace-context";
 
 /** Manizales sits on a ridge running east–west. Only the starting frame before
@@ -56,38 +65,52 @@ const CITY_BOUNDS: [[number, number], [number, number]] = [
 
 type Props = {
   sites: SiteDTO[];
-  /** Jornadas. Places with an hour attached, drawn only in "Ayudar". */
+  /** Grupos. */
   calls?: CallDTO[];
   /** Animal reports. Not sites: they mostly have no location at all. */
   animals?: AnimalDTO[];
-  /** Resource offers. Cards in "Servicios", never pins — see
-   *  workspace-context.ts. */
+  /** Resource offers — a truck, a warehouse, a spare room. Pinned at the
+   *  barrio's own centroid when they carry a point. */
   resourceOffers?: ResourceOfferDTO[];
-  /** Debris and damage reports, shown in "Ayudar". */
+  /** Individual household requests — "Necesidades". */
   workOrders?: WorkOrderDTO[];
-  /** The Alcaldía's latest balance, or null once it has expired. */
-  report?: SituationReportDTO | null;
   /** Every barrio with an evacuation/utility status on record. */
   neighborhoodStatuses?: NeighborhoodStatusDTO[];
+  /** Every frente on record — "este barrio necesita X". Curated by hand, see
+   *  `neighborhood_need`. Not shown as its own chip yet — see `PanelChip`. */
+  neighborhoodNeeds?: NeighborhoodNeedDTO[];
+  /** Whether the reader has an account — the one field `UnifiedPanel`'s
+   *  work-order cards need to decide between "reclamar" and "entra primero". */
+  signedIn?: boolean;
   /** Set when arriving from a shared link. The map opens already centred on
    *  that pin with its card up, because the question the link was sent to
    *  answer is "¿por dónde queda exactamente?" and it should be answered
    *  before anyone touches anything. */
   initialSelectedId?: string;
-  /** Forces the active section. The tab layout leaves this off and lets the
-   *  active route segment decide; `/punto/[id]` sets it, because there the
-   *  section is a property of the pin that was shared. */
+  /** Seeds which chip the panel opens on (see `initialChipForTab`). The tab
+   *  layout leaves this off and lets the active route segment decide;
+   *  `/punto/[id]` sets it explicitly, because there the section is a
+   *  property of the pin that was shared. Only a seed — the reader can still
+   *  pick a different chip afterwards. */
   tab?: TabId;
-  /** The section's own screen: a list, a photo board, a set of cards. */
-  children: React.ReactNode;
+  /** Extra content rendered above the panel — today only `/grupo/[id]`'s
+   *  attendee list, which is not part of any family and does not belong
+   *  inside `UnifiedPanel`. */
+  children?: React.ReactNode;
 };
 
 /**
- * The map, the section switcher and whatever panel the active section renders.
+ * The map, the (now icon-only) quick-jump row, and the one panel that
+ * carries all the actual filtering.
  *
- * Everything persistent lives here and everything section-specific arrives as
- * `children`, which is what lets the reader move between "Ayudar" and
- * "Mascotas" without the map being torn down and rebuilt underneath them.
+ * Every family draws on the map unconditionally now — sites, grupos, casos,
+ * located animal sightings, located resource offers — nothing is hidden for
+ * belonging to the "wrong" section. What changed hands to `UnifiedPanel` is
+ * the filtering itself: its own row of chips (Todo, Grupos, Necesidades,
+ * Sitios, Mascotas, Servicios) is the one control surface for what the panel
+ * lists, and it never gates the map. `activeChip` is that state, shared
+ * through the workspace context so `UnifiedPanel` can read and change it and
+ * this component's own primary button can jump straight to one.
  */
 export function MapWorkspace({
   sites,
@@ -95,8 +118,9 @@ export function MapWorkspace({
   animals = [],
   resourceOffers = [],
   workOrders = [],
-  report,
   neighborhoodStatuses = [],
+  neighborhoodNeeds = [],
+  signedIn = false,
   initialSelectedId,
   tab: forcedTab,
   children,
@@ -104,15 +128,24 @@ export function MapWorkspace({
   // In the tab layout this is the active child route; on a shared-pin page
   // there is no such child, so the caller passes the section explicitly.
   const segment = useSelectedLayoutSegment();
-  const tab = forcedTab ?? tabFromSegment(segment);
+
+  const [activeChip, setActiveChip] = useState<PanelChip>(() =>
+    initialChipForTab(forcedTab ?? tabFromSegment(segment)),
+  );
+
+  // Only fires on a REAL route change (a pasted `/mascotas` link, the back
+  // button) — chip clicks never touch `segment`, so this never fights a
+  // reader's own selection. `segment` is an external signal (the router), so
+  // syncing state from it is exactly the escape hatch this lint rule leaves
+  // open — see the same justification on the effect in `useDraft`.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveChip(initialChipForTab(forcedTab ?? tabFromSegment(segment)));
+  }, [segment, forcedTab]);
 
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId ?? null,
   );
-  // The only context layer left after the move to sections. It stays a toggle
-  // rather than a section because it answers a different question at the same
-  // time as whatever is on screen: which barrio am I looking at.
-  const [showBarrios, setShowBarrios] = useState(true);
   // Which barrio the map is centred on. Zoomed in you are inside one, its
   // outline is off-screen and the wash is invisible, so the layer looks dead
   // even though it is working. This says where you are without a cursor —
@@ -121,9 +154,8 @@ export function MapWorkspace({
   // The barrio being filtered by, set by tapping one on the map. Null is the
   // whole city, which is where everyone starts.
   const [barrio, setBarrio] = useState<BarrioProps | null>(null);
-  // Mobile only: shrinks the panel to just its tab bar so the map can take
-  // the freed space. Lives here rather than inside PanelTabs so it survives
-  // moving between sections during the same visit.
+  // Mobile only: shrinks the panel to just its header so the map can take
+  // the freed space.
   const [panelCollapsed, setPanelCollapsed] = useState(false);
 
   const liveStatus = useLiveSiteStatus();
@@ -137,32 +169,13 @@ export function MapWorkspace({
     [sites, liveStatus],
   );
 
-  /**
-   * What is drawn: the sites that belong to the active section, and nothing
-   * else. Types mapped to `null` are drawn nowhere — they are still valid rows,
-   * they just are not part of any question this app answers.
-   */
-  const visible = useMemo(
-    () => withLiveStatus.filter((site) => SITE_TYPE_TAB[site.type] === tab),
-    [withLiveStatus, tab],
-  );
-
-  /**
-   * Jornadas belong to exactly one section, so there is nothing to map: they
-   * are drawn in "Ayudar" and nowhere else. A shift is a way of giving time,
-   * which is the question that section answers.
-   */
-  const visibleCalls = useMemo(
-    () => (tab === "help" ? calls : []),
-    [calls, tab],
-  );
-
-  /** Debris and damage reports: same rule as a jornada — read in "Ayudar",
-   *  nowhere else, because "las necesidades se ven en Ayudar" applies here
-   *  too. */
-  const visibleWorkOrders = useMemo(
-    () => (tab === "help" ? workOrders : []),
-    [workOrders, tab],
+  /** Every site the map ever draws — the ones mapped to `null` in
+   *  `SITE_TYPE_TAB` still never appear, because they are still not part of
+   *  any question this app answers. No filtering beyond that: the map is
+   *  unconditional now, the panel does the narrowing. */
+  const mapSites = useMemo(
+    () => withLiveStatus.filter((site) => SITE_TYPE_TAB[site.type] !== null),
+    [withLiveStatus],
   );
 
   /**
@@ -175,73 +188,55 @@ export function MapWorkspace({
    */
   const panelSites = useMemo(
     () =>
-      barrio
-        ? visible.filter((site) => site.neighborhood === barrio.name)
-        : visible,
-    [visible, barrio],
+      barrio ? mapSites.filter((site) => site.neighborhood === barrio.name) : mapSites,
+    [mapSites, barrio],
   );
 
   const panelCalls = useMemo(
     () =>
-      barrio
-        ? visibleCalls.filter((call) => call.neighborhood === barrio.name)
-        : visibleCalls,
-    [visibleCalls, barrio],
+      barrio ? calls.filter((call) => call.neighborhood === barrio.name) : calls,
+    [calls, barrio],
   );
 
   const panelWorkOrders = useMemo(
     () =>
       barrio
-        ? visibleWorkOrders.filter((order) => order.neighborhood === barrio.name)
-        : visibleWorkOrders,
-    [visibleWorkOrders, barrio],
+        ? workOrders.filter((order) => order.neighborhood === barrio.name)
+        : workOrders,
+    [workOrders, barrio],
+  );
+
+  /** Offers carry a `neighborhood`, even though the point behind it is a
+   *  barrio-level fact rather than an exact corner — narrowing by it is
+   *  still meaningful, unlike for animals (see `animals` below, unfiltered). */
+  const panelResourceOffers = useMemo(
+    () =>
+      barrio
+        ? resourceOffers.filter((offer) => offer.neighborhood === barrio.name)
+        : resourceOffers,
+    [resourceOffers, barrio],
   );
 
   /**
-   * Per-section counts, so an empty section is visible before it is opened.
-   * City-wide, matching the map: the pins for every barrio stay drawn, so a
-   * number that counted only the selected barrio would contradict what is on
-   * screen. The barrio's own count lives in the panel header, where it belongs.
-   */
-  const counts = useMemo(() => {
-    const base: Record<TabId, number> = {
-      help: 0,
-      need: 0,
-      pets: 0,
-      services: 0,
-    };
-    for (const site of withLiveStatus) {
-      const target = SITE_TYPE_TAB[site.type];
-      if (target) base[target] += 1;
-    }
-    // Jornadas count towards "Ayudar" alongside the places. The number says how
-    // much is on that map, and a shift is on it.
-    base.help += calls.length;
-    // Only the animals still missing: a reunited pet is good news, not an open
-    // case.
-    base.pets = animals.filter((a) => a.resolvedAt === null).length;
-    base.services = resourceOffers.length;
-    return base;
-  }, [withLiveStatus, animals, calls, resourceOffers]);
-
-  /**
-   * One selection, two kinds of thing. Ids are uuids from different tables, so
-   * at most one of these resolves and whichever does decides which card opens —
-   * no discriminator to keep in step, and no way for both to be open at once.
+   * One selection, two kinds of thing with a popup. Animal and offer pins
+   * can still be selected — they just have no card of their own yet, so
+   * selecting one only highlights its marker and scrolls the panel.
    */
   const selected = withLiveStatus.find((site) => site.id === selectedId) ?? null;
-  const selectedCall = visibleCalls.find((call) => call.id === selectedId) ?? null;
+  const selectedCall = calls.find((call) => call.id === selectedId) ?? null;
 
   /**
-   * Some sections are not about places at all.
+   * Some chips are not about places at all.
    *
    * A lost animal has no location — that is what lost means — and a service
    * moves by definition. For those the panel is the product and the map shrinks
    * to a zone reference, rather than the other way round.
    */
-  const panelLeads = tab === "pets" || tab === "services";
+  const panelLeads = activeChip === "pets" || activeChip === "services";
 
-  const reportEntries = REPORT_ENTRY[tab];
+  const primaryAction = CHIP_PRIMARY_ACTION[activeChip];
+  const reportEntries =
+    activeChip === "all" ? ALL_REPORT_ENTRIES : (CHIP_REPORT_MENU[activeChip] ?? []);
 
   const barrioStatus = useMemo(
     () =>
@@ -253,63 +248,77 @@ export function MapWorkspace({
 
   const workspace = useMemo(
     () => ({
-      tab,
-      // The panel's lists, narrowed to the barrio. The map draws `visible`.
+      activeChip,
+      setActiveChip,
+      // The panel's lists, narrowed to the barrio. The map draws the full,
+      // unfiltered sets above instead.
       sites: panelSites,
       calls: panelCalls,
       animals,
-      resourceOffers,
+      resourceOffers: panelResourceOffers,
       workOrders: panelWorkOrders,
+      // Same two lists, city-wide — what FrontsList counts against, since a
+      // barrio being filtered by must not hide every other barrio's numbers.
+      cityCalls: calls,
+      cityWorkOrders: workOrders,
+      neighborhoodNeeds,
       selectedId,
       select: setSelectedId,
       barrio,
       clearBarrio: () => setBarrio(null),
+      selectBarrioByName: (name: string) =>
+        setBarrio({ id: name, name, comuna: null, lon: 0, lat: 0 }),
       barrioStatus,
-      report: report ?? null,
       neighborhoodStatuses,
-      showBarrios,
-      onBarriosChange: setShowBarrios,
       panelCollapsed,
       setPanelCollapsed,
     }),
     [
-      tab,
+      activeChip,
       panelSites,
       panelCalls,
       animals,
-      resourceOffers,
+      panelResourceOffers,
       panelWorkOrders,
+      calls,
+      workOrders,
+      neighborhoodNeeds,
       selectedId,
       barrio,
       barrioStatus,
-      report,
       neighborhoodStatuses,
-      showBarrios,
       panelCollapsed,
     ],
   );
 
   return (
     <WorkspaceContext value={workspace}>
-      <div className="flex h-full w-full flex-col md:flex-row">
+      {/* Stacked (map on top, panel below) until `lg` (1024px), not `md`
+          (768px) — a portrait tablet sits right at 768–834px, and with six
+          filter chips plus a search box the panel now carries enough that
+          splitting it beside the map at that width left neither one with
+          room to breathe. Full-width stacked reads far better there; true
+          side-by-side waits for a screen wide enough that both halves still
+          have space once split. */}
+      <div className="flex h-full w-full flex-col lg:flex-row">
         <div
           className={cn(
             "relative min-h-0 transition-[flex-grow] duration-300",
-            // Non-panelLeads sections are always flex-1 already, mobile and
-            // desktop alike — the aside next to it carries a fixed height, so
+            // Non-panelLeads chips are always flex-1 already, narrow and
+            // wide alike — the aside next to it carries a fixed height, so
             // shrinking that height (collapsed) already hands this the freed
             // space with no extra class needed here.
             //
-            // panelLeads sections invert that today (map fixed, aside grows)
+            // panelLeads chips invert that today (map fixed, aside grows)
             // because the panel is the product there. Collapsing has to
-            // invert it back on mobile — the map takes the freed space
-            // instead — but only on mobile: md: always restores the normal
-            // 38% share, since there is room to spare there and the toggle
-            // that sets `panelCollapsed` is hidden on that breakpoint.
+            // invert it back below `lg`: the map takes the freed space
+            // instead — but only there: lg: always restores the normal 38%
+            // share, since there is room to spare there and the toggle that
+            // sets `panelCollapsed` is hidden at that breakpoint.
             panelLeads
               ? cn(
                   panelCollapsed ? "flex-1" : "h-[32dvh]",
-                  "md:h-auto md:flex-[0_0_38%]",
+                  "lg:h-auto lg:flex-[0_0_38%]",
                 )
               : "flex-1",
           )}
@@ -330,38 +339,44 @@ export function MapWorkspace({
               showCompass
               showFullscreen
             />
-            {showBarrios && (
-              <BarrioLayer
-                onCentreChange={setCentreBarrio}
-                selected={barrio?.name ?? null}
-                onSelect={setBarrio}
-                statuses={neighborhoodStatuses}
-              />
-            )}
-            {/* Framed over both, so a jornada convened on the edge of the city
-                is not left outside the opening view of the map that draws it. */}
-            <FitToSites sites={[...visible, ...visibleCalls]} />
+            <BarrioLayer
+              onCentreChange={setCentreBarrio}
+              selected={barrio?.name ?? null}
+              onSelect={setBarrio}
+              statuses={neighborhoodStatuses}
+            />
+            {/* Framed over everything the map can ever draw, once, on load. */}
+            <FitToSites
+              sites={[
+                ...mapSites,
+                ...calls,
+                ...animals.filter(
+                  (a): a is AnimalDTO & { longitude: number; latitude: number } =>
+                    a.longitude !== null && a.latitude !== null,
+                ),
+                ...resourceOffers.filter(
+                  (o): o is ResourceOfferDTO & { longitude: number; latitude: number } =>
+                    o.longitude !== null && o.latitude !== null,
+                ),
+              ]}
+            />
             <FlyToSelected site={selected ?? selectedCall} />
 
-            <SiteMarkers
-              sites={visible}
+            <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={setSelectedId} />
+
+            <CallMarkers calls={calls} selectedId={selectedId} onSelect={setSelectedId} />
+
+            <SightingMarkers
+              animals={animals}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
 
-            <CallMarkers
-              calls={visibleCalls}
+            <ResourceOfferMarkers
+              resourceOffers={resourceOffers}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
-
-            {tab === "pets" && (
-              <SightingMarkers
-                animals={animals}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-              />
-            )}
 
             {/* Anchored to the pin rather than sliding over the map, so the
                 answer and its place on the map stay on screen together.
@@ -402,21 +417,23 @@ export function MapWorkspace({
             )}
           </Map>
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-1.5 p-2 sm:flex-row sm:items-start sm:justify-between sm:gap-2 sm:p-3">
-            <div className="pointer-events-auto min-w-0 sm:max-w-[calc(100vw-24rem)]">
-              <TabBar active={tab} counts={counts} />
-            </div>
-
-            {/* Reference belongs away from the section switcher: the tabs steer
-                the app, while the clock is context checked between actions.
-                The balance moved into the panel's own Balance tab — it is
-                something you check once and carry, not a control that
-                belongs on the map. */}
-            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5 self-end sm:self-auto">
-              {/* Mobile is tight on vertical space above an already-small
-                  map, and the clock is reassurance ("this is live"), not a
-                  control — the barrio chip below it matters more there. */}
-              <div className="hidden md:block">
+          {/* Only the clock and the barrio chip live up here now. The old
+              section switcher (Todo/Ayudar/Necesito/Mascotas/Servicios) was
+              removed rather than shrunk further: every one of its five
+              actions was already reachable through `UnifiedPanel`'s own row
+              of chips — four mapped it 1:1, and "Ayudar" landed on the exact
+              same "Todo" chip the panel's own Todo button already opens — so
+              it was a second control surface for something the panel already
+              did, not a distinct capability. The four routes still exist and
+              still seed which chip a fresh visit opens on (see
+              `initialChipForTab`); they just have no button of their own to
+              click while already inside the app. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end gap-2 p-2 sm:p-3">
+            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
+              {/* Hidden below `lg`: the clock is reassurance ("this is
+                  live"), not a control, and on a narrower screen the barrio
+                  chip below it matters more. */}
+              <div className="hidden lg:block">
                 <LiveClock />
               </div>
                 {/* One slot, two states. While a barrio is filtered the chip
@@ -431,10 +448,9 @@ export function MapWorkspace({
                   >
                     {barrio.name}
                     <X className="size-3" strokeWidth={3} aria-hidden />
-                    <span className="sr-only">{BARRIO_TOGGLE.clear}</span>
+                    <span className="sr-only">{BARRIO_PANEL.clear}</span>
                   </button>
                 ) : (
-                  showBarrios &&
                   centreBarrio && (
                     <span className="bg-background/90 rounded-full border px-2.5 py-1 text-[0.7rem] font-medium shadow-sm backdrop-blur">
                       {centreBarrio}
@@ -445,73 +461,84 @@ export function MapWorkspace({
           </div>
 
           {/* Bottom-left: the thumb's reach on a phone, and clear of the map
-              controls on the right. This is the only write path the city has,
-              and it points at the active section's own forms — "reportar" means
-              something different in each one. Services has no entity yet, so
-              there is nothing to point at and nothing is drawn.
+              controls on the right. "Todo" has no one obvious next step the
+              way a single chip does, so it gets only the "+" — every form in
+              the app, none of them promoted above the rest. */}
+          {(primaryAction || reportEntries.length > 0) && (
+            <div className="absolute bottom-4 left-2 z-10 flex flex-col items-start gap-2">
+              <ReportMenu entries={reportEntries} barrio={barrio?.name ?? null} />
 
-              "Ayudar" has two, stacked. The first declared is the filled one
-              and stays where the single button always was, so the gesture people
-              already learned still does what it did; the second sits above it,
-              quieter, because convening a jornada is the rarer act and the one
-              that ends at a sign-in. */}
-          {reportEntries.length > 0 && (
-            <div className="absolute bottom-4 left-2 z-10 flex flex-col-reverse items-start gap-2">
-              {reportEntries.map(({ href, label, icon: Icon }, index) => (
+              {primaryAction && (
                 <Link
-                  key={href}
                   // The barrio being looked at travels to the form, which opens
                   // with it already chosen and its map already framed there.
                   // In the URL rather than in state: the form is another route,
                   // and this way the link survives a reload and can be pasted.
                   href={
                     barrio
-                      ? `${href}?barrio=${encodeURIComponent(barrio.name)}`
-                      : href
+                      ? `${primaryAction.href}?barrio=${encodeURIComponent(barrio.name)}`
+                      : primaryAction.href
                   }
-                  className={cn(
-                    "focus-visible:ring-ring flex items-center gap-2 rounded-full text-sm font-semibold shadow-lg focus-visible:ring-2 focus-visible:outline-none",
-                    index === 0
-                      ? "bg-primary text-primary-foreground py-3 pr-4 pl-3.5"
-                      : "bg-background/95 border py-2 pr-3.5 pl-3 text-xs backdrop-blur",
-                  )}
+                  className="bg-primary text-primary-foreground focus-visible:ring-ring flex items-center gap-2 rounded-full py-3 pr-4 pl-3.5 text-sm font-semibold shadow-lg focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <Icon
-                    className={index === 0 ? "size-4" : "size-3.5"}
-                    strokeWidth={2.5}
-                    aria-hidden
-                  />
-                  {label}
+                  <primaryAction.icon className="size-4" strokeWidth={2.5} aria-hidden />
+                  {primaryAction.label}
                 </Link>
-              ))}
+              )}
             </div>
           )}
         </div>
 
-        {/* Below the map on a phone, beside it on a laptop. Which of the two
-            gets the space depends on the section: for places the map is the
+        {/* Below the map until `lg`, beside it from there. Which of the two
+            gets the space depends on the chip: for places the map is the
             product, for animals and services the panel is. */}
         <aside
           className={cn(
-            "bg-background flex min-h-0 flex-col border-t md:border-t-0 md:border-l",
-            // Collapsed shrinks the aside to just its tab bar on mobile,
-            // whatever the section — Balance now lives inside `children`
-            // (every section's own PanelTabs) rather than as a block here,
-            // so there is nothing left above it to keep visible. md: always
-            // restores the section's normal desktop share.
+            "bg-background flex min-h-0 flex-col border-t lg:border-t-0 lg:border-l",
             panelCollapsed
               ? cn(
                   "h-12 shrink-0 overflow-hidden",
                   panelLeads
-                    ? "md:h-auto md:flex-1 md:overflow-y-auto"
-                    : "md:h-auto md:w-80",
+                    ? "lg:h-auto lg:flex-1 lg:overflow-y-auto"
+                    : "lg:h-auto lg:w-96 xl:w-[26rem]",
                 )
               : panelLeads
                 ? "flex-1 overflow-y-auto"
-                : "h-[38dvh] shrink-0 md:h-auto md:w-80",
+                : "h-[38dvh] shrink-0 lg:h-auto lg:w-96 xl:w-[26rem]",
           )}
         >
-          {children}
+          {/* Only below `lg`: from there the panel sits beside a map with
+              room to spare, and there is nowhere for this to free up. Its
+              own small header rather than folded into BarrioHeader, because
+              collapsing has to work identically whichever chip is active,
+              including the two ("pets", "services") that render their own
+              board instead of a list. */}
+          <div className="flex shrink-0 items-center justify-end border-b p-1 lg:hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setPanelCollapsed(!panelCollapsed)}
+              aria-label={panelCollapsed ? PANEL_LABEL.expand : PANEL_LABEL.collapse}
+              aria-expanded={!panelCollapsed}
+            >
+              {panelCollapsed ? (
+                <ChevronUp className="size-4" aria-hidden />
+              ) : (
+                <ChevronDown className="size-4" aria-hidden />
+              )}
+            </Button>
+          </div>
+
+          {/* Collapsed on mobile means the aside has already shrunk to just
+              the header above; not rendering the content avoids a clipped,
+              still-scrollable panel sitting invisibly underneath it. */}
+          {!panelCollapsed && (
+            <div className="flex min-h-0 flex-1 flex-col">
+              {children}
+              <UnifiedPanel signedIn={signedIn} />
+            </div>
+          )}
         </aside>
       </div>
     </WorkspaceContext>

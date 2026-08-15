@@ -3,36 +3,34 @@ import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { SituationDAL } from "@/data/situation/situation.dal";
+import { getCurrentUser } from "@/data/user/require-user";
 import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 
 import { MapWorkspace } from "../_components/map-workspace";
 
 /**
- * Everything the four sections share: the map, the switcher, the balance.
+ * Everything every section shares: one unified map, the filter row above it,
+ * and the panel beside it (see `MapWorkspace`, `UnifiedPanel`).
  *
- * It is a layout rather than four pages because the map has to survive moving
- * between sections — MapLibre remounted on every tap loses the camera, refetches
- * tiles and blinks, and on a phone with one bar of signal that is the whole
- * experience. Each section's page renders only its own panel.
+ * The four child routes (`ayudar/`, `necesito/`, …) still exist and each
+ * renders nothing of its own — they only carry metadata and seed which filter
+ * opens, so `/mascotas` stays a real, shareable URL without gating what the
+ * map draws the way it used to.
  *
- * A Server Component: it reads through the DALs and hands plain data down. All
- * three reads are small and every section shows the counts of the others, so
- * they are loaded once here instead of per section.
+ * A Server Component: it reads through the DALs and hands plain data down.
+ * Loaded once here rather than per section, because every filter now shows
+ * counts for every other one.
  */
-export default async function TabsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function TabsLayout() {
   const [
     sites,
     calls,
     animals,
     resourceOffers,
     workOrders,
-    report,
     neighborhoodStatuses,
+    neighborhoodNeeds,
+    user,
   ] = await Promise.all([
     SiteDAL.public().listPublished(),
     CallDAL.public().listPublished(),
@@ -42,8 +40,9 @@ export default async function TabsLayout({
     // and it is the one field here that differs between an anonymous
     // visitor and the person who already holds the claim.
     WorkOrderDAL.create().then((dal) => dal.listPublished()),
-    SituationDAL.public().latest(),
     NeighborhoodDAL.public().statuses(),
+    NeighborhoodDAL.public().needs(),
+    getCurrentUser(),
   ]);
 
   return (
@@ -54,11 +53,10 @@ export default async function TabsLayout({
         animals={animals}
         resourceOffers={resourceOffers}
         workOrders={workOrders}
-        report={report}
         neighborhoodStatuses={neighborhoodStatuses}
-      >
-        {children}
-      </MapWorkspace>
+        neighborhoodNeeds={neighborhoodNeeds}
+        signedIn={user !== null}
+      />
     </main>
   );
 }

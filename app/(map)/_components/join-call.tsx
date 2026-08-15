@@ -163,7 +163,7 @@ const STORAGE_KEY = "joined-calls";
  * localStorage rather than sessionStorage, unlike the report drafts: a draft
  * belongs to one sitting, but "me apunté para el sábado" has to survive closing
  * the tab on Thursday. It holds call ids and nothing else — no name, no number
- * — so a shared phone gives nothing away beyond which jornadas it joined.
+ * — so a shared phone gives nothing away beyond which grupos it joined.
  */
 function useJoinedLocally(callId: string) {
   const [joined, setJoined] = useState(false);

@@ -5,7 +5,6 @@ import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
 import { canSeeAttendees } from "@/data/call/call.policy";
 import { SiteDAL } from "@/data/site/site.dal";
-import { SituationDAL } from "@/data/situation/situation.dal";
 import { getCurrentUser } from "@/data/user/require-user";
 import { clientEnv } from "@/lib/env";
 import {
@@ -17,12 +16,11 @@ import {
 } from "@/lib/labels";
 
 import { MapWorkspace } from "../../_components/map-workspace";
-import { SitePanel } from "../../_components/site-panel";
 
 import { CallAttendees } from "./_components/call-attendees";
 
 /**
- * A shared jornada.
+ * A shared grupo.
  *
  * This is the route the whole feature is built around. A shift is organised in
  * a WhatsApp group, and what circulates there is a line of text that always
@@ -37,7 +35,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const call = await CallDAL.public().findById(id);
 
-  if (!call) return { title: "Jornada no encontrada" };
+  if (!call) return { title: "Grupo no encontrado" };
 
   // Everything someone in the group needs before deciding to tap: what kind of
   // work, when, where, and whether there is still room.
@@ -57,7 +55,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title: call.title,
       description,
-      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/jornada/${call.id}`,
+      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/grupo/${call.id}`,
       locale: "es_CO",
       type: "website",
     },
@@ -67,20 +65,19 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedCallPage({ params }: Params) {
   const { id } = await params;
 
-  const [call, sites, calls, animals, report, user] = await Promise.all([
+  const [call, sites, calls, animals, user] = await Promise.all([
     CallDAL.public().findById(id),
     SiteDAL.public().listPublished(),
     CallDAL.public().listPublished(),
     AnimalDAL.public().listPublished(),
-    SituationDAL.public().latest(),
     getCurrentUser(),
   ]);
 
   if (!call) notFound();
 
-  // A link outlives the shift it points at. `listPublished` drops a jornada the
+  // A link outlives the shift it points at. `listPublished` drops a grupo the
   // moment it is over, so the shared one is added back — arriving late deserves
-  // "esta jornada ya terminó" on the card, not an empty map.
+  // "este grupo ya terminó" on the card, not an empty map.
   const withShared = calls.some((c) => c.id === call.id)
     ? calls
     : [call, ...calls];
@@ -98,14 +95,13 @@ export default async function SharedCallPage({ params }: Params) {
         sites={sites}
         calls={withShared}
         animals={animals}
-        report={report}
         initialSelectedId={call.id}
-        // A jornada is always a way of giving time, so a shared one opens on
+        // A grupo is always a way of giving time, so a shared one opens on
         // "Ayudar" whatever the reader was looking at last.
         tab="help"
+        signedIn={user !== null}
       >
         {attendees && <CallAttendees attendees={attendees} />}
-        <SitePanel />
       </MapWorkspace>
     </main>
   );

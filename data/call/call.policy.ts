@@ -36,7 +36,7 @@ export function canCreateInformalCall(): boolean {
 /**
  * Anyone may move an informal pin — never a formal one.
  *
- * A formal jornada's meeting point is part of what its organiser committed
+ * A formal grupo's meeting point is part of what its organiser committed
  * to; letting a stranger drag it would undo the one thing an account was
  * asked for in the first place. An informal pin has no organiser to
  * contradict, so the same openness that let anyone create it lets anyone

@@ -19,7 +19,7 @@ export function ReportLayout({
   title: string;
   /** The promise this particular form makes. Defaults to the one every report
    *  makes — it goes on the map now, marked unconfirmed — which is true of a
-   *  point and not quite true of a jornada, where what follows publication is
+   *  point and not quite true of a grupo, where what follows publication is
    *  that people start signing up to it. */
   subtitle?: string;
   backHref: string;

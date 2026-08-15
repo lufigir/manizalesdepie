@@ -15,15 +15,15 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Jornadas on the map, drawn alongside the acopios in "Ayudar".
+ * Grupos on the map, drawn alongside the acopios in "Ayudar".
  *
  * Not clustered, unlike sites. Clustering exists because downtown Manizales
- * stacks a dozen places inside a few blocks; shifts are convened by the handful
+ * stacks a dozen places inside a few blocks; shifts are armed by the handful
  * and spread across the city, so grouping them would hide the pin that is the
  * whole answer without solving a problem anyone has. If that stops being true,
  * `useClusters` is generic enough to take them.
  *
- * The square badge is deliberate: at a glance a jornada must not be mistaken
+ * The square badge is deliberate: at a glance a grupo must not be mistaken
  * for a place you can walk into. A pin with a corner is a different kind of
  * thing, before the icon or the colour has been read.
  */
@@ -58,7 +58,7 @@ export function CallMarkers({
                   CONFIDENCE_MARKER[level],
                   selectedId === call.id && "scale-125",
                 )}
-                aria-label={`Jornada de ${CALL_CATEGORY_LABEL[call.category]}: ${
+                aria-label={`Grupo de ${CALL_CATEGORY_LABEL[call.category]}: ${
                   call.title
                 }. ${CALL_STATE_LABEL[state]}. ${confidenceLabel}`}
               >

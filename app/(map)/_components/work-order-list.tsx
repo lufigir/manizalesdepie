@@ -27,10 +27,11 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Debris and damage, in "Ayudar" — its own tab, same reasoning as `CallList`:
- * this is a thing with a lifecycle, not a place with hours, so it does not
- * belong inside the site list. The heading and count live in the tab itself
- * (see PanelTabs), not here — this only ever renders once that tab is showing.
+ * Debris and damage, in "Ayudar" — its own chip in `UnifiedPanel`, same
+ * reasoning as a grupo: this is a thing with a lifecycle, not a place with
+ * hours, so it does not belong inside the site list. The heading and count
+ * live in the chip itself, not here — this renders once that chip is active,
+ * or as one row among others inside "Todo".
  */
 export function WorkOrderList({
   workOrders,
@@ -39,18 +40,31 @@ export function WorkOrderList({
   workOrders: WorkOrderDTO[];
   signedIn: boolean;
 }) {
+  if (workOrders.length === 0) {
+    return (
+      <p className="text-muted-foreground p-6 text-center text-sm text-balance">
+        {WORK_ORDER_LABEL.empty}
+      </p>
+    );
+  }
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-2">
+    <div className="p-2">
       <ul className="flex flex-col gap-1">
         {workOrders.map((order) => (
-          <WorkOrderItem key={order.id} order={order} signedIn={signedIn} />
+          <li key={order.id}>
+            <WorkOrderItem order={order} signedIn={signedIn} />
+          </li>
         ))}
       </ul>
     </div>
   );
 }
 
-function WorkOrderItem({
+/** Exported so the "Todo" merged list (see `entity-list.tsx`) can place this
+ *  same card among grupos and sitios instead of re-deriving its claim/close
+ *  interaction from scratch. */
+export function WorkOrderItem({
   order,
   signedIn,
 }: {
@@ -104,7 +118,7 @@ function WorkOrderItem({
   }
 
   return (
-    <li className="rounded-lg border p-2">
+    <div className="rounded-lg border p-2">
       <div className="flex items-center gap-2">
         <span
           className={cn(
@@ -219,6 +233,6 @@ function WorkOrderItem({
           </div>
         </div>
       )}
-    </li>
+    </div>
   );
 }

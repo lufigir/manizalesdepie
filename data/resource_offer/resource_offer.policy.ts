@@ -4,7 +4,7 @@
 
 /**
  * Anonymous, like reporting a site. An offer of a truck or a spare room does
- * not collect anyone else's contact details the way convening a jornada
+ * not collect anyone else's contact details the way arming a grupo
  * does — the WhatsApp on the row is the offerer's own, published on purpose
  * so someone can ask — so it carries none of the reason `canCreateCall`
  * gates on an account.

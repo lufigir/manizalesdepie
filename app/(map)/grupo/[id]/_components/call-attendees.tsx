@@ -6,7 +6,7 @@ import { JOIN_LABEL } from "@/lib/labels";
 /**
  * Who signed up, shown to the one person entitled to see it.
  *
- * This block is the reason creating a jornada asks for an account at all. These
+ * This block is the reason creating a grupo asks for an account at all. These
  * numbers were handed over so that one specific organiser could say "nos vemos
  * a las 8, lleva guantes" — not to be published on a map during a looting
  * curfew. The row-level policy on `call_attendance` is what enforces that; this

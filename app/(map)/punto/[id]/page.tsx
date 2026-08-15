@@ -5,13 +5,11 @@ import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { SituationDAL } from "@/data/situation/situation.dal";
 import { clientEnv } from "@/lib/env";
 import { SITE_STATUS_LABEL, SITE_TYPE_LABEL, confidence } from "@/lib/labels";
-import { DEFAULT_TAB, SITE_TYPE_TAB } from "@/lib/tabs";
+import { DEFAULT_TAB_ID, SITE_TYPE_TAB } from "@/lib/tabs";
 
 import { MapWorkspace } from "../../_components/map-workspace";
-import { SitePanel } from "../../_components/site-panel";
 
 /**
  * A shared pin.
@@ -64,13 +62,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedSitePage({ params }: Params) {
   const { id } = await params;
 
-  const [site, sites, calls, animals, report, neighborhoodStatuses] =
+  const [site, sites, calls, animals, neighborhoodStatuses] =
     await Promise.all([
       SiteDAL.public().findById(id),
       SiteDAL.public().listPublished(),
       CallDAL.public().listPublished(),
       AnimalDAL.public().listPublished(),
-      SituationDAL.public().latest(),
       NeighborhoodDAL.public().statuses(),
     ]);
 
@@ -85,7 +82,7 @@ export default async function SharedSitePage({ params }: Params) {
   // The section is a property of the pin that was shared, not of the route, so
   // it is passed in rather than read off the URL. A type that belongs to no
   // section still opens: the pin is the answer the link was sent to give.
-  const tab = SITE_TYPE_TAB[site.type] ?? DEFAULT_TAB.id;
+  const tab = SITE_TYPE_TAB[site.type] ?? DEFAULT_TAB_ID;
 
   return (
     <main className="h-dvh w-full overflow-hidden">
@@ -93,13 +90,10 @@ export default async function SharedSitePage({ params }: Params) {
         sites={withShared}
         calls={calls}
         animals={animals}
-        report={report}
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={site.id}
         tab={tab}
-      >
-        <SitePanel />
-      </MapWorkspace>
+      />
     </main>
   );
 }

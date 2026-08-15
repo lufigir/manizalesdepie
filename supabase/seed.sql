@@ -248,3 +248,102 @@ cross join (values
   ('Ropa y zapatos usados',        'not_accepted'::item_mode, 0)
 ) as v(label, mode, priority)
 where s.type = 'shelter';
+
+-- ------------------------------------------------------------ work orders --
+-- Individual household requests, reported the 14th and 15th of August on
+-- mapa-necesidades.site — an independent, unaffiliated community mapping
+-- effort for the same earthquake (see its own footer: "plataforma solidaria
+-- y apolítica"). Pulled by hand, not by a script, and narrowed to two days on
+-- purpose: the 73 sectors that platform carries span a much wider window,
+-- and importing all of it at once is a curation job, not a seed.
+--
+-- One row from that source (a "Viviendas afectadas" entry in La Unión,
+-- Valle del Cauca — 150 km away, well outside `CITY_BOUNDS`) is left out
+-- entirely: it was tagged `ciudad=manizales` in their data but is not this
+-- city, and `createWorkOrderSchema`'s own out-of-area rule would reject it
+-- if it ever reached the form.
+--
+-- Same privacy split as everywhere else in this file: the reporter's name
+-- and phone go only into `work_order_contact`, never into the public row.
+-- `approx_location` is rounded to three decimal places (~100 m) rather than
+-- the source's original precision, which sat close enough to a real
+-- household to be an address in practice — the whole reason
+-- `work_order.approx_location` exists is to never publish that.
+--
+-- published = false, same as every other row in this file: this is a
+-- crowdsourced report from a platform we do not run, and a curator has to
+-- read it before it reaches the public map.
+
+insert into work_order (id, category, description, approx_location, status, published, confirmed_at)
+select v.id, v.category, v.description, st_point(v.lng, v.lat)::geography, 'unclaimed', false, now()
+from (values
+  ('c793b455-cde0-4506-814b-217fb0982c16'::uuid, 'supplies'::work_order_category,
+   'Se necesitan herramientas de corte: un disco de corte para metal (4 pulgadas), uno para madera y dos cajas de puntilla de 1/2 pulgada. Sector La Linda.',
+   -75.546, 5.092),
+  ('d23eb76d-f837-4506-bf33-305b56e201e1'::uuid, 'animal_rescue'::work_order_category,
+   'Refugio de animales con 92 perros, 4 gatos y una pareja de adultos a cargo: se necesita alimento y medicamentos veterinarios, elementos de aseo y mercado. Sector El Arenillo.',
+   -75.537, 5.064),
+  ('a7f91c85-d321-490f-a937-65a788dae202'::uuid, 'structural_risk'::work_order_category,
+   'Familia de bajos recursos con la vivienda muy afectada: se necesita gravilla, cemento, láminas, tejas y otros materiales para reconstruir. Sector Alto Persia.',
+   -75.503, 5.059),
+  ('8fdd8c69-bf33-4911-9298-4670a87c49f9'::uuid, 'other'::work_order_category,
+   'Bomberos voluntarios del sector Fundadores piden apoyo con combustible para los vehículos de ayuda que circulan por la ciudad.',
+   -75.510, 5.069),
+  ('75909d60-577b-445a-93ad-ecc991d908f8'::uuid, 'water'::work_order_category,
+   'Varias familias del sector El Nevado necesitan comida, agua potable y alojamiento temporal; quien reporta indica que hay más familias en la misma situación.',
+   -75.514, 5.060),
+  ('88542281-0df7-420a-aeee-3b5a2db7a769'::uuid, 'other'::work_order_category,
+   'Persona desalojada de su vivienda tras el sismo. Sector El Nevado.',
+   -75.514, 5.060),
+  ('3f735f74-39ee-49d8-9f6f-eedebc6f4eb7'::uuid, 'animal_rescue'::work_order_category,
+   'Refugio de mascotas con 48 perros y 20 gatos: se necesita ayuda para poner tejas en el techo y trasladar escombros del lugar. Centro de Villamaría.',
+   -75.514, 5.046),
+  ('d0bc5ff3-3f7d-4596-ac65-5973beaf8bc4'::uuid, 'supplies'::work_order_category,
+   'Familia de escasos recursos con varios niños, cerca de la calle 16 con 17, requiere alimentos. Sector Los Agustinos.',
+   -75.522, 5.071),
+  ('5d9b15a7-3916-4cd5-bd4a-182d2be76c04'::uuid, 'supplies'::work_order_category,
+   'Un joven (talla M, pantalón 34, zapatos 39) y su hija de 5 a 6 años lo perdieron todo: se necesita ropa de esas tallas, implementos de aseo y mercado. Sector Enea.',
+   -75.516, 5.062),
+  ('2b44a0e9-e784-4556-bbac-f6080b7a62b4'::uuid, 'structural_risk'::work_order_category,
+   'Vivienda cerca de la carrera 29 #38-18, barrio Villanueva, necesita materiales para reconstruir.',
+   -75.508, 5.061),
+  ('34d2a43f-98a9-46dd-8243-130df442b65a'::uuid, 'structural_risk'::work_order_category,
+   'Se requieren lonas para cubrir casas dañadas y evitar robos de lo poco que quedó. Barrio Galán.',
+   -75.512, 5.078)
+) as v(id, category, description, lng, lat);
+
+insert into work_order_contact (work_order_id, exact_address, contact_name, phone, notes)
+values
+  ('c793b455-cde0-4506-814b-217fb0982c16', 'Sector La Linda, Manizales (dirección exacta por confirmar)',
+   'Guadalupe Nieto M', '3246219748',
+   'Reportado en mapa-necesidades.site el 15 de agosto de 2026 (pin #3092).'),
+  ('d23eb76d-f837-4506-bf33-305b56e201e1', 'Sector El Arenillo, Manizales (dirección exacta por confirmar)',
+   'Lucia Cuervo — Fundación Ángeles de la Calle', '3176560345',
+   'Reportado en mapa-necesidades.site el 15 de agosto de 2026 (pin #9633).'),
+  ('a7f91c85-d321-490f-a937-65a788dae202', 'Sector Alto Persia, Manizales (dirección exacta por confirmar)',
+   'Mayerly Granada', '3107083713',
+   'Reportado en mapa-necesidades.site el 15 de agosto de 2026 (pin #6777).'),
+  ('8fdd8c69-bf33-4911-9298-4670a87c49f9', 'Bomberos Voluntarios Fundadores, Manizales',
+   'Jairo López — Ministerio del Interior', '3154195166',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #4963). Marcado como prioridad alta en la fuente.'),
+  ('75909d60-577b-445a-93ad-ecc991d908f8', 'Sector El Nevado, Manizales (dirección exacta por confirmar)',
+   'Alejo', '642933789',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #1650). Marcado como prioridad alta en la fuente. El teléfono reportado (642933789) no tiene el formato celular colombiano habitual; verificar antes de contactar.'),
+  ('88542281-0df7-420a-aeee-3b5a2db7a769', 'Sector El Nevado, Manizales (dirección exacta por confirmar)',
+   'Mónica Arenas Montes', '3215182803',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #6288).'),
+  ('3f735f74-39ee-49d8-9f6f-eedebc6f4eb7', 'Centro de Villamaría (dirección exacta por confirmar)',
+   'Leidy Ortiz Ocampo — líder del refugio', '3022060845',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #1877).'),
+  ('d0bc5ff3-3f7d-4596-ac65-5973beaf8bc4', 'Calle 16 con carrera 17, sector Los Agustinos, Manizales',
+   'Olga Uribe', '3003544440',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #2078). Marcado como prioridad alta en la fuente.'),
+  ('5d9b15a7-3916-4cd5-bd4a-182d2be76c04', 'Sector Enea, Manizales (dirección exacta por confirmar)',
+   'Manuela Duque', '3183049437',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #6331). Marcado como prioridad alta en la fuente.'),
+  ('2b44a0e9-e784-4556-bbac-f6080b7a62b4', 'Carrera 29 #38-18, barrio Villanueva, Manizales',
+   'Banny Jaramillo', '3103612586',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #3355). Marcado como prioridad alta en la fuente.'),
+  ('34d2a43f-98a9-46dd-8243-130df442b65a', 'Barrio Galán, Manizales (dirección exacta por confirmar)',
+   'Santiago Alzate', '3122335959',
+   'Reportado en mapa-necesidades.site el 14 de agosto de 2026 (pin #1993). Marcado como prioridad alta en la fuente.');

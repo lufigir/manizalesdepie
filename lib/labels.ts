@@ -21,13 +21,14 @@ import {
 } from "lucide-react";
 
 import type { CallCategory, CallDTO } from "@/data/call/call.dto";
+import type { NeedPriority } from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceType } from "@/data/resource_offer/resource_offer.dto";
 import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
 import type {
   WorkOrderCategory,
   WorkOrderStatus,
 } from "@/data/work_order/work_order.dto";
-import type { TabId } from "@/lib/tabs";
+import type { PanelChip } from "@/lib/tabs";
 
 /**
  * The interface speaks Spanish; the code and the database speak English. This
@@ -126,7 +127,7 @@ export const ITEM_MODE_LABEL: Record<ItemMode, string> = {
 export const AUTH_LABEL = {
   title: "Entra para ayudar",
   subtitle:
-    "Solo necesitas cuenta para apuntarte a una jornada o hacerte cargo de un caso. Ver el mapa nunca la pide.",
+    "Solo necesitas cuenta para apuntarte a un grupo o hacerte cargo de un caso. Ver el mapa nunca la pide.",
   google: "Continuar con Google",
   signOut: "Cerrar sesión",
   back: "Volver al mapa",
@@ -134,7 +135,7 @@ export const AUTH_LABEL = {
   /** Shown at the publish gate. Says WHY the account is needed, at the moment
    *  it is asked for — not as a rule in the abstract. */
   gateReason:
-    "Guardamos lo que escribiste. Solo pedimos cuenta para crear jornadas, porque otras personas se apuntan contando contigo y recibes sus contactos.",
+    "Guardamos lo que escribiste. Solo pedimos cuenta para armar grupos, porque otras personas se apuntan contando contigo y recibes sus contactos.",
   errorTitle: "No pudimos completar el ingreso",
   errorBody:
     "El enlace pudo haber vencido o ya se usó. Intenta entrar otra vez desde el mapa.",
@@ -267,25 +268,6 @@ export const REPORT_SECTION = {
   },
 } as const;
 
-/** The Alcaldía's daily balance card. */
-export const SITUATION_LABEL = {
-  title: "Balance de la ciudad",
-  peopleTitle: "Personas y familias",
-  affected: "damnificados",
-  evaluations: "Evaluaciones de estructuras",
-  villages: "Veredas con afectación",
-  homes: "Viviendas afectadas",
-  homesPartial: "parcial",
-  homesTotal: "total o casi total",
-  evacuated: "Familias con evacuación oficial",
-  injured: "Heridos",
-  dead: "Fallecidos",
-  merchants: "Comerciantes afectados",
-  gas: "Usuarios sin gas",
-  inShelters: "en albergues",
-  petsInShelters: "mascotas en albergues",
-} as const;
-
 /**
  * Per-barrio status: evacuation and utilities.
  *
@@ -366,12 +348,15 @@ export const ANIMAL_KIND_STYLE = {
 } as const;
 
 /**
- * Convocatorias — jornadas, brigadas, turnos.
+ * Grupos — cuadrillas, brigadas, turnos que alguien arma para ir a ayudar.
  *
- * "Jornada" and not "convocatoria" everywhere the reader can see. The code says
- * `volunteer_call` because that is what the row is; the city says "jornada de
- * limpieza en Chipre el sábado", and matching the word people already use is
- * what makes a map legible in a hurry.
+ * "Grupo" and not "jornada" or "convocatoria" everywhere the reader can see.
+ * The code says `volunteer_call` because that is what the row is (and
+ * `conveneCall`, `CallDAL` keep that name too — renaming the schema and every
+ * identifier for a copy change would be a much bigger, riskier edit for zero
+ * user-facing gain); the city says "armemos un grupo pa' sacar escombros",
+ * and matching the word people already use in a WhatsApp thread is what gets
+ * someone to actually create one instead of just reading the map.
  */
 export const CALL_CATEGORY_LABEL: Record<CallCategory, string> = {
   debris_removal: "Escombros",
@@ -524,23 +509,23 @@ export function callWhen(
   return `${head} – ${clock(new Date(call.endsAt))}`;
 }
 
-/** The jornadas block at the top of "Ayudar", and the card on the map. */
+/** The grupos block at the top of "Ayudar", and the card on the map. */
 export const CALL_LABEL = {
-  heading: "Jornadas",
-  headingHint: "Sitios y horas donde se necesitan manos",
+  heading: "Grupos",
+  headingHint: "Cuadrillas y horas donde se necesitan manos",
   empty:
-    "Todavía no hay jornadas convocadas. Si estás organizando una, publícala y la ciudad la ve hoy mismo.",
+    "Todavía no hay grupos armados. Si estás organizando uno, publícalo y la ciudad lo ve hoy mismo.",
   meetingPoint: "Punto de encuentro",
   bring: "Lleva",
   organiser: "Escribir al organizador",
   directions: "Cómo llegar",
   share: "Compartir",
-  ended: "Esta jornada ya terminó.",
-  endedHint: "Mira las que están abiertas ahora en el mapa.",
+  ended: "Este grupo ya terminó.",
+  endedHint: "Mira los que están abiertos ahora en el mapa.",
   happeningNow: "Actualmente hay gente ayudando",
   backToMap: "Ver el mapa",
-  countOne: "1 jornada",
-  countMany: (n: number) => `${n} jornadas`,
+  countOne: "1 grupo",
+  countMany: (n: number) => `${n} grupos`,
 } as const;
 
 /** Moving an informal pin. See `RelocateCall` and `CallDAL.relocateInformal`. */
@@ -567,36 +552,36 @@ export const JOIN_LABEL = {
   joinTomorrow: "Apuntarme para mañana",
   whatsapp: "Tu WhatsApp",
   whatsappHint:
-    "Opcional. Solo lo ve quien convocó la jornada, y es como te avisa si se cancela o se cambia la hora.",
+    "Opcional. Solo lo ve quien armó el grupo, y es como te avisa si se cancela o se cambia la hora.",
   submit: "Apuntarme",
   submitting: "Apuntando…",
   joined: "Listo, quedaste apuntado",
   joinedHint: "Llega al punto de encuentro a la hora. Si no puedes, avísale al organizador.",
-  already: "Ya estabas apuntado a esta jornada",
+  already: "Ya estabas apuntado a este grupo",
   full: "Ya se llenaron los cupos",
   failed: "No se pudo apuntar. Intenta otra vez.",
   cancel: "Ahora no",
   attendees: "Quién se apuntó",
   attendeesHint:
-    "Solo tú ves esta lista, porque tú convocaste. Escríbeles antes de la hora.",
+    "Solo tú ves esta lista, porque tú armaste el grupo. Escríbeles antes de la hora.",
   attendeesEmpty: "Todavía nadie se ha apuntado.",
   noContact: "Sin número",
   tomorrowTag: "Para mañana",
 } as const;
 
 /**
- * The form that convenes a jornada.
+ * The form that arms a grupo.
  *
  * It is the only form in this app that ends at a sign-in wall, and the copy
  * says why at that exact moment rather than as a rule at the door — see
  * AUTH_LABEL.gateReason.
  */
 export const CALL_FORM = {
-  title: "Convocar una jornada",
+  title: "Armar un grupo",
   subtitle:
     "Sale al mapa de una vez. Quien quiera ir se apunta con un toque y tú recibes sus contactos.",
   category: "¿Qué se va a hacer?",
-  callTitle: "¿Cómo se llama la jornada?",
+  callTitle: "¿Cómo se llama el grupo?",
   callTitlePlaceholder: "Limpieza de escombros en la calle 24",
   description: "¿Qué hay que hacer?",
   descriptionPlaceholder:
@@ -614,25 +599,25 @@ export const CALL_FORM = {
     "Diez personas tienen que llegar al mismo sitio a la misma hora. La esquina importa.",
   starts: "¿Cuándo empieza?",
   ends: "¿A qué hora termina?",
-  endsHint: "Opcional. Si no lo pones, la jornada sale del mapa seis horas después de empezar.",
+  endsHint: "Opcional. Si no lo pones, el grupo sale del mapa seis horas después de empezar.",
   slots: "¿Cuánta gente necesitas?",
   slotsHint: "Opcional. Déjalo vacío si entre más manos mejor.",
   bring: "¿Qué hay que llevar?",
   bringPlaceholder: "Guantes, pala, tapabocas, agua.",
   whatsapp: "Tu WhatsApp",
   whatsappHint:
-    "Opcional, y visible para todos: es para que te pregunten si la jornada sigue en pie.",
-  submit: "Publicar la jornada",
+    "Opcional, y visible para todos: es para que te pregunten si el grupo sigue en pie.",
+  submit: "Publicar el grupo",
   submitting: "Publicando…",
-  nearbyTitle: "Ya hay una jornada parecida",
+  nearbyTitle: "Ya hay un grupo parecido",
   nearbyBody:
-    "Está muy cerca y casi a la misma hora. Si es la misma, apúntate en vez de partir el grupo en dos.",
-  nearbyIgnore: "No es la misma, publicar igual",
+    "Está muy cerca y casi a la misma hora. Si es el mismo, apúntate en vez de partir el grupo en dos.",
+  nearbyIgnore: "No es el mismo, publicar igual",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
   // The informal path: no title, no hour, no account. See
   // createInformalCallSchema — this is a sighting, not a commitment, so the
   // copy asks a different question than the formal form above it.
-  modeFormal: "Convocatoria",
+  modeFormal: "Grupo formal",
   modeFormalHint: "Con hora y responsable. Quien vaya se apunta y le llegan sus contactos.",
   modeInformal: "Solo el punto",
   modeInformalHint: "Sin cuenta, sin hora fija — gente que ya se está juntando en un barrio.",
@@ -709,9 +694,12 @@ export const SERVICES_FORM = {
  * and it is also false. It says who fills this section and how, so an empty
  * screen is an invitation instead of a dead end.
  */
-export const SECTION_EMPTY: Record<TabId, string> = {
-  help: "Todavía nadie ha reportado dónde ayudar. Si sabes de un acopio o una jornada, repórtalo y sale al mapa de una vez.",
-  need: "Todavía no hay albergues ni puntos de censo publicados en el mapa.",
+export const SECTION_EMPTY: Record<
+  Extract<PanelChip, "all" | "sites" | "pets" | "services">,
+  string
+> = {
+  all: "Todavía no hay nada reportado en la ciudad. Sé la primera persona en publicar algo.",
+  sites: "Todavía no hay puntos publicados en el mapa: acopios, albergues, salud, censo o sangre.",
   pets: ANIMAL_LABEL.empty,
   services: SERVICES_LABEL.empty,
 };
@@ -749,24 +737,51 @@ export const BARRIO_PICKER = {
  * about where a border runs.
  */
 /**
- * The panel's own tab bar — Balance plus whatever each section's content
- * splits into (see PanelTabs). Only the titles that don't already exist
- * elsewhere: a jornada tab reuses CALL_LABEL.heading, a service tab reuses
- * SERVICES_LABEL.title, and so on.
+ * Panel-wide labels. `UnifiedPanel` reads these plus whatever each family's
+ * own module already exports (`CALL_LABEL.heading`, `SERVICES_LABEL.title`,
+ * and so on) instead of duplicating a title here.
  */
 export const PANEL_LABEL = {
-  balance: "Balance",
+  all: "Todo",
   sites: "Sitios",
   pets: "Mascotas",
   collapse: "Minimizar panel",
   expand: "Mostrar panel",
 } as const;
 
-export const BARRIO_TOGGLE = {
-  title: "Mostrar también",
-  label: "Barrios",
-  hint: "División oficial de la Alcaldía",
-  clear: "Quitar el filtro de barrio",
+/**
+ * A barrio's declared priority. `NEED_PRIORITY_STYLE` deliberately reuses the
+ * same colours as a work order's status badge — `critical` reads as
+ * `unclaimed` red, `high` as `claimed` amber — so a reader who already learned
+ * that grammar from a case card does not have to learn a second one for a
+ * frente.
+ */
+export const NEED_PRIORITY_LABEL: Record<NeedPriority, string> = {
+  critical: "Crítico",
+  high: "Prioritario",
+  normal: "Normal",
+};
+
+export const NEED_PRIORITY_STYLE: Record<NeedPriority, string> = {
+  critical: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  high: "bg-claimed-surface text-claimed border-claimed/30",
+  normal: "bg-muted text-muted-foreground border-transparent",
+};
+
+/**
+ * Frentes: "este barrio necesita X", declared by the curator team so armar un
+ * grupo starts from a problem already on record. See `neighborhood_need`.
+ */
+export const FRONTS_LABEL = {
+  heading: "Frentes",
+  headingHint: "Lo que cada barrio necesita, con los grupos que ya están en eso",
+  empty: "Todavía no hay frentes declarados.",
+  cases: (n: number) => (n === 1 ? "1 caso" : `${n} casos`),
+  casesNone: "sin casos reportados",
+  groupsCount: (n: number) => (n === 1 ? "1 grupo" : `${n} grupos`),
+  groupsNone: "sin grupos todavía",
+  filterBarrio: "Ver este barrio",
+  armHere: "Armar un grupo aquí",
 } as const;
 
 /**
@@ -780,38 +795,14 @@ export const BARRIO_TOGGLE = {
  */
 export const BARRIO_PANEL = {
   comuna: (id: string) => `Comuna ${Number(id)}`,
+  /** Shown instead of a barrio name when nothing is filtered — the header is
+   *  always on screen now (see BarrioHeader), so it always has something to
+   *  say about where the panel is looking. */
+  wholeCity: "Toda la ciudad",
   countOne: "1 punto en este barrio",
   countMany: (n: number) => `${n} puntos en este barrio`,
   empty: "Nadie ha reportado nada en este barrio todavía. Que esté vacío no quiere decir que no haga falta ayuda.",
   clear: "Ver toda la ciudad",
-} as const;
-
-/**
- * The Alcaldía's own phone lines, in the reference drawer.
- *
- * They are here because they answer something this map deliberately does not:
- * a damaged house nobody has reported yet, and a missing person. Missing people
- * are out of scope as a feature — we do not hold that data — but refusing to
- * show the official number for it would be withholding the one useful thing we
- * can say about it.
- *
- * `tel:` links: this is read on a phone, standing outside a cracked house.
- */
-export const OFFICIAL_LINES = {
-  title: "Líneas oficiales",
-  hint: "Alcaldía de Manizales. Reporta solo lo que aún no hayas reportado.",
-  lines: [
-    {
-      number: "132",
-      dial: "132",
-      what: "Personas desaparecidas y daños estructurales sin reportar",
-    },
-    {
-      number: "320 263 8306",
-      dial: "+573202638306",
-      what: "Censo de daños en viviendas y establecimientos",
-    },
-  ],
 } as const;
 
 /** The list beside the map. The filter matches what is already loaded, so the
@@ -849,7 +840,7 @@ export function freshness(confirmedAt: string): {
 }
 
 /**
- * Órdenes de trabajo. "Jornada" was the city's own word for a shift; this is
+ * Órdenes de trabajo. "Grupo" is a cuadrilla with a time and a place; this is
  * closer to "reporté los escombros de la 24" — a single job, not an event.
  */
 export const WORK_ORDER_CATEGORY_LABEL: Record<WorkOrderCategory, string> = {
@@ -909,11 +900,15 @@ export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
 };
 
 export const WORK_ORDER_LABEL = {
-  // Short: this is now only a PanelTabs label, sharing a 320px-or-less strip
-  // with up to three other tabs. "Escombros y daños" fit as a section header
-  // with the whole panel to itself; it does not fit as one of four tabs.
-  heading: "Escombros",
-  headingHint: "Casos reportados que alguien con volqueta o manos puede reclamar",
+  // "Necesidades", not "Escombros": the category set behind a work order
+  // grew past debris the day this started importing individual household
+  // requests (water, animals, reconstruction materials, transport) — see
+  // `work_order_category`. Short because this is a filter chip sharing a
+  // row with several others, not a section header with the panel to itself.
+  heading: "Necesidades",
+  headingHint: "Casos puntuales que alguien con volqueta o manos puede reclamar",
+  empty:
+    "Todavía no hay necesidades puntuales reportadas. Si conoces una, repórtala desde Necesito.",
   countOne: "1 caso",
   countMany: (n: number) => `${n} casos`,
   claim: "Reclamar este caso",

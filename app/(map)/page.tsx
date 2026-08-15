@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { DEFAULT_TAB } from "@/lib/tabs";
+import { DEFAULT_TAB_HREF } from "@/lib/tabs";
 
 /**
  * "/" is not a screen of its own; it is the question "¿qué vengo a hacer?"
@@ -11,5 +11,5 @@ import { DEFAULT_TAB } from "@/lib/tabs";
  * the section it opens.
  */
 export default function MapPage() {
-  redirect(DEFAULT_TAB.href);
+  redirect(DEFAULT_TAB_HREF);
 }

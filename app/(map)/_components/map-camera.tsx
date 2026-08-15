@@ -7,7 +7,7 @@ import { useMap } from "@/components/ui/map";
 /**
  * Anything with a coordinate. Both of these care about where something is and
  * about nothing else, so they take the coordinate rather than the entity — which
- * is what lets one camera frame acopios and jornadas together instead of the
+ * is what lets one camera frame acopios and grupos together instead of the
  * map opening on half of what it draws.
  */
 type Located = { longitude: number; latitude: number };
