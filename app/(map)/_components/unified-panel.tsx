@@ -48,7 +48,7 @@ import { useWorkspace } from "./workspace-context";
  * each row's own type and status; it just is not a reason to hide one list
  * from the other any more.
  */
-export function UnifiedPanel({ signedIn = false }: { signedIn?: boolean }) {
+export function UnifiedPanel() {
   const {
     activeChip,
     setActiveChip,
@@ -132,7 +132,13 @@ export function UnifiedPanel({ signedIn = false }: { signedIn?: boolean }) {
         groupKey: "workOrders",
         groupLabel: WORK_ORDER_LABEL.heading,
         score: workOrderUrgency(order, neighborhoodNeeds),
-        node: <WorkOrderItem order={order} signedIn={signedIn} />,
+        node: (
+          <WorkOrderItem
+            order={order}
+            selected={order.id === selectedId}
+            onSelect={select}
+          />
+        ),
       })),
       ...openAnimals.map((animal) => ({
         id: animal.id,
@@ -175,7 +181,6 @@ export function UnifiedPanel({ signedIn = false }: { signedIn?: boolean }) {
     neighborhoodNeeds,
     selectedId,
     select,
-    signedIn,
   ]);
 
   return (
@@ -262,7 +267,11 @@ export function UnifiedPanel({ signedIn = false }: { signedIn?: boolean }) {
         )}
 
         {activeChip === "workOrders" && (
-          <WorkOrderList workOrders={workOrders} signedIn={signedIn} />
+          <WorkOrderList
+            workOrders={workOrders}
+            selectedId={selectedId}
+            onSelect={select}
+          />
         )}
 
         {activeChip === "sites" && (

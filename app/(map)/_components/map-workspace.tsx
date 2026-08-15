@@ -81,9 +81,6 @@ type Props = {
   /** Every frente on record — "este barrio necesita X". Curated by hand, see
    *  `neighborhood_need`. Not shown as its own chip yet — see `PanelChip`. */
   neighborhoodNeeds?: NeighborhoodNeedDTO[];
-  /** Whether the reader has an account — the one field `UnifiedPanel`'s
-   *  work-order cards need to decide between "reclamar" and "entra primero". */
-  signedIn?: boolean;
   /** Set when arriving from a shared link. The map opens already centred on
    *  that pin with its card up, because the question the link was sent to
    *  answer is "¿por dónde queda exactamente?" and it should be answered
@@ -122,7 +119,6 @@ export function MapWorkspace({
   workOrders = [],
   neighborhoodStatuses = [],
   neighborhoodNeeds = [],
-  signedIn = false,
   initialSelectedId,
   tab: forcedTab,
   children,
@@ -442,7 +438,7 @@ export function MapWorkspace({
                 offset={22}
                 className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
               >
-                <WorkOrderItem order={selectedOrder} signedIn={signedIn} />
+                <WorkOrderItem order={selectedOrder} />
               </MapPopup>
             )}
           </Map>
@@ -566,7 +562,7 @@ export function MapWorkspace({
           {!panelCollapsed && (
             <div className="flex min-h-0 flex-1 flex-col">
               {children}
-              <UnifiedPanel signedIn={signedIn} />
+              <UnifiedPanel />
             </div>
           )}
         </aside>

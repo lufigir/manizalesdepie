@@ -99,7 +99,6 @@ export default async function SharedCallPage({ params }: Params) {
         // A grupo is always a way of giving time, so a shared one opens on
         // "Ayudar" whatever the reader was looking at last.
         tab="help"
-        signedIn={user !== null}
       >
         {attendees && <CallAttendees attendees={attendees} />}
       </MapWorkspace>

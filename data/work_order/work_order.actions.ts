@@ -27,26 +27,36 @@ export async function reportWorkOrder(input: {
   return { id };
 }
 
-export async function claimWorkOrder(id: string) {
-  const dal = await WorkOrderDAL.create();
-  await dal.claim(id);
+/** "Yo puedo atender" — anonymous. Returns the contact straight away; see
+ *  `WorkOrderDAL.attend`. */
+export async function attendWorkOrder(input: {
+  workOrderId: string;
+  name: string;
+  phone: string;
+}) {
+  const dal = WorkOrderDAL.public();
+  const result = await dal.attend(input);
   revalidatePath("/ayudar");
+  return result;
 }
 
 export async function closeWorkOrder(
   id: string,
   result: "closed_completed" | "closed_by_others" | "closed_rejected",
 ) {
-  const dal = await WorkOrderDAL.create();
+  const dal = WorkOrderDAL.public();
   await dal.close(id, result);
   revalidatePath("/ayudar");
 }
 
-/** The exact address and phone — only for whoever holds the claim, or a
- *  curator. Every call is a logged read; see `WorkOrderDAL.getContact`. */
-export async function getWorkOrderContact(id: string) {
-  const dal = await WorkOrderDAL.create();
-  return dal.getContact(id);
+export async function updateWorkOrder(input: {
+  id: string;
+  category?: string;
+  description?: string;
+}) {
+  const dal = WorkOrderDAL.public();
+  await dal.update(input);
+  revalidatePath("/ayudar");
 }
 
 export async function verifyWorkOrder(id: string) {

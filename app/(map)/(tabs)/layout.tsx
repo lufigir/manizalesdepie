@@ -3,7 +3,6 @@ import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { getCurrentUser } from "@/data/user/require-user";
 import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 
 import { MapWorkspace } from "../_components/map-workspace";
@@ -30,19 +29,14 @@ export default async function TabsLayout() {
     workOrders,
     neighborhoodStatuses,
     neighborhoodNeeds,
-    user,
   ] = await Promise.all([
     SiteDAL.public().listPublished(),
     CallDAL.public().listPublished(),
     AnimalDAL.public().listPublished(),
     ResourceOfferDAL.public().listPublished(),
-    // .create(), not .public(): `claimedByMe` needs to know who is asking,
-    // and it is the one field here that differs between an anonymous
-    // visitor and the person who already holds the claim.
-    WorkOrderDAL.create().then((dal) => dal.listPublished()),
+    WorkOrderDAL.public().listPublished(),
     NeighborhoodDAL.public().statuses(),
     NeighborhoodDAL.public().needs(),
-    getCurrentUser(),
   ]);
 
   return (
@@ -55,7 +49,6 @@ export default async function TabsLayout() {
         workOrders={workOrders}
         neighborhoodStatuses={neighborhoodStatuses}
         neighborhoodNeeds={neighborhoodNeeds}
-        signedIn={user !== null}
       />
     </main>
   );

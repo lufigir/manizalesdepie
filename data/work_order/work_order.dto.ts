@@ -11,6 +11,11 @@ import { z } from "zod";
  * so the detail stays at the two levels that can actually be kept honest —
  * unclaimed / claimed / closed, and free text for anything more specific a
  * claimant wants to say. See docs/PLAN.md §3.1.
+ *
+ * "Claimed" changed meaning the 15th, when the single Google-gated claimant
+ * became several anonymous attendees (see `work_order_attendance`): it now
+ * means "at least one person said yo puedo atender", not "exactly one
+ * person has custody of this".
  */
 
 export const WORK_ORDER_CATEGORIES = [
@@ -46,14 +51,10 @@ export const workOrderSchema = z.object({
   latitude: z.number(),
   neighborhood: z.string().nullable(),
   status: workOrderStatusSchema,
-  /** Whose claim this is. Never a name — only enough to know whether the
-   *  reader is the one holding it. The exact address lives in
-   *  `work_order_contact`, read through `WorkOrderDAL.getContact`, never
-   *  here. */
-  claimedByMe: z.boolean(),
-  /** When an unattended claim frees itself back up — see `CLAIM_DAYS`. Null
-   *  once the row is closed. */
-  releasesAt: z.iso.datetime({ offset: true }).nullable(),
+  /** How many people have said "yo puedo atender". Several can attend the
+   *  same case at once, so there is no single "was it me" flag to give
+   *  back the way a lone claimant used to have. */
+  attendeeCount: z.number().int().min(0),
   verified: z.boolean(),
   confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
@@ -65,10 +66,9 @@ export type WorkOrderDTO = z.infer<typeof workOrderSchema>;
 const OUT_OF_AREA = "Este mapa solo cubre Manizales y Villamaría.";
 
 /**
- * What the public form may submit. Anonymous, like a site report — the
- * account is asked for at CLAIM time, not report time, because reporting
- * damage carries none of the reason a claim does (see
- * `canClaimWorkOrder`).
+ * What the public form may submit. Anonymous, like a site report and like
+ * attending one (see `attendWorkOrderSchema`) — nothing about this app's
+ * work-order flow asks for an account any more.
  *
  * The contact fields are the one place this form touches a third party's
  * exact address and phone without their own consent — see the guardrail in
@@ -92,8 +92,11 @@ export const createWorkOrderSchema = z.object({
 
 export type CreateWorkOrderInput = z.infer<typeof createWorkOrderSchema>;
 
-/** The sensitive half: `work_order_contact`, read only by the claimant and
- *  curators. Every read is logged — see `WorkOrderDAL.getContact`. */
+/** The sensitive half: `work_order_contact`. Revealed once, straight back to
+ *  whoever just attended (see `attendWorkOrderSchema`) — never fetched
+ *  separately by identity any more, so there is no policy gate to name here
+ *  the way there used to be. Every reveal is still logged; see
+ *  `WorkOrderDAL.attend`. */
 export const workOrderContactSchema = z.object({
   exactAddress: z.string(),
   contactName: z.string().nullable(),
@@ -102,3 +105,34 @@ export const workOrderContactSchema = z.object({
 });
 
 export type WorkOrderContactDTO = z.infer<typeof workOrderContactSchema>;
+
+/**
+ * "Yo puedo atender" — anonymous, no account. Name and phone are both
+ * required, unlike a grupo's optional whatsapp: a headcount is still useful
+ * for a shift, but showing up at someone's damaged house needs to know who
+ * is actually coming.
+ */
+export const attendWorkOrderSchema = z.object({
+  workOrderId: z.uuid(),
+  name: z.string().trim().min(2, "Escribe tu nombre").max(120),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\d{7,15}$/, "Solo dígitos, con indicativo del país"),
+});
+
+export type AttendWorkOrderInput = z.infer<typeof attendWorkOrderSchema>;
+
+/**
+ * Correcting a case's own details — category or description — after the
+ * fact. Anonymous, like reporting one: this is the same kind of "the sign
+ * was wrong" fix a site's status confirmation already is, not a claim on
+ * anything sensitive (`work_order_contact` is not editable here).
+ */
+export const updateWorkOrderSchema = z.object({
+  id: z.uuid(),
+  category: workOrderCategorySchema.optional(),
+  description: z.string().trim().min(5).max(500).optional(),
+});
+
+export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderSchema>;

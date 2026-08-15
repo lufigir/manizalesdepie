@@ -14,41 +14,30 @@ export function canReportWorkOrder(): boolean {
 }
 
 /**
- * Claiming requires an account — the same reasoning as `canCreateCall`, not
- * `canProposeSite`. A claim is a promise to actually go do the work, and it
- * unlocks the one thing this app treats as sensitive by default: the exact
- * address and phone of whoever is affected. A custodian of that has to be
- * someone real, not "anonymous browser #4".
+ * Anonymous — "yo puedo atender" asks only for a name and a phone, the same
+ * low-friction rule joining a grupo already follows. Several people can
+ * attend the same case; nobody is a gatekeeper of it any more. What used to
+ * live here (an account, because the claimant became custodian of
+ * `work_order_contact`) moved to the read itself: attending reveals the
+ * contact once, in the same response, logged either way — see
+ * `WorkOrderDAL.attend`.
  */
-export function canClaimWorkOrder(user: CurrentUser | null): boolean {
-  return user !== null;
+export function canAttendWorkOrder(): boolean {
+  return true;
 }
 
-/**
- * Who may read `work_order_contact`: the curator, and whoever currently
- * holds the claim — mirrors the RLS policy on the table itself (see
- * `work_order_contact_read_claimant` in the init migration). Stated here too
- * so a mistake in the DAL fails closed instead of relying on RLS alone to
- * catch it.
- */
-export function canSeeWorkOrderContact(
-  user: CurrentUser | null,
-  workOrder: { claimedById: string | null; status: string },
-): boolean {
-  if (!user) return false;
-  if (user.role === "curator") return true;
-  return workOrder.claimedById === user.id && workOrder.status === "claimed";
+/** Open to anyone, the same rule `canConfirmSite` already follows: closing
+ *  says "this is done", not "trust me, I did it" — it exposes nothing, so
+ *  it does not need to be gated by who is asking. */
+export function canCloseWorkOrder(): boolean {
+  return true;
 }
 
-/** Only the claimant or a curator closes a work order — an anonymous
- *  passer-by does not get to declare someone else's job done. */
-export function canCloseWorkOrder(
-  user: CurrentUser | null,
-  workOrder: { claimedById: string | null },
-): boolean {
-  if (!user) return false;
-  if (user.role === "curator") return true;
-  return workOrder.claimedById === user.id;
+/** Open to anyone, same reasoning as `canCloseWorkOrder`: correcting a
+ *  case's own category or description fixes a detail, it does not touch
+ *  anything sensitive — `work_order_contact` is not editable here. */
+export function canUpdateWorkOrder(): boolean {
+  return true;
 }
 
 /** Only a curator marks a work order as checked against its source. */

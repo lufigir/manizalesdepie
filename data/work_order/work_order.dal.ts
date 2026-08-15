@@ -6,32 +6,36 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
+  attendWorkOrderSchema,
   createWorkOrderSchema,
+  updateWorkOrderSchema,
   workOrderContactSchema,
   workOrderSchema,
+  type WorkOrderContactDTO,
   type WorkOrderDTO,
 } from "./work_order.dto";
 import {
-  canClaimWorkOrder,
+  canAttendWorkOrder,
   canCloseWorkOrder,
   canReportWorkOrder,
-  canSeeWorkOrderContact,
+  canUpdateWorkOrder,
   canVerifyWorkOrder,
 } from "./work_order.policy";
 
-/** The real Crisis Cleanup number — six days, not the 48 hours AGENTS.md had
- *  it at before the correction in docs/PLAN.md §5. Long enough that a claim
- *  is not lost to a single busy weekend, short enough that a volqueta that
- *  never showed frees the job back up inside the week. */
-const CLAIM_DAYS = 6;
+/** How long a closed case stays on the public map before it drops off on
+ *  its own. Long enough that someone already on the way still sees it and a
+ *  wrong "cerrado" is easy to catch and undo; short enough that the map
+ *  does not fill up with resolved cases nobody needs to see any more. */
+const CLOSED_VISIBLE_HOURS = 6;
 
 /**
- * The only path from this application to `work_order`, `work_order_contact`
- * and `work_order_access`.
+ * The only path from this application to `work_order`, `work_order_contact`,
+ * `work_order_attendance` and `work_order_access`.
  *
- * Private constructor and static factories, like `CallDAL` — and for the
- * same sharper reason there: one of this module's methods reads a third
- * party's exact address and phone.
+ * Private constructor and static factories, like `CallDAL` — kept even
+ * though most methods here no longer need an identity, because `verify`
+ * still does, and a class with a public constructor would let that one slip
+ * through unauthenticated by accident.
  */
 export class WorkOrderDAL {
   private constructor(private readonly user: CurrentUser | null) {}
@@ -46,7 +50,9 @@ export class WorkOrderDAL {
   }
 
   /** Every open or recently-closed work order, most recently confirmed
-   *  first — `work_order_public` already excludes rows merged into another. */
+   *  first. `work_order_public` already excludes rows merged into another;
+   *  this also drops a closed case once `expires_at` has passed — see
+   *  `CLOSED_VISIBLE_HOURS`. */
   async listPublished(): Promise<WorkOrderDTO[]> {
     const supabase = await createServerSupabase();
 
@@ -54,6 +60,7 @@ export class WorkOrderDAL {
       .from("work_order_public")
       .select("*")
       .eq("published", true)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order("confirmed_at", { ascending: false });
 
     if (error) {
@@ -130,63 +137,89 @@ export class WorkOrderDAL {
   }
 
   /**
-   * Claims a job. Requires an account — see `canClaimWorkOrder` — and locks
-   * it for `CLAIM_DAYS`: long enough to actually go do it, short enough
-   * that an abandoned claim does not sit on the map forever blocking anyone
-   * else from picking it up.
+   * "Yo puedo atender" — anonymous, no account, and several people can do
+   * this for the same case. Reveals `work_order_contact` right back in the
+   * same response, which is the whole reason this used to require a
+   * Google-signed identity: now the reveal itself is what gets logged (see
+   * `work_order_access`) instead of a login wall in front of it.
    */
-  async claim(id: string): Promise<void> {
-    if (!canClaimWorkOrder(this.user)) {
-      throw new Error("Necesitas una cuenta para reclamar una orden de trabajo");
-    }
+  async attend(input: unknown): Promise<{ contact: WorkOrderContactDTO | null }> {
+    const data = attendWorkOrderSchema.parse(input);
+
+    if (!canAttendWorkOrder()) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
-    const now = new Date();
-    const releasesAt = new Date(
-      now.getTime() + CLAIM_DAYS * 24 * 60 * 60 * 1000,
-    ).toISOString();
 
-    const { error } = await supabase
-      .from("work_order")
-      .update({
-        status: "claimed",
-        claimed_by: this.user!.id,
-        claimed_at: now.toISOString(),
-        releases_at: releasesAt,
-      })
-      .eq("id", id)
-      .eq("status", "unclaimed");
+    const { data: attendance, error } = await supabase
+      .from("work_order_attendance")
+      .insert({ work_order_id: data.workOrderId, name: data.name, phone: data.phone })
+      .select("id")
+      .single();
 
-    if (error) {
-      log.error("workOrder.claim failed", { code: error.code, workOrderId: id });
-      throw new Error("No se pudo reclamar la orden de trabajo");
+    if (error || !attendance) {
+      log.error("workOrder.attend failed", {
+        code: error?.code,
+        workOrderId: data.workOrderId,
+      });
+      throw new Error("No se pudo registrar que vas a atender este caso");
     }
 
-    log.info("work order claimed", { workOrderId: id, byUser: this.user!.id });
+    log.info("work order attended", { workOrderId: data.workOrderId });
+
+    const { data: contact, error: contactError } = await supabase
+      .from("work_order_contact")
+      .select("exact_address, contact_name, phone, notes")
+      .eq("work_order_id", data.workOrderId)
+      .maybeSingle();
+
+    if (contactError) {
+      log.error("workOrder.attend contact lookup failed", {
+        code: contactError.code,
+        workOrderId: data.workOrderId,
+      });
+    }
+
+    if (contact) {
+      // Logged against the attendance row instead of a profile — there is
+      // no signed-in identity here any more, but the audit trail a curator
+      // could always read back stays exactly as real.
+      await supabase
+        .from("work_order_access")
+        .insert({ work_order_id: data.workOrderId, attendee_id: attendance.id });
+    }
+
+    return {
+      contact: contact
+        ? workOrderContactSchema.parse({
+            exactAddress: contact.exact_address,
+            contactName: contact.contact_name,
+            phone: contact.phone,
+            notes: contact.notes,
+          })
+        : null,
+    };
   }
 
-  /** Closes a claimed job — completed, already done by someone else, or not
-   *  a real case. Honest outcomes, not just "done"; see docs/PLAN.md §4. */
+  /** Closes a case — completed, already done by someone else, or not a real
+   *  case. Honest outcomes, not just "done"; see docs/PLAN.md §4. Open to
+   *  anyone now (see `canCloseWorkOrder`), and starts the clock on
+   *  `CLOSED_VISIBLE_HOURS` instead of leaving a resolved case on the map
+   *  forever. */
   async close(
     id: string,
     result: "closed_completed" | "closed_by_others" | "closed_rejected",
   ): Promise<void> {
-    const { data: before, error: fetchError } = await createAdminSupabase()
-      .from("work_order")
-      .select("claimed_by")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (fetchError || !before) throw new Error("No se encontró la orden de trabajo");
-
-    if (!canCloseWorkOrder(this.user, { claimedById: before.claimed_by })) {
-      throw new Error("Forbidden");
-    }
+    if (!canCloseWorkOrder()) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + CLOSED_VISIBLE_HOURS * 60 * 60 * 1000,
+    ).toISOString();
+
     const { error } = await supabase
       .from("work_order")
-      .update({ status: result, closed_at: new Date().toISOString() })
+      .update({ status: result, closed_at: now.toISOString(), expires_at: expiresAt })
       .eq("id", id);
 
     if (error) {
@@ -197,53 +230,27 @@ export class WorkOrderDAL {
     log.info("work order closed", { workOrderId: id, result });
   }
 
-  /**
-   * The exact address and phone. Every read is written to
-   * `work_order_access` first — visibility a curator can audit is what
-   * deters casual curiosity, per AGENTS.md.
-   */
-  async getContact(id: string) {
-    if (!this.user) throw new Error("Forbidden");
+  /** Corrects a case's own category or description — anonymous, like
+   *  reporting one. Never touches `work_order_contact`. */
+  async update(input: unknown): Promise<void> {
+    const data = updateWorkOrderSchema.parse(input);
+
+    if (!canUpdateWorkOrder()) throw new Error("Forbidden");
+
+    const patch: Record<string, unknown> = {};
+    if (data.category !== undefined) patch.category = data.category;
+    if (data.description !== undefined) patch.description = data.description;
+    if (Object.keys(patch).length === 0) return;
 
     const supabase = createAdminSupabase();
-    const { data: order, error: orderError } = await supabase
-      .from("work_order")
-      .select("claimed_by, status")
-      .eq("id", id)
-      .maybeSingle();
+    const { error } = await supabase.from("work_order").update(patch).eq("id", data.id);
 
-    if (orderError || !order) throw new Error("No se encontró la orden de trabajo");
-
-    if (
-      !canSeeWorkOrderContact(this.user, {
-        claimedById: order.claimed_by,
-        status: order.status,
-      })
-    ) {
-      throw new Error("Forbidden");
+    if (error) {
+      log.error("workOrder.update failed", { code: error.code, workOrderId: data.id });
+      throw new Error("No se pudo actualizar la orden de trabajo");
     }
 
-    const { data, error } = await supabase
-      .from("work_order_contact")
-      .select("exact_address, contact_name, phone, notes")
-      .eq("work_order_id", id)
-      .maybeSingle();
-
-    if (error || !data) {
-      log.error("workOrder.getContact failed", { code: error?.code, workOrderId: id });
-      throw new Error("No se pudo cargar el contacto");
-    }
-
-    await supabase
-      .from("work_order_access")
-      .insert({ work_order_id: id, profile_id: this.user.id });
-
-    return workOrderContactSchema.parse({
-      exactAddress: data.exact_address,
-      contactName: data.contact_name,
-      phone: data.phone,
-      notes: data.notes,
-    });
+    log.info("work order updated", { workOrderId: data.id, fields: Object.keys(patch) });
   }
 
   /** Records that a curator checked this against its source. */
@@ -273,8 +280,7 @@ export class WorkOrderDAL {
       latitude: row.latitude,
       neighborhood: row.neighborhood,
       status: row.status,
-      claimedByMe: this.user !== null && row.claimed_by === this.user.id,
-      releasesAt: row.releases_at,
+      attendeeCount: row.attendee_count,
       verified: row.verified,
       confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,

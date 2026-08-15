@@ -906,18 +906,34 @@ export const WORK_ORDER_LABEL = {
   // `work_order_category`. Short because this is a filter chip sharing a
   // row with several others, not a section header with the panel to itself.
   heading: "Necesidades",
-  headingHint: "Casos puntuales que alguien con volqueta o manos puede reclamar",
+  headingHint: "Casos puntuales que alguien con volqueta o manos puede atender",
   empty:
     "Todavía no hay necesidades puntuales reportadas. Si conoces una, repórtala desde Necesito.",
   countOne: "1 caso",
   countMany: (n: number) => `${n} casos`,
-  claim: "Reclamar este caso",
-  claiming: "Reclamando…",
-  claimed: "Lo tienes tú",
-  claimedHint: "Se libera solo si no lo cierras en 6 días.",
-  needsAccount: "Entra con tu cuenta para reclamarlo",
-  seeContact: "Ver dirección y contacto",
-  loadingContact: "Cargando…",
+  // "Yo puedo atender" replaced "Reclamar" the 15th, along with the account
+  // it used to require: no login, just a name and a WhatsApp, the same
+  // shape `JOIN_LABEL` already uses for a grupo.
+  attend: "Yo puedo atender",
+  attending: "Enviando…",
+  attendName: "Tu nombre",
+  attendPhone: "Tu WhatsApp",
+  attendSubmit: "Confirmar",
+  attendCancel: "Ahora no",
+  attendedThanks: "Listo, quedaste registrado.",
+  attendContactTitle: "Dirección y contacto",
+  attendContactHint: "Solo se te muestra a ti, una vez. Anótala.",
+  attendNoContact:
+    "Quien reportó esto no dejó una dirección exacta. Escribe al WhatsApp del reporte o pregunta en el barrio.",
+  attendeeCountOne: "1 persona va a atenderlo",
+  attendeeCountMany: (n: number) => `${n} personas van a atenderlo`,
+  attendeeCountNone: "Nadie ha dicho que puede atenderlo todavía",
+  edit: "Editar",
+  editCategory: "Categoría",
+  editDescription: "Descripción",
+  editSave: "Guardar",
+  editSaving: "Guardando…",
+  editCancel: "Cancelar",
   closeCompleted: "Ya se resolvió",
   closeByOthers: "Ya lo habían resuelto",
   closeRejected: "No es un caso real",
