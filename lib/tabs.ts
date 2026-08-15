@@ -33,20 +33,27 @@ import type { SiteType } from "@/data/site/site.dto";
 
 export type TabId = "help" | "need" | "pets" | "services";
 
-type TabRoute = { id: TabId; segment: string; href: string };
+type TabRoute = { id: TabId; segment: string };
 
+/**
+ * The sections that still have a URL of their own.
+ *
+ * "help" is not among them, and that is the point: it is what the ROOT
+ * renders. `/ayudar` used to exist and seeded the exact same "Todo" chip the
+ * bare domain does, so it was a second address for one screen — and the
+ * screen everybody lands on. It was removed rather than aliased.
+ */
 const TAB_ROUTES: readonly TabRoute[] = [
-  { id: "help", segment: "ayudar", href: "/ayudar" },
-  { id: "need", segment: "necesito", href: "/necesito" },
-  { id: "pets", segment: "mascotas", href: "/mascotas" },
-  { id: "services", segment: "servicios", href: "/servicios" },
+  { id: "need", segment: "necesito" },
+  { id: "pets", segment: "mascotas" },
+  { id: "services", segment: "servicios" },
 ];
 
 export const DEFAULT_TAB_ID: TabId = "help";
-export const DEFAULT_TAB_HREF: string = TAB_ROUTES[0].href;
 
-/** Resolves the segment Next reports for the active child route. Falls back to
- *  "Ayudar" so an unknown segment lands somewhere useful instead of blank. */
+/** Resolves the segment Next reports for the active child route. `null` is
+ *  the root — the map with no section chosen — and an unknown segment falls
+ *  back the same way, which lands on "Todo" rather than on blank. */
 export function tabFromSegment(segment: string | null): TabId {
   return TAB_ROUTES.find((tab) => tab.segment === segment)?.id ?? DEFAULT_TAB_ID;
 }
@@ -116,40 +123,19 @@ export function initialChipForTab(tab: TabId): PanelChip {
 
 
 /**
- * The one filled, prominent action for a chip — what someone who opened the
- * app to DO something taps, not what they tap to describe something. Chips
- * with no entity of their own to report ("all", "sites") get none: "all" is
- * a survey, and "Sitios" mixes two report forms with no single obvious one
- * to promote (see `CHIP_REPORT_MENU`).
- */
-export const CHIP_PRIMARY_ACTION: Partial<Record<PanelChip, ReportEntry>> = {
-  calls: { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
-  // "Pedir ayuda", not "Reportar un punto": what this form actually creates —
-  // a work order someone with volqueta or manos can claim — is a household's
-  // own request, not a place someone else built.
-  workOrders: { href: "/reportar/escombros", label: "Pedir ayuda", icon: LifeBuoy },
-  pets: { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
-  services: { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
-};
-
-/**
- * Everything else worth reporting from a chip — reached through the
- * secondary "+" beside the primary button. Empty where the primary already
- * covers the chip's only entity, or where — "all" — the "+" carries every
- * form in the app instead (see `ALL_REPORT_ENTRIES`).
- */
-export const CHIP_REPORT_MENU: Partial<Record<PanelChip, ReportEntry[]>> = {
-  sites: [
-    { href: "/reportar/ayudar", label: "Reportar dónde ayudar", icon: MapPin },
-    { href: "/reportar/necesito", label: "Reportar un punto de ayuda", icon: MapPin },
-  ],
-};
-
-/**
- * Every report form in the app, flattened into one list — what "Todo" opens
- * behind its own "+" instead of a single primary action. "Todo" has no one
- * obvious next step (it is a survey, not an intent), so it gets the full menu
- * rather than a guess at which form matters most.
+ * Every report form in the app, flattened into one list — what the map's one
+ * "Reportar" button opens, on every chip.
+ *
+ * This used to be per-chip: a promoted primary action for each filter, plus a
+ * secondary menu holding whatever that filter did not promote. The reason it
+ * is gone is that the two things were never the same axis. A chip narrows
+ * what the panel LISTS; it says nothing about what the reader has to report.
+ * Someone filtering on "Grupos" because they are looking for a shift is
+ * exactly as likely to be the person who then finds a lost dog — and under
+ * the old rule, the form for that was not on their screen.
+ *
+ * Six entries is a long menu, and it is still the right one: the alternative
+ * was a shorter menu that is sometimes missing the thing you came to write.
  */
 export const ALL_REPORT_ENTRIES: ReportEntry[] = [
   { href: "/reportar/ayudar", label: "Reportar dónde ayudar", icon: MapPin },
