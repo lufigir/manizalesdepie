@@ -68,3 +68,32 @@ export async function verifySite(id: string) {
   revalidatePath("/");
   revalidatePath("/admin");
 }
+
+export async function adminUpdateSite(input: {
+  id: string;
+  type?: string;
+  name?: string;
+  description?: string;
+  address?: string;
+  schedule?: string;
+  whatsapp?: string;
+}) {
+  const dal = await SiteDAL.create();
+  await dal.adminUpdate(input);
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
+export async function setSitePublished(id: string, published: boolean) {
+  const dal = await SiteDAL.create();
+  await dal.setPublished(id, published);
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
+export async function deleteSite(id: string) {
+  const dal = await SiteDAL.create();
+  await dal.remove(id);
+  revalidatePath("/");
+  revalidatePath("/admin");
+}

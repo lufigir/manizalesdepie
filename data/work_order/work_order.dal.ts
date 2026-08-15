@@ -17,6 +17,7 @@ import {
 import {
   canAttendWorkOrder,
   canCloseWorkOrder,
+  canManageWorkOrder,
   canReportWorkOrder,
   canUpdateWorkOrder,
   canVerifyWorkOrder,
@@ -52,16 +53,25 @@ export class WorkOrderDAL {
   /** Every open or recently-closed work order, most recently confirmed
    *  first. `work_order_public` already excludes rows merged into another;
    *  this also drops a closed case once `expires_at` has passed — see
-   *  `CLOSED_VISIBLE_HOURS`. */
+   *  `CLOSED_VISIBLE_HOURS`.
+   *
+   *  A curator sees hidden cases too, distinguished on the card by
+   *  `AdminActions` — otherwise `setPublished(id, false)` would have no way
+   *  back short of a direct database query. Anyone else only ever sees
+   *  `published = true`, same as before. */
   async listPublished(): Promise<WorkOrderDTO[]> {
     const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("work_order_public")
       .select("*")
-      .eq("published", true)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-      .order("confirmed_at", { ascending: false });
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+
+    if (this.user?.role !== "curator") {
+      query = query.eq("published", true);
+    }
+
+    const { data, error } = await query.order("confirmed_at", { ascending: false });
 
     if (error) {
       log.error("workOrder.listPublished failed", { code: error.code });
@@ -270,6 +280,39 @@ export class WorkOrderDAL {
     }
   }
 
+  /** A curator hides or republishes a case — reversible, the same
+   *  `published` column every list already filters by, no history lost. */
+  async setPublished(id: string, published: boolean): Promise<void> {
+    if (!canManageWorkOrder(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase
+      .from("work_order")
+      .update({ published })
+      .eq("id", id);
+
+    if (error) {
+      log.error("workOrder.setPublished failed", { code: error.code, workOrderId: id });
+      throw new Error("No se pudo cambiar la visibilidad del caso");
+    }
+  }
+
+  /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
+   *  to `work_order_contact`, `work_order_attendance` and `work_order_access`. */
+  async remove(id: string): Promise<void> {
+    if (!canManageWorkOrder(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("work_order").delete().eq("id", id);
+
+    if (error) {
+      log.error("workOrder.remove failed", { code: error.code, workOrderId: id });
+      throw new Error("No se pudo eliminar el caso");
+    }
+
+    log.info("work order deleted", { workOrderId: id, byUser: this.user!.id });
+  }
+
   /** Map explicitly, never spread. */
   private toDTO(row: Record<string, unknown>): WorkOrderDTO {
     return workOrderSchema.parse({
@@ -285,6 +328,7 @@ export class WorkOrderDAL {
       confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
       createdAt: row.created_at,
+      published: row.published,
     });
   }
 }

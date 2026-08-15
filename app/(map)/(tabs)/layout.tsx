@@ -3,6 +3,7 @@ import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
+import { getCurrentUser } from "@/data/user/require-user";
 import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 
 import { MapWorkspace } from "../_components/map-workspace";
@@ -29,14 +30,22 @@ export default async function TabsLayout() {
     workOrders,
     neighborhoodStatuses,
     neighborhoodNeeds,
+    user,
   ] = await Promise.all([
-    SiteDAL.public().listPublished(),
-    CallDAL.public().listPublished(),
-    AnimalDAL.public().listPublished(),
-    ResourceOfferDAL.public().listPublished(),
-    WorkOrderDAL.public().listPublished(),
+    // `.create()`, not `.public()`, on every list read below: a curator's
+    // session has to reach each DAL for `listPublished` to include what
+    // they hid (see the note on `WorkOrderDAL.listPublished`) — otherwise
+    // `setPublished(id, false)` would have no way back except a direct
+    // database query. `getCurrentUser` is request-cached, so this costs
+    // nothing extra over the `isAdmin` read below.
+    SiteDAL.create().then((dal) => dal.listPublished()),
+    CallDAL.create().then((dal) => dal.listPublished()),
+    AnimalDAL.create().then((dal) => dal.listPublished()),
+    ResourceOfferDAL.create().then((dal) => dal.listPublished()),
+    WorkOrderDAL.create().then((dal) => dal.listPublished()),
     NeighborhoodDAL.public().statuses(),
     NeighborhoodDAL.public().needs(),
+    getCurrentUser(),
   ]);
 
   return (
@@ -49,6 +58,7 @@ export default async function TabsLayout() {
         workOrders={workOrders}
         neighborhoodStatuses={neighborhoodStatuses}
         neighborhoodNeeds={neighborhoodNeeds}
+        isAdmin={user?.role === "curator"}
       />
     </main>
   );

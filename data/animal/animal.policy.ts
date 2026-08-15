@@ -31,3 +31,8 @@ export function canVerifyAnimal(user: CurrentUser | null): boolean {
 export function canUnpublishAnimal(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
+
+/** Editing any field, hiding or deleting a report outright — curators only. */
+export function canManageAnimal(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
+}

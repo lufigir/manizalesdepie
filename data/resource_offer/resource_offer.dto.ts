@@ -42,6 +42,10 @@ export const resourceOfferSchema = z.object({
   confirmedAt: z.iso.datetime({ offset: true }),
   expiresAt: z.iso.datetime({ offset: true }),
   createdById: z.uuid().nullable(),
+  /** Read by `AdminActions` for the "Ocultar"/"Publicar" toggle — a
+   *  curator-only fact; `listPublished` only returns a hidden row at all
+   *  when the caller is a curator. */
+  published: z.boolean(),
 });
 
 export type ResourceOfferDTO = z.infer<typeof resourceOfferSchema>;
@@ -72,4 +76,25 @@ export const createResourceOfferSchema = z.object({
 
 export type CreateResourceOfferInput = z.infer<
   typeof createResourceOfferSchema
+>;
+
+/** A curator correcting any of an offer's own fields — not the point,
+ *  same reasoning as `adminUpdateSiteSchema`. */
+export const adminUpdateResourceOfferSchema = z.object({
+  id: z.uuid(),
+  type: resourceTypeSchema.optional(),
+  description: z.string().trim().min(5).max(500).optional(),
+  quantity: z.number().int().min(1).max(9999).optional(),
+  area: z.string().trim().max(120).optional(),
+  whatsapp: z
+    .string()
+    .trim()
+    .regex(/^\d{10,15}$/, "Debe ser solo dígitos, con indicativo del país")
+    .optional(),
+  availableFrom: z.iso.datetime({ offset: true }).optional(),
+  availableUntil: z.iso.datetime({ offset: true }).optional(),
+});
+
+export type AdminUpdateResourceOfferInput = z.infer<
+  typeof adminUpdateResourceOfferSchema
 >;

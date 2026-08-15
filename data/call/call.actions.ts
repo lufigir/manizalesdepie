@@ -107,3 +107,35 @@ export async function verifyCall(id: string) {
   revalidatePath("/ayudar");
   revalidatePath("/admin");
 }
+
+export async function adminUpdateCall(input: {
+  id: string;
+  title?: string;
+  category?: string;
+  description?: string;
+  meetingAddress?: string;
+  startsAt?: string;
+  endsAt?: string;
+  slotsTotal?: number;
+  bring?: string;
+  whatsapp?: string;
+}) {
+  const dal = await CallDAL.create();
+  await dal.adminUpdate(input);
+  revalidatePath("/ayudar");
+  revalidatePath("/admin");
+}
+
+export async function setCallPublished(id: string, published: boolean) {
+  const dal = await CallDAL.create();
+  await dal.setPublished(id, published);
+  revalidatePath("/ayudar");
+  revalidatePath("/admin");
+}
+
+export async function deleteCall(id: string) {
+  const dal = await CallDAL.create();
+  await dal.remove(id);
+  revalidatePath("/ayudar");
+  revalidatePath("/admin");
+}

@@ -58,6 +58,10 @@ export const callSchema = z.object({
   /** Who convened it. Not a name — only the id, and only so the page can show
    *  the attendee list to that one person. */
   createdById: z.uuid().nullable(),
+  /** Read by `AdminActions` for the "Ocultar"/"Publicar" toggle — a
+   *  curator-only fact; `listPublished` only returns a hidden row at all
+   *  when the caller is a curator. */
+  published: z.boolean(),
 });
 
 export type CallDTO = z.infer<typeof callSchema>;
@@ -184,3 +188,30 @@ export const attendeeSchema = z.object({
 });
 
 export type AttendeeDTO = z.infer<typeof attendeeSchema>;
+
+/** A curator correcting any of a grupo's own fields — the meeting point is
+ *  not here, same reasoning as `adminUpdateSiteSchema`. */
+export const adminUpdateCallSchema = z
+  .object({
+    id: z.uuid(),
+    title: z.string().trim().min(6).max(120).optional(),
+    category: callCategorySchema.optional(),
+    description: z.string().trim().max(1000).optional(),
+    meetingAddress: z.string().trim().min(5).max(200).optional(),
+    startsAt: z.iso.datetime({ offset: true }).optional(),
+    endsAt: z.iso.datetime({ offset: true }).optional(),
+    slotsTotal: z.number().int().min(1).max(500).optional(),
+    bring: z.string().trim().max(300).optional(),
+    whatsapp: z
+      .string()
+      .trim()
+      .regex(/^\d{10,15}$/, "Debe ser solo dígitos, con indicativo del país")
+      .optional(),
+  })
+  .refine(
+    (call) =>
+      !call.startsAt || !call.endsAt || new Date(call.endsAt) > new Date(call.startsAt),
+    { message: "La hora de fin va después de la de inicio", path: ["endsAt"] },
+  );
+
+export type AdminUpdateCallInput = z.infer<typeof adminUpdateCallSchema>;

@@ -56,3 +56,29 @@ export async function verifyAnimal(id: string) {
   await dal.verify(id);
   revalidatePath("/");
 }
+
+export async function adminUpdateAnimal(input: {
+  id: string;
+  kind?: string;
+  species?: string;
+  petName?: string;
+  description?: string;
+  zone?: string;
+  whatsapp?: string;
+}) {
+  const dal = await AnimalDAL.create();
+  await dal.adminUpdate(input);
+  revalidatePath("/");
+}
+
+export async function setAnimalPublished(id: string, published: boolean) {
+  const dal = await AnimalDAL.create();
+  await dal.setPublished(id, published);
+  revalidatePath("/");
+}
+
+export async function deleteAnimal(id: string) {
+  const dal = await AnimalDAL.create();
+  await dal.remove(id);
+  revalidatePath("/");
+}

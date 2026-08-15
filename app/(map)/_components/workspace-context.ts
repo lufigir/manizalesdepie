@@ -87,6 +87,10 @@ export type WorkspaceValue = {
    *  survives moving between sections during the same visit. */
   panelCollapsed: boolean;
   setPanelCollapsed: (collapsed: boolean) => void;
+  /** A curator, signed in. Every card's edit/hide/delete strip (see
+   *  `AdminActions`) checks this instead of fetching its own session — one
+   *  server read in the tab layout, not one per card. */
+  isAdmin: boolean;
 };
 
 export const WorkspaceContext = createContext<WorkspaceValue | null>(null);

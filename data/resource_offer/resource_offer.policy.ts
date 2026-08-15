@@ -1,3 +1,5 @@
+import type { CurrentUser } from "@/data/user/require-user";
+
 /**
  * Pure predicates. No database, no session lookup, no side effects.
  */
@@ -11,4 +13,14 @@
  */
 export function canProposeResourceOffer(): boolean {
   return true;
+}
+
+/** Editing any field, hiding or deleting an offer outright — curators only. */
+export function canManageResourceOffer(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
+}
+
+/** Only a curator marks an offer as checked against its source. */
+export function canVerifyResourceOffer(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
 }

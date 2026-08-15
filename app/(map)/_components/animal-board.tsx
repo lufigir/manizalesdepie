@@ -1,13 +1,31 @@
 "use client";
 
 import Image from "next/image";
-import { useTransition } from "react";
-import { Check, PawPrint } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Check, PawPrint, Pencil } from "lucide-react";
 
-import { resolveAnimal } from "@/data/animal/animal.actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  adminUpdateAnimal,
+  deleteAnimal,
+  resolveAnimal,
+  setAnimalPublished,
+  verifyAnimal,
+} from "@/data/animal/animal.actions";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import { ANIMAL_KIND_STYLE, ANIMAL_LABEL, freshness } from "@/lib/labels";
+import {
+  ADMIN_LABEL,
+  ANIMAL_FORM,
+  ANIMAL_KIND_STYLE,
+  ANIMAL_LABEL,
+  freshness,
+} from "@/lib/labels";
 import { cn } from "@/lib/utils";
+
+import { AdminActions } from "./admin-actions";
+import { useWorkspace } from "./workspace-context";
 
 /**
  * The animal board: a grid of photographs.
@@ -57,9 +75,29 @@ function AnimalCard({
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
+  const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
   const { label: freshLabel } = freshness(animal.lastSeenAt);
   const resolved = animal.resolvedAt !== null;
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [petName, setPetName] = useState(animal.petName ?? "");
+  const [description, setDescription] = useState(animal.description);
+  const [zone, setZone] = useState(animal.zone ?? "");
+  const [whatsapp, setWhatsapp] = useState(animal.whatsapp);
+
+  function saveEdit() {
+    setEditError(null);
+    startTransition(async () => {
+      try {
+        await adminUpdateAnimal({ id: animal.id, petName, description, zone, whatsapp });
+        setEditOpen(false);
+      } catch (cause) {
+        setEditError(cause instanceof Error ? cause.message : ADMIN_LABEL.failed);
+      }
+    });
+  }
 
   return (
     <li>
@@ -143,6 +181,65 @@ function AnimalCard({
           </button>
         )}
       </div>
+
+      {isAdmin && (
+        <div className="border-t px-2 pt-1.5 pb-2">
+          {editOpen ? (
+            <div className="flex flex-col gap-1.5">
+              <Input
+                value={petName}
+                onChange={(e) => setPetName(e.target.value)}
+                placeholder={ANIMAL_FORM.petName}
+              />
+              <Textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              <Input
+                value={zone}
+                onChange={(e) => setZone(e.target.value)}
+                placeholder={ANIMAL_FORM.zone}
+              />
+              <Input
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldWhatsapp}
+              />
+              {editError && (
+                <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+                  {editError}
+                </p>
+              )}
+              <div className="flex gap-1">
+                <Button size="sm" loading={pending} onClick={saveEdit}>
+                  {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
+                  {ADMIN_LABEL.cancel}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
+            >
+              <Pencil className="size-2.5" aria-hidden />
+              {ADMIN_LABEL.edit}
+            </button>
+          )}
+
+          <AdminActions
+            published={animal.published}
+            onSetPublished={(published) => setAnimalPublished(animal.id, published)}
+            verified={animal.verified}
+            onVerify={() => verifyAnimal(animal.id)}
+            onDelete={() => deleteAnimal(animal.id)}
+          />
+        </div>
+      )}
     </li>
   );
 }

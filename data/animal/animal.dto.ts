@@ -37,6 +37,10 @@ export const animalSchema = z.object({
   verified: z.boolean(),
   confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
+  /** Read by `AdminActions` for the "Ocultar"/"Publicar" toggle — a
+   *  curator-only fact; `listPublished` only returns a hidden row at all
+   *  when the caller is a curator. */
+  published: z.boolean(),
 });
 
 export type AnimalDTO = z.infer<typeof animalSchema>;
@@ -70,3 +74,22 @@ export const createAnimalSchema = z.object({
 });
 
 export type CreateAnimalInput = z.infer<typeof createAnimalSchema>;
+
+/** A curator correcting any of a report's own fields. Not the photo or the
+ *  coordinate: replacing a photo needs the upload flow, and the point is
+ *  read directly off where the animal was actually seen. */
+export const adminUpdateAnimalSchema = z.object({
+  id: z.uuid(),
+  kind: animalKindSchema.optional(),
+  species: animalSpeciesSchema.optional(),
+  petName: z.string().trim().max(60).optional(),
+  description: z.string().trim().min(10).max(600).optional(),
+  zone: z.string().trim().max(120).optional(),
+  whatsapp: z
+    .string()
+    .trim()
+    .regex(/^\d{10,15}$/, "Solo dígitos, con indicativo del país")
+    .optional(),
+});
+
+export type AdminUpdateAnimalInput = z.infer<typeof adminUpdateAnimalSchema>;

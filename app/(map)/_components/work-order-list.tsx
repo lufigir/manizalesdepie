@@ -9,7 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   attendWorkOrder,
   closeWorkOrder,
+  deleteWorkOrder,
+  setWorkOrderPublished,
   updateWorkOrder,
+  verifyWorkOrder,
 } from "@/data/work_order/work_order.actions";
 import {
   WORK_ORDER_CATEGORIES,
@@ -28,6 +31,9 @@ import {
   workOrderRollup,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+
+import { AdminActions } from "./admin-actions";
+import { useWorkspace } from "./workspace-context";
 
 /**
  * Debris and damage, in "Ayudar" — its own chip in `UnifiedPanel`, same
@@ -92,6 +98,7 @@ export function WorkOrderItem({
   selected?: boolean;
   onSelect?: (id: string) => void;
 }) {
+  const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -350,6 +357,16 @@ export function WorkOrderItem({
             {WORK_ORDER_LABEL.closeRejected}
           </button>
         </div>
+      )}
+
+      {isAdmin && (
+        <AdminActions
+          published={order.published}
+          onSetPublished={(published) => setWorkOrderPublished(order.id, published)}
+          verified={order.verified}
+          onVerify={() => verifyWorkOrder(order.id)}
+          onDelete={() => deleteWorkOrder(order.id)}
+        />
       )}
     </div>
   );

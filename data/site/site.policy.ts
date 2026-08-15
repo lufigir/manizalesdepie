@@ -50,3 +50,8 @@ export function canEditSite(
   if (user.role === "curator") return true;
   return !site.published && site.createdById === user.id;
 }
+
+/** Hiding or deleting a site outright — curators only. */
+export function canManageSite(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
+}

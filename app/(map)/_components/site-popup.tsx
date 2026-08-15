@@ -1,8 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, ChevronRight, ExternalLink, Navigation, Share2 } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  ExternalLink,
+  Navigation,
+  Pencil,
+  Share2,
+} from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetHeader,
@@ -11,9 +20,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { confirmSiteStatus } from "@/data/site/site.actions";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  adminUpdateSite,
+  confirmSiteStatus,
+  deleteSite,
+  setSitePublished,
+  verifySite,
+} from "@/data/site/site.actions";
 import type { SiteDTO } from "@/data/site/site.dto";
 import {
+  ADMIN_LABEL,
   ITEM_MODE_LABEL,
   SHEET_LABEL,
   SITE_STATUS_LABEL,
@@ -25,6 +42,9 @@ import {
   freshness,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+
+import { AdminActions } from "./admin-actions";
+import { useWorkspace } from "./workspace-context";
 
 /**
  * The card that opens on the pin itself.
@@ -40,8 +60,36 @@ import { cn } from "@/lib/utils";
  * hurry must hit that before they load the car.
  */
 export function SitePopup({ site }: { site: SiteDTO }) {
+  const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [name, setName] = useState(site.name);
+  const [description, setDescription] = useState(site.description ?? "");
+  const [address, setAddress] = useState(site.address ?? "");
+  const [schedule, setSchedule] = useState(site.schedule ?? "");
+  const [whatsapp, setWhatsapp] = useState(site.whatsapp ?? "");
+
+  function saveEdit() {
+    setEditError(null);
+    startTransition(async () => {
+      try {
+        await adminUpdateSite({
+          id: site.id,
+          name,
+          description,
+          address,
+          schedule,
+          whatsapp: whatsapp || undefined,
+        });
+        setEditOpen(false);
+      } catch (cause) {
+        setEditError(cause instanceof Error ? cause.message : ADMIN_LABEL.failed);
+      }
+    });
+  }
 
   const { label: freshLabel, stale } = freshness(site.confirmedAt);
   const { label: confidenceLabel } = confidence(site);
@@ -287,6 +335,67 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           ))}
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="border-t pt-2">
+          {editOpen ? (
+            <div className="flex flex-col gap-1.5">
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={ADMIN_LABEL.fieldName} />
+              <Textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldDescription}
+              />
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldAddress}
+              />
+              <Input
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldSchedule}
+              />
+              <Input
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldWhatsapp}
+              />
+              {editError && (
+                <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+                  {editError}
+                </p>
+              )}
+              <div className="flex gap-1">
+                <Button size="sm" loading={pending} onClick={saveEdit}>
+                  {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
+                  {ADMIN_LABEL.cancel}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
+            >
+              <Pencil className="size-2.5" aria-hidden />
+              {ADMIN_LABEL.edit}
+            </button>
+          )}
+
+          <AdminActions
+            published={site.published}
+            onSetPublished={(published) => setSitePublished(site.id, published)}
+            verified={site.verified}
+            onVerify={() => verifySite(site.id)}
+            onDelete={() => deleteSite(site.id)}
+          />
+        </div>
+      )}
     </div>
   );
 }

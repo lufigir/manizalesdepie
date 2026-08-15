@@ -59,6 +59,11 @@ export const workOrderSchema = z.object({
   confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
   createdAt: z.iso.datetime({ offset: true }),
+  /** Read by `AdminActions` to show "Ocultar" vs "Publicar" — a curator-only
+   *  toggle, not otherwise shown; `listPublished` already only returns true
+   *  rows, so an admin fetch that includes a hidden one is what makes this
+   *  matter. */
+  published: z.boolean(),
 });
 
 export type WorkOrderDTO = z.infer<typeof workOrderSchema>;

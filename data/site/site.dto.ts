@@ -74,6 +74,10 @@ export const siteSchema = z.object({
   confirmedAt: z.iso.datetime({ offset: true }),
   expiresAt: z.iso.datetime({ offset: true }),
   items: z.array(siteItemSchema),
+  /** Read by `AdminActions` for the "Ocultar"/"Publicar" toggle — a
+   *  curator-only fact, otherwise not shown; `listPublished` only returns a
+   *  hidden row at all when the caller is a curator. */
+  published: z.boolean(),
 });
 
 export type SiteDTO = z.infer<typeof siteSchema>;
@@ -127,3 +131,24 @@ export const updateSiteStatusSchema = z.object({
   id: z.uuid(),
   status: siteStatusSchema,
 });
+
+/**
+ * A curator correcting any of a site's own fields — the coordinate is not
+ * here: moving a pin needs a map picker, which the inline card does not
+ * have, so relocating a site stays a delete-and-reproposal for now.
+ */
+export const adminUpdateSiteSchema = z.object({
+  id: z.uuid(),
+  type: siteTypeSchema.optional(),
+  name: z.string().trim().min(3).max(120).optional(),
+  description: z.string().trim().max(1000).optional(),
+  address: z.string().trim().max(200).optional(),
+  schedule: z.string().trim().max(120).optional(),
+  whatsapp: z
+    .string()
+    .trim()
+    .regex(/^\d{10,15}$/, "Debe ser solo dígitos, con indicativo del país")
+    .optional(),
+});
+
+export type AdminUpdateSiteInput = z.infer<typeof adminUpdateSiteSchema>;

@@ -65,3 +65,17 @@ export async function verifyWorkOrder(id: string) {
   revalidatePath("/ayudar");
   revalidatePath("/admin");
 }
+
+export async function setWorkOrderPublished(id: string, published: boolean) {
+  const dal = await WorkOrderDAL.create();
+  await dal.setPublished(id, published);
+  revalidatePath("/ayudar");
+  revalidatePath("/admin");
+}
+
+export async function deleteWorkOrder(id: string) {
+  const dal = await WorkOrderDAL.create();
+  await dal.remove(id);
+  revalidatePath("/ayudar");
+  revalidatePath("/admin");
+}

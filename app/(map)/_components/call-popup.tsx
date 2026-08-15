@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ChevronRight, Clock, MapPin, Navigation, Share2, Users } from "lucide-react";
+import { useState, useTransition } from "react";
+import {
+  Check,
+  ChevronRight,
+  Clock,
+  MapPin,
+  Navigation,
+  Pencil,
+  Share2,
+  Users,
+} from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetHeader,
@@ -11,8 +22,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  adminUpdateCall,
+  deleteCall,
+  setCallPublished,
+  verifyCall,
+} from "@/data/call/call.actions";
 import type { CallDTO } from "@/data/call/call.dto";
 import {
+  ADMIN_LABEL,
   CALL_CATEGORY_ICON,
   CALL_CATEGORY_LABEL,
   CALL_LABEL,
@@ -28,8 +47,10 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { AdminActions } from "./admin-actions";
 import { JoinCall } from "./join-call";
 import { RelocateCall } from "./relocate-call";
+import { useWorkspace } from "./workspace-context";
 
 /**
  * The card that opens on a grupo's pin.
@@ -42,7 +63,36 @@ import { RelocateCall } from "./relocate-call";
  * they arrive.
  */
 export function CallPopup({ call }: { call: CallDTO }) {
+  const { isAdmin } = useWorkspace();
   const [copied, setCopied] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [title, setTitle] = useState(call.title);
+  const [description, setDescription] = useState(call.description ?? "");
+  const [meetingAddress, setMeetingAddress] = useState(call.meetingAddress ?? "");
+  const [bring, setBring] = useState(call.bring ?? "");
+  const [whatsapp, setWhatsapp] = useState(call.whatsapp ?? "");
+
+  function saveEdit() {
+    setEditError(null);
+    startTransition(async () => {
+      try {
+        await adminUpdateCall({
+          id: call.id,
+          title,
+          description,
+          meetingAddress,
+          bring,
+          whatsapp: whatsapp || undefined,
+        });
+        setEditOpen(false);
+      } catch (cause) {
+        setEditError(cause instanceof Error ? cause.message : ADMIN_LABEL.failed);
+      }
+    });
+  }
 
   const state = callState(call);
   const Icon = CALL_CATEGORY_ICON[call.category];
@@ -230,6 +280,63 @@ export function CallPopup({ call }: { call: CallDTO }) {
           )}
         </button>
       </div>
+
+      {isAdmin && (
+        <div className="border-t pt-2">
+          {editOpen ? (
+            <div className="flex flex-col gap-1.5">
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={ADMIN_LABEL.fieldName} />
+              <Textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldDescription}
+              />
+              <Input
+                value={meetingAddress}
+                onChange={(e) => setMeetingAddress(e.target.value)}
+                placeholder={CALL_LABEL.meetingPoint}
+              />
+              <Input value={bring} onChange={(e) => setBring(e.target.value)} placeholder={CALL_LABEL.bring} />
+              <Input
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder={ADMIN_LABEL.fieldWhatsapp}
+              />
+              {editError && (
+                <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+                  {editError}
+                </p>
+              )}
+              <div className="flex gap-1">
+                <Button size="sm" loading={pending} onClick={saveEdit}>
+                  {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
+                  {ADMIN_LABEL.cancel}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
+            >
+              <Pencil className="size-2.5" aria-hidden />
+              {ADMIN_LABEL.edit}
+            </button>
+          )}
+
+          <AdminActions
+            published={call.published}
+            onSetPublished={(published) => setCallPublished(call.id, published)}
+            verified={call.verified}
+            onVerify={() => verifyCall(call.id)}
+            onDelete={() => deleteCall(call.id)}
+          />
+        </div>
+      )}
     </div>
   );
 }

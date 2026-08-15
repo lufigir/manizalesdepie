@@ -961,3 +961,43 @@ export const WORK_ORDER_FORM = {
   submitting: "Publicando…",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
 } as const;
+
+/**
+ * The curator-only strip that appears on every card — site, grupo, necesidad,
+ * mascota, servicio — once `isAdmin` is true (see `WorkspaceContext`). One
+ * shared vocabulary for editing, hiding and deleting, so a curator learns the
+ * controls once instead of once per entity.
+ *
+ * Hide is the default destructive action, and it is reversible — flips
+ * `published` back off, same column every list already filters by, so the
+ * row simply stops appearing rather than losing history. Delete is separate
+ * and asks twice on purpose: it is a real `DELETE FROM`, for spam and test
+ * rows, not for something that just went stale.
+ */
+export const ADMIN_LABEL = {
+  edit: "Editar",
+  save: "Guardar",
+  saving: "Guardando…",
+  cancel: "Cancelar",
+  hide: "Ocultar",
+  hiding: "Ocultando…",
+  hidden: "Oculto",
+  publish: "Publicar",
+  publishing: "Publicando…",
+  verify: "Verificar",
+  verifying: "Verificando…",
+  verified: "Verificado",
+  delete: "Eliminar",
+  deleteConfirm: "¿Seguro? Se borra para siempre",
+  deleteConfirmShort: "Sí, borrar",
+  deleting: "Borrando…",
+  failed: "No se pudo completar. Intenta otra vez.",
+  /** Field placeholders shared by every entity's inline edit form — one
+   *  vocabulary instead of each card inventing its own. */
+  fieldName: "Nombre",
+  fieldDescription: "Descripción",
+  fieldAddress: "Dirección",
+  fieldSchedule: "Horario",
+  fieldWhatsapp: "WhatsApp",
+  fieldZone: "Barrio o zona",
+} as const;

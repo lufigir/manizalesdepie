@@ -6,6 +6,7 @@ import { log } from "@/lib/log";
 import { getCurrentUser, type CurrentUser } from "@/data/user/require-user";
 
 import {
+  adminUpdateSiteSchema,
   createSiteSchema,
   siteSchema,
   updateSiteStatusSchema,
@@ -13,6 +14,7 @@ import {
 } from "./site.dto";
 import {
   canConfirmSite,
+  canManageSite,
   canProposeSite,
   canPublishSite,
   canVerifySite,
@@ -51,11 +53,18 @@ export class SiteDAL {
   async listPublished(): Promise<SiteDTO[]> {
     const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("site_public")
-      .select("*, items:site_item(id, label, mode, priority)")
-      .eq("published", true)
-      .order("confirmed_at", { ascending: false });
+      .select("*, items:site_item(id, label, mode, priority)");
+
+    // A curator sees a site they hid too, marked on the card by
+    // `AdminActions` — otherwise `setPublished(id, false)` would have no
+    // way back short of a direct database query.
+    if (this.user?.role !== "curator") {
+      query = query.eq("published", true);
+    }
+
+    const { data, error } = await query.order("confirmed_at", { ascending: false });
 
     if (error) {
       log.error("site.listPublished failed", { code: error.code });
@@ -242,6 +251,63 @@ export class SiteDAL {
     });
   }
 
+  /** A curator corrects any of a site's own fields. Never the coordinate —
+   *  see the note on `adminUpdateSiteSchema`. */
+  async adminUpdate(input: unknown): Promise<void> {
+    const data = adminUpdateSiteSchema.parse(input);
+
+    if (!canManageSite(this.user)) throw new Error("Forbidden");
+
+    const patch: Record<string, unknown> = {};
+    if (data.type !== undefined) patch.type = data.type;
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.address !== undefined) patch.address = data.address;
+    if (data.schedule !== undefined) patch.schedule = data.schedule;
+    if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
+    if (Object.keys(patch).length === 0) return;
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("site").update(patch).eq("id", data.id);
+
+    if (error) {
+      log.error("site.adminUpdate failed", { code: error.code, siteId: data.id });
+      throw new Error("No se pudo actualizar el punto");
+    }
+
+    log.info("site admin-updated", { siteId: data.id, fields: Object.keys(patch) });
+  }
+
+  /** A curator hides or republishes a site — reversible, the same
+   *  `published` column every list already filters by. */
+  async setPublished(id: string, published: boolean): Promise<void> {
+    if (!canManageSite(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("site").update({ published }).eq("id", id);
+
+    if (error) {
+      log.error("site.setPublished failed", { code: error.code, siteId: id });
+      throw new Error("No se pudo cambiar la visibilidad del punto");
+    }
+  }
+
+  /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
+   *  to `site_item`. */
+  async remove(id: string): Promise<void> {
+    if (!canManageSite(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("site").delete().eq("id", id);
+
+    if (error) {
+      log.error("site.remove failed", { code: error.code, siteId: id });
+      throw new Error("No se pudo eliminar el punto");
+    }
+
+    log.info("site deleted", { siteId: id, byUser: this.user!.id });
+  }
+
   /** Map explicitly, never spread. A column added tomorrow stays server-side
    *  until someone deliberately adds it here and to the schema. */
   private toDTO(row: Record<string, unknown>): SiteDTO {
@@ -263,6 +329,7 @@ export class SiteDAL {
       confirmedAt: row.confirmed_at,
       expiresAt: row.expires_at,
       items: row.items ?? [],
+      published: row.published,
     });
   }
 }

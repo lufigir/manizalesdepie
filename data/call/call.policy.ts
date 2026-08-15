@@ -82,3 +82,10 @@ export function canSeeAttendees(
 export function canVerifyCall(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
+
+/** Editing any field, hiding or deleting a grupo outright — curators only.
+ *  Distinct from the organiser's own read-only view of who signed up
+ *  (`canSeeAttendees`): this is the destructive counterpart. */
+export function canManageCall(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
+}

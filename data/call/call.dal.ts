@@ -7,6 +7,7 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
+  adminUpdateCallSchema,
   attendeeSchema,
   callSchema,
   createCallSchema,
@@ -21,6 +22,7 @@ import {
   canCreateCall,
   canCreateInformalCall,
   canJoinCall,
+  canManageCall,
   canRelocateInformalCall,
   canSeeAttendees,
   canVerifyCall,
@@ -68,12 +70,19 @@ export class CallDAL {
   async listPublished(): Promise<CallDTO[]> {
     const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("volunteer_call_public")
       .select("*")
-      .eq("published", true)
-      .gt("expires_at", new Date().toISOString())
-      .order("starts_at", { ascending: true });
+      .gt("expires_at", new Date().toISOString());
+
+    // A curator sees a grupo they hid too, marked on the card by
+    // `AdminActions` — otherwise `setPublished(id, false)` would have no
+    // way back short of a direct database query.
+    if (this.user?.role !== "curator") {
+      query = query.eq("published", true);
+    }
+
+    const { data, error } = await query.order("starts_at", { ascending: true });
 
     if (error) {
       log.error("call.listPublished failed", { code: error.code });
@@ -427,6 +436,72 @@ export class CallDAL {
     }
   }
 
+  /** A curator corrects any of a grupo's own fields — never the meeting
+   *  point, see `adminUpdateCallSchema`. */
+  async adminUpdate(input: unknown): Promise<void> {
+    const data = adminUpdateCallSchema.parse(input);
+
+    if (!canManageCall(this.user)) throw new Error("Forbidden");
+
+    const patch: Record<string, unknown> = {};
+    if (data.title !== undefined) patch.title = data.title;
+    if (data.category !== undefined) patch.category = data.category;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.meetingAddress !== undefined) patch.meeting_address = data.meetingAddress;
+    if (data.startsAt !== undefined) patch.starts_at = data.startsAt;
+    if (data.endsAt !== undefined) patch.ends_at = data.endsAt;
+    if (data.slotsTotal !== undefined) patch.slots_total = data.slotsTotal;
+    if (data.bring !== undefined) patch.bring = data.bring;
+    if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
+    if (Object.keys(patch).length === 0) return;
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase
+      .from("volunteer_call")
+      .update(patch)
+      .eq("id", data.id);
+
+    if (error) {
+      log.error("call.adminUpdate failed", { code: error.code, callId: data.id });
+      throw new Error("No se pudo actualizar el grupo");
+    }
+
+    log.info("call admin-updated", { callId: data.id, fields: Object.keys(patch) });
+  }
+
+  /** A curator hides or republishes a grupo — reversible, the same
+   *  `published` column every list already filters by. */
+  async setPublished(id: string, published: boolean): Promise<void> {
+    if (!canManageCall(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase
+      .from("volunteer_call")
+      .update({ published })
+      .eq("id", id);
+
+    if (error) {
+      log.error("call.setPublished failed", { code: error.code, callId: id });
+      throw new Error("No se pudo cambiar la visibilidad del grupo");
+    }
+  }
+
+  /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
+   *  to `call_attendance`. */
+  async remove(id: string): Promise<void> {
+    if (!canManageCall(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("volunteer_call").delete().eq("id", id);
+
+    if (error) {
+      log.error("call.remove failed", { code: error.code, callId: id });
+      throw new Error("No se pudo eliminar el grupo");
+    }
+
+    log.info("call deleted", { callId: id, byUser: this.user!.id });
+  }
+
   /** Mapped explicitly, never spread. */
   private toDTO(row: Record<string, unknown>): CallDTO {
     return callSchema.parse({
@@ -460,6 +535,7 @@ export class CallDAL {
       confirmedAt: row.confirmed_at,
       expiresAt: row.expires_at,
       createdById: row.created_by,
+      published: row.published,
     });
   }
 }

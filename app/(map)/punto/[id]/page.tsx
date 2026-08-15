@@ -5,6 +5,7 @@ import { AnimalDAL } from "@/data/animal/animal.dal";
 import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
+import { getCurrentUser } from "@/data/user/require-user";
 import { clientEnv } from "@/lib/env";
 import { SITE_STATUS_LABEL, SITE_TYPE_LABEL, confidence } from "@/lib/labels";
 import { DEFAULT_TAB_ID, SITE_TYPE_TAB } from "@/lib/tabs";
@@ -62,13 +63,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedSitePage({ params }: Params) {
   const { id } = await params;
 
-  const [site, sites, calls, animals, neighborhoodStatuses] =
+  const [site, sites, calls, animals, neighborhoodStatuses, user] =
     await Promise.all([
       SiteDAL.public().findById(id),
       SiteDAL.public().listPublished(),
       CallDAL.public().listPublished(),
       AnimalDAL.public().listPublished(),
       NeighborhoodDAL.public().statuses(),
+      getCurrentUser(),
     ]);
 
   if (!site) notFound();
@@ -93,6 +95,7 @@ export default async function SharedSitePage({ params }: Params) {
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={site.id}
         tab={tab}
+        isAdmin={user?.role === "curator"}
       />
     </main>
   );

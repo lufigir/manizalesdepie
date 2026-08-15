@@ -44,3 +44,9 @@ export function canUpdateWorkOrder(): boolean {
 export function canVerifyWorkOrder(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
+
+/** Hiding or deleting a case outright — unlike closing it, which anyone may
+ *  do to say "this is done" — stays with curators. */
+export function canManageWorkOrder(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
+}

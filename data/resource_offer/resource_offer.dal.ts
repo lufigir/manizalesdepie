@@ -6,11 +6,16 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
+  adminUpdateResourceOfferSchema,
   createResourceOfferSchema,
   resourceOfferSchema,
   type ResourceOfferDTO,
 } from "./resource_offer.dto";
-import { canProposeResourceOffer } from "./resource_offer.policy";
+import {
+  canManageResourceOffer,
+  canProposeResourceOffer,
+  canVerifyResourceOffer,
+} from "./resource_offer.policy";
 
 /** An offer with no stated end is worth showing for a while, not forever —
  *  long enough that "tengo una volqueta" is not gone by lunch, short enough
@@ -43,12 +48,19 @@ export class ResourceOfferDAL {
   async listPublished(): Promise<ResourceOfferDTO[]> {
     const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("resource_offer_public")
       .select("*")
-      .eq("published", true)
-      .gt("expires_at", new Date().toISOString())
-      .order("confirmed_at", { ascending: false });
+      .gt("expires_at", new Date().toISOString());
+
+    // A curator sees an offer they hid too, marked on the card by
+    // `AdminActions` — otherwise `setPublished(id, false)` would have no
+    // way back short of a direct database query.
+    if (this.user?.role !== "curator") {
+      query = query.eq("published", true);
+    }
+
+    const { data, error } = await query.order("confirmed_at", { ascending: false });
 
     if (error) {
       log.error("resourceOffer.listPublished failed", { code: error.code });
@@ -108,6 +120,95 @@ export class ResourceOfferDAL {
     return { id: row.id };
   }
 
+  /** Records that a curator checked this against its source. */
+  async verify(id: string): Promise<void> {
+    if (!canVerifyResourceOffer(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("resource_offer")
+      .update({ verified_by: this.user!.id, verified_at: now, confirmed_at: now })
+      .eq("id", id);
+
+    if (error) {
+      log.error("resourceOffer.verify failed", { code: error.code, resourceOfferId: id });
+      throw new Error("No se pudo verificar el servicio");
+    }
+  }
+
+  /** A curator corrects any of an offer's own fields — never the point,
+   *  see `adminUpdateResourceOfferSchema`. */
+  async adminUpdate(input: unknown): Promise<void> {
+    const data = adminUpdateResourceOfferSchema.parse(input);
+
+    if (!canManageResourceOffer(this.user)) throw new Error("Forbidden");
+
+    const patch: Record<string, unknown> = {};
+    if (data.type !== undefined) patch.type = data.type;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.quantity !== undefined) patch.quantity = data.quantity;
+    if (data.area !== undefined) patch.area = data.area;
+    if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
+    if (data.availableFrom !== undefined) patch.available_from = data.availableFrom;
+    if (data.availableUntil !== undefined) patch.available_until = data.availableUntil;
+    if (Object.keys(patch).length === 0) return;
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase
+      .from("resource_offer")
+      .update(patch)
+      .eq("id", data.id);
+
+    if (error) {
+      log.error("resourceOffer.adminUpdate failed", {
+        code: error.code,
+        resourceOfferId: data.id,
+      });
+      throw new Error("No se pudo actualizar el servicio");
+    }
+
+    log.info("resource offer admin-updated", {
+      resourceOfferId: data.id,
+      fields: Object.keys(patch),
+    });
+  }
+
+  /** A curator hides or republishes an offer — reversible, the same
+   *  `published` column every list already filters by. */
+  async setPublished(id: string, published: boolean): Promise<void> {
+    if (!canManageResourceOffer(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase
+      .from("resource_offer")
+      .update({ published })
+      .eq("id", id);
+
+    if (error) {
+      log.error("resourceOffer.setPublished failed", {
+        code: error.code,
+        resourceOfferId: id,
+      });
+      throw new Error("No se pudo cambiar la visibilidad del servicio");
+    }
+  }
+
+  /** A real `DELETE FROM`, for spam and test rows — curators only. */
+  async remove(id: string): Promise<void> {
+    if (!canManageResourceOffer(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("resource_offer").delete().eq("id", id);
+
+    if (error) {
+      log.error("resourceOffer.remove failed", { code: error.code, resourceOfferId: id });
+      throw new Error("No se pudo eliminar el servicio");
+    }
+
+    log.info("resource offer deleted", { resourceOfferId: id, byUser: this.user!.id });
+  }
+
   /** Map explicitly, never spread. */
   private toDTO(row: Record<string, unknown>): ResourceOfferDTO {
     return resourceOfferSchema.parse({
@@ -127,6 +228,7 @@ export class ResourceOfferDAL {
       confirmedAt: row.confirmed_at,
       expiresAt: row.expires_at,
       createdById: row.created_by,
+      published: row.published,
     });
   }
 }

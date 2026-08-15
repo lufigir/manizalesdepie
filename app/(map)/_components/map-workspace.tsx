@@ -96,6 +96,9 @@ type Props = {
    *  attendee list, which is not part of any family and does not belong
    *  inside `UnifiedPanel`. */
   children?: React.ReactNode;
+  /** A curator, signed in — see `WorkspaceValue.isAdmin`. Resolved once,
+   *  server-side, by whichever route rendered this. */
+  isAdmin?: boolean;
 };
 
 /**
@@ -122,6 +125,7 @@ export function MapWorkspace({
   initialSelectedId,
   tab: forcedTab,
   children,
+  isAdmin = false,
 }: Props) {
   // In the tab layout this is the active child route; on a shared-pin page
   // there is no such child, so the caller passes the section explicitly.
@@ -271,6 +275,7 @@ export function MapWorkspace({
       neighborhoodStatuses,
       panelCollapsed,
       setPanelCollapsed,
+      isAdmin,
     }),
     [
       activeChip,
@@ -287,6 +292,7 @@ export function MapWorkspace({
       barrioStatus,
       neighborhoodStatuses,
       panelCollapsed,
+      isAdmin,
     ],
   );
 

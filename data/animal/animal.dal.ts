@@ -7,11 +7,13 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
+  adminUpdateAnimalSchema,
   animalSchema,
   createAnimalSchema,
   type AnimalDTO,
 } from "./animal.dto";
 import {
+  canManageAnimal,
   canReportAnimal,
   canResolveAnimal,
   canVerifyAnimal,
@@ -47,10 +49,16 @@ export class AnimalDAL {
   async listPublished(): Promise<AnimalDTO[]> {
     const supabase = await createServerSupabase();
 
-    const { data, error } = await supabase
-      .from("animal_report_public")
-      .select("*")
-      .eq("published", true)
+    let query = supabase.from("animal_report_public").select("*");
+
+    // A curator sees a report they hid too, marked on the card by
+    // `AdminActions` — otherwise `setPublished(id, false)` would have no
+    // way back short of a direct database query.
+    if (this.user?.role !== "curator") {
+      query = query.eq("published", true);
+    }
+
+    const { data, error } = await query
       .order("resolved_at", { ascending: true, nullsFirst: true })
       .order("last_seen_at", { ascending: false });
 
@@ -164,6 +172,67 @@ export class AnimalDAL {
     }
   }
 
+  /** A curator corrects any of a report's own fields — never the photo or
+   *  the coordinate, see `adminUpdateAnimalSchema`. */
+  async adminUpdate(input: unknown): Promise<void> {
+    const data = adminUpdateAnimalSchema.parse(input);
+
+    if (!canManageAnimal(this.user)) throw new Error("Forbidden");
+
+    const patch: Record<string, unknown> = {};
+    if (data.kind !== undefined) patch.kind = data.kind;
+    if (data.species !== undefined) patch.species = data.species;
+    if (data.petName !== undefined) patch.pet_name = data.petName;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.zone !== undefined) patch.zone = data.zone;
+    if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
+    if (Object.keys(patch).length === 0) return;
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("animal_report").update(patch).eq("id", data.id);
+
+    if (error) {
+      log.error("animal.adminUpdate failed", { code: error.code, animalId: data.id });
+      throw new Error("No se pudo actualizar el reporte");
+    }
+
+    log.info("animal admin-updated", { animalId: data.id, fields: Object.keys(patch) });
+  }
+
+  /** A curator hides or republishes a report — reversible, the same
+   *  `published` column every list already filters by. */
+  async setPublished(id: string, published: boolean): Promise<void> {
+    if (!canManageAnimal(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase
+      .from("animal_report")
+      .update({ published })
+      .eq("id", id);
+
+    if (error) {
+      log.error("animal.setPublished failed", { code: error.code, animalId: id });
+      throw new Error("No se pudo cambiar la visibilidad del reporte");
+    }
+  }
+
+  /** A real `DELETE FROM`, for spam and test rows — curators only. The
+   *  photo in storage is left behind, orphaned; cleaning it up needs a
+   *  bucket sweep, not a per-row concern. */
+  async remove(id: string): Promise<void> {
+    if (!canManageAnimal(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("animal_report").delete().eq("id", id);
+
+    if (error) {
+      log.error("animal.remove failed", { code: error.code, animalId: id });
+      throw new Error("No se pudo eliminar el reporte");
+    }
+
+    log.info("animal deleted", { animalId: id, byUser: this.user!.id });
+  }
+
   /** Mapped explicitly, never spread. */
   private toDTO(row: Record<string, unknown>): AnimalDTO {
     const path = row.photo_path as string | null;
@@ -188,6 +257,7 @@ export class AnimalDAL {
       verified: row.verified,
       confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
+      published: row.published,
     });
   }
 }
