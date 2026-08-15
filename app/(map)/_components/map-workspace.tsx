@@ -39,8 +39,8 @@ import { FitToSites, FlyToSelected } from "./map-camera";
 import { ReportMenu } from "./report-menu";
 import { ResourceOfferMarkers } from "./resource-offer-markers";
 import { SightingMarkers } from "./sighting-markers";
-import { WorkOrderItem } from "./work-order-list";
 import { WorkOrderMarkers } from "./work-order-markers";
+import { WorkOrderPopup } from "./work-order-popup";
 import { SiteMarkers } from "./site-markers";
 import { SitePopup } from "./site-popup";
 import { UnifiedPanel } from "./unified-panel";
@@ -412,11 +412,6 @@ export function MapWorkspace({
               </MapPopup>
             )}
 
-            {/* No dedicated WorkOrderPopup: the card is the same one the
-                panel already draws for "Necesidades", claim/close buttons
-                included — a case's whole detail is that card, so a second
-                component that only reformats it would drift from it over
-                time. */}
             {selectedOrder && (
               <MapPopup
                 longitude={selectedOrder.longitude}
@@ -428,7 +423,7 @@ export function MapWorkspace({
                 offset={22}
                 className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
               >
-                <WorkOrderItem order={selectedOrder} />
+                <WorkOrderPopup order={selectedOrder} />
               </MapPopup>
             )}
           </Map>
