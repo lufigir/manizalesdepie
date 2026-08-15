@@ -11,7 +11,7 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { useClusters } from "./use-clusters";
+import { useSpreadPins } from "./use-clusters";
 
 /**
  * Necesidades on the map — the one family that used to exist only as a list
@@ -22,8 +22,9 @@ import { useClusters } from "./use-clusters";
  * its own outline. Read at a glance before the icon or the colour has been
  * decoded, the same way the other two shapes already are.
  *
- * Clustered like sites: several requests from the same block are exactly
- * the density this map already has a pattern for.
+ * Spread apart like sites: several requests from the same block are exactly
+ * the density `useSpreadPins` exists for, and a case's own category icon is
+ * worth more at a glance than a count would be.
  */
 export function WorkOrderMarkers({
   workOrders,
@@ -34,74 +35,70 @@ export function WorkOrderMarkers({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
-  const clusters = useClusters(workOrders);
+  const pins = useSpreadPins(workOrders);
 
   return (
     <>
-      {clusters.map((cluster) =>
-        cluster.items.length === 1 ? (
-          <SinglePin
-            key={cluster.key}
-            order={cluster.items[0]}
-            selected={selectedId === cluster.items[0].id}
-            onSelect={onSelect}
-          />
-        ) : (
-          <MapMarker key={cluster.key} longitude={cluster.longitude} latitude={cluster.latitude}>
-            <MarkerContent>
-              <span
-                className="ring-background bg-background text-foreground flex size-8 rotate-45 items-center justify-center rounded-md shadow-md ring-2"
-                aria-label={`${cluster.items.length} necesidades reportadas aquí.`}
-              >
-                <span className="-rotate-45 text-xs font-bold tabular-nums">
-                  {cluster.items.length}
-                </span>
-              </span>
-            </MarkerContent>
-            <MarkerTooltip offset={20}>
-              {cluster.items
-                .slice(0, 4)
-                .map((o) => WORK_ORDER_CATEGORY_LABEL[o.category])
-                .join(" · ")}
-              {cluster.items.length > 4 && ` y ${cluster.items.length - 4} más`}
-            </MarkerTooltip>
-          </MapMarker>
-        ),
-      )}
+      {pins.map(({ item, longitude, latitude, offsetX, offsetY }) => (
+        <SinglePin
+          key={item.id}
+          order={item}
+          longitude={longitude}
+          latitude={latitude}
+          offsetX={offsetX}
+          offsetY={offsetY}
+          selected={selectedId === item.id}
+          onSelect={onSelect}
+        />
+      ))}
     </>
   );
 }
 
 function SinglePin({
   order,
+  longitude,
+  latitude,
+  offsetX,
+  offsetY,
   selected,
   onSelect,
 }: {
   order: WorkOrderDTO;
+  longitude: number;
+  latitude: number;
+  offsetX: number;
+  offsetY: number;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
   const rollup = workOrderRollup(order.status);
+  const spread = offsetX !== 0 || offsetY !== 0;
 
   return (
     <MapMarker
-      longitude={order.longitude}
-      latitude={order.latitude}
+      longitude={longitude}
+      latitude={latitude}
       onClick={() => onSelect(order.id)}
     >
       <MarkerContent>
         <span
-          className={cn(
-            "ring-background flex size-7 rotate-45 items-center justify-center rounded-md shadow-md ring-2 transition-transform",
-            WORK_ORDER_ROLLUP_MARKER[rollup],
-            selected && "scale-125",
-          )}
-          aria-label={`Necesidad de ${WORK_ORDER_CATEGORY_LABEL[order.category]}: ${
-            order.description
-          }. ${WORK_ORDER_ROLLUP_LABEL[rollup]}.`}
+          className="block transition-transform duration-200"
+          style={spread ? { transform: `translate(${offsetX}px, ${offsetY}px)` } : undefined}
         >
-          <Icon className="-rotate-45 size-4" strokeWidth={2.5} aria-hidden />
+          <span
+            className={cn(
+              "ring-background flex size-7 rotate-45 items-center justify-center rounded-md shadow-md ring-2 transition-transform",
+              WORK_ORDER_ROLLUP_MARKER[rollup],
+              selected && "scale-125",
+            )}
+            aria-label={`Necesidad de ${WORK_ORDER_CATEGORY_LABEL[order.category]}: ${
+              order.description
+            }. ${WORK_ORDER_ROLLUP_LABEL[rollup]}.`}
+          >
+            <Icon className="-rotate-45 size-4" strokeWidth={2.5} aria-hidden />
+          </span>
         </span>
       </MarkerContent>
       {!selected && (

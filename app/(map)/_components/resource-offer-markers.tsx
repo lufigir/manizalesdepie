@@ -5,7 +5,7 @@ import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto"
 import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { useClusters } from "./use-clusters";
+import { useSpreadPins } from "./use-clusters";
 
 type Located = ResourceOfferDTO & { longitude: number; latitude: number };
 
@@ -17,8 +17,9 @@ type Located = ResourceOfferDTO & { longitude: number; latitude: number };
  * corner where the volqueta is parked, so the marker has to look like an
  * approximation or it reads as more precise than it is.
  *
- * Clustered like sites — several offers from the same barrio commonly share
- * that exact centroid, which is the single densest point this map draws.
+ * Spread apart like sites — several offers from the same barrio commonly
+ * share that exact centroid, which is the single densest point this map
+ * draws — so `useSpreadPins` earns its keep here more than anywhere else.
  */
 export function ResourceOfferMarkers({
   resourceOffers,
@@ -33,73 +34,66 @@ export function ResourceOfferMarkers({
     (offer): offer is Located =>
       offer.longitude !== null && offer.latitude !== null,
   );
-  const clusters = useClusters(located);
+  const pins = useSpreadPins(located);
 
   return (
     <>
-      {clusters.map((cluster) =>
-        cluster.items.length === 1 ? (
-          <SinglePin
-            key={cluster.key}
-            offer={cluster.items[0]}
-            selected={selectedId === cluster.items[0].id}
-            onSelect={onSelect}
-          />
-        ) : (
-          <MapMarker
-            key={cluster.key}
-            longitude={cluster.longitude}
-            latitude={cluster.latitude}
-          >
-            <MarkerContent>
-              <span
-                className="ring-background bg-background text-foreground flex size-8 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2"
-                aria-label={`${cluster.items.length} servicios ofrecidos aquí.`}
-              >
-                <span className="text-xs font-bold tabular-nums">
-                  {cluster.items.length}
-                </span>
-              </span>
-            </MarkerContent>
-            <MarkerTooltip offset={20}>
-              {cluster.items
-                .slice(0, 4)
-                .map((o) => RESOURCE_TYPE_LABEL[o.type])
-                .join(" · ")}
-            </MarkerTooltip>
-          </MapMarker>
-        ),
-      )}
+      {pins.map(({ item, longitude, latitude, offsetX, offsetY }) => (
+        <SinglePin
+          key={item.id}
+          offer={item}
+          longitude={longitude}
+          latitude={latitude}
+          offsetX={offsetX}
+          offsetY={offsetY}
+          selected={selectedId === item.id}
+          onSelect={onSelect}
+        />
+      ))}
     </>
   );
 }
 
 function SinglePin({
   offer,
+  longitude,
+  latitude,
+  offsetX,
+  offsetY,
   selected,
   onSelect,
 }: {
   offer: Located;
+  longitude: number;
+  latitude: number;
+  offsetX: number;
+  offsetY: number;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
   const Icon = RESOURCE_TYPE_ICON[offer.type];
+  const spread = offsetX !== 0 || offsetY !== 0;
 
   return (
     <MapMarker
-      longitude={offer.longitude}
-      latitude={offer.latitude}
+      longitude={longitude}
+      latitude={latitude}
       onClick={() => onSelect(offer.id)}
     >
       <MarkerContent>
         <span
-          className={cn(
-            "border-muted-foreground/60 bg-background text-foreground ring-background flex size-7 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2 transition-transform",
-            selected && "scale-125",
-          )}
-          aria-label={`${RESOURCE_TYPE_LABEL[offer.type]}: ${offer.description}`}
+          className="block transition-transform duration-200"
+          style={spread ? { transform: `translate(${offsetX}px, ${offsetY}px)` } : undefined}
         >
-          <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
+          <span
+            className={cn(
+              "border-muted-foreground/60 bg-background text-foreground ring-background flex size-7 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2 transition-transform",
+              selected && "scale-125",
+            )}
+            aria-label={`${RESOURCE_TYPE_LABEL[offer.type]}: ${offer.description}`}
+          >
+            <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
+          </span>
         </span>
       </MarkerContent>
       {!selected && (

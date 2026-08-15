@@ -60,8 +60,8 @@ export function WorkOrderList({
   }
 
   return (
-    <div className="p-2">
-      <ul className="flex flex-col gap-1">
+    <div className="p-1.5">
+      <ul className="flex flex-col gap-1.5">
         {workOrders.map((order) => (
           <li key={order.id}>
             <WorkOrderItem
@@ -160,7 +160,7 @@ export function WorkOrderItem({
         onClick={() => onSelect?.(order.id)}
         aria-current={selected}
         disabled={!onSelect}
-        className="focus-visible:ring-ring w-full rounded-md text-left disabled:cursor-default focus-visible:ring-2 focus-visible:outline-none"
+        className="hover:bg-accent focus-visible:ring-ring w-full rounded-md text-left transition-colors disabled:cursor-default disabled:hover:bg-transparent focus-visible:ring-2 focus-visible:outline-none"
       >
         <div className="flex items-center gap-2">
           <span

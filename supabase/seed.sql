@@ -289,7 +289,7 @@ from (values
   ('8fdd8c69-bf33-4911-9298-4670a87c49f9'::uuid, 'other'::work_order_category,
    'Bomberos voluntarios del sector Fundadores piden apoyo con combustible para los vehículos de ayuda que circulan por la ciudad.',
    -75.510, 5.069),
-  ('75909d60-577b-445a-93ad-ecc991d908f8'::uuid, 'water'::work_order_category,
+  ('75909d60-577b-445a-93ad-ecc991d908f8'::uuid, 'supplies'::work_order_category,
    'Varias familias del sector El Nevado necesitan comida, agua potable y alojamiento temporal; quien reporta indica que hay más familias en la misma situación.',
    -75.514, 5.060),
   ('88542281-0df7-420a-aeee-3b5a2db7a769'::uuid, 'other'::work_order_category,

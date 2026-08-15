@@ -115,3 +115,77 @@ export function useClusters<T extends Located>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, items, radius, zoomTick]);
 }
+
+export type SpreadPin<T> = {
+  item: T;
+  /** Where to anchor the `MapMarker` — the item's own coordinate when it is
+   *  alone, the shared centroid of its whole group otherwise. */
+  longitude: number;
+  latitude: number;
+  /** Pixel nudge away from that anchor, `0` for an unclustered pin. Applied
+   *  as a CSS `translate`, never as a fake coordinate — see the note on
+   *  `useSpreadPins`. */
+  offsetX: number;
+  offsetY: number;
+};
+
+/**
+ * Every pin, individually — never a count badge.
+ *
+ * `useClusters` still does the grouping (it answers "which pins overlap on
+ * screen"); this answers the next question, "so where do I actually draw
+ * each one". A group's members are pushed onto a ring around its centroid
+ * with a CSS transform, in pixels, exactly the way the old fan-out-on-tap
+ * used to — the only change is that the ring is now what always renders,
+ * instead of a number a reader had to tap through first. Each member still
+ * carries its own icon and is still its own tap target.
+ *
+ * A ring, not a grid: it scales to any count without needing a second layout
+ * rule, and it is the shape a reader's eye already parses as "a pile of
+ * things", the same read a real pile of pins on a table would give.
+ */
+export function useSpreadPins<T extends Located>(
+  items: T[],
+  radius = 42,
+): SpreadPin<T>[] {
+  const clusters = useClusters(items, radius);
+
+  return useMemo(() => {
+    const pins: SpreadPin<T>[] = [];
+
+    for (const cluster of clusters) {
+      if (cluster.items.length === 1) {
+        const item = cluster.items[0];
+        pins.push({
+          item,
+          longitude: item.longitude,
+          latitude: item.latitude,
+          offsetX: 0,
+          offsetY: 0,
+        });
+        continue;
+      }
+
+      const count = cluster.items.length;
+      // Grows with the count so a handful of pins do not overlap each other
+      // on the ring, capped so a large group does not fan out past the
+      // radius `useClusters` used to group them in the first place.
+      const spreadRadius = Math.max(24, Math.min(58, 9 * count));
+
+      cluster.items.forEach((item, index) => {
+        // Start at twelve o'clock so the first pin is never hidden behind a
+        // popup, which opens above the marker.
+        const angle = (index / count) * 2 * Math.PI - Math.PI / 2;
+        pins.push({
+          item,
+          longitude: cluster.longitude,
+          latitude: cluster.latitude,
+          offsetX: Math.cos(angle) * spreadRadius,
+          offsetY: Math.sin(angle) * spreadRadius,
+        });
+      });
+    }
+
+    return pins;
+  }, [clusters]);
+}

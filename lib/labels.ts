@@ -847,8 +847,11 @@ export const WORK_ORDER_CATEGORY_LABEL: Record<WorkOrderCategory, string> = {
   debris_removal: "Escombros",
   animal_rescue: "Rescate de animales",
   structural_risk: "Riesgo estructural",
+  // Covers food, drinking water, hygiene items — anything a family is
+  // asking for rather than a job site is asking to be fixed. "Agua" used to
+  // be its own category here and never once meant just water in practice;
+  // see the note on `WORK_ORDER_CATEGORIES`.
   supplies: "Insumos",
-  water: "Agua",
   other: "Otro",
 };
 
@@ -857,7 +860,6 @@ export const WORK_ORDER_CATEGORY_ICON: Record<WorkOrderCategory, LucideIcon> = {
   animal_rescue: PawPrint,
   structural_risk: HardHat,
   supplies: Package,
-  water: GlassWater,
   other: Boxes,
 };
 

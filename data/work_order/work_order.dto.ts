@@ -18,12 +18,18 @@ import { z } from "zod";
  * person has custody of this".
  */
 
+// "water" existed briefly and is gone: every real case tagged with it read
+// as food, drinking water and shelter together — which is just "supplies"
+// with extra steps, not a category of its own. The Postgres enum still
+// carries the value (dropping it needs recreating the type, the same reason
+// `site_type` keeps `water_point`/`vet_clinic` after the map stopped
+// drawing them) but nothing here offers or accepts it any more; the one row
+// that had it was migrated to `supplies`.
 export const WORK_ORDER_CATEGORIES = [
   "debris_removal",
   "animal_rescue",
   "structural_risk",
   "supplies",
-  "water",
   "other",
 ] as const;
 
