@@ -944,7 +944,7 @@ export const WORK_ORDER_LABEL = {
 export const WORK_ORDER_FORM = {
   title: "Reportar escombros o un daño",
   subtitle:
-    "Sale al mapa de una vez, sin cuenta. Alguien con volqueta o manos lo puede reclamar.",
+    "Sale al mapa de una vez, sin cuenta. Alguien con volqueta o manos puede decir que lo atiende.",
   category: "¿Qué tipo de caso es?",
   description: "Describe el caso",
   descriptionPlaceholder:
@@ -952,11 +952,11 @@ export const WORK_ORDER_FORM = {
   barrio: "¿En qué barrio?",
   contactTitle: "Si sabes la dirección exacta y cómo contactar",
   contactHint:
-    "Opcional y privado: solo lo ve quien reclame el caso y un curador. Nunca se publica.",
+    "Opcional y privado: solo lo ve quien diga que lo atiende y un curador. Nunca se publica.",
   exactAddress: "Dirección exacta",
   contactName: "Nombre de contacto",
   phone: "Teléfono",
-  notes: "Notas para quien reclame",
+  notes: "Notas para quien lo atienda",
   submit: "Publicar el caso",
   submitting: "Publicando…",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",

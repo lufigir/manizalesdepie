@@ -9,6 +9,42 @@ código no puede mostrar.
 
 ---
 
+## 0. Actualización — 15 de agosto: el modelo de §1/§2 quedó superado
+
+Todo lo que sigue en §1 y §2 describe la arquitectura de **cuatro rutas
+gateadas** (`/ayudar`, `/necesito`, `/mascotas`, `/servicios`, cada una con su
+propio panel) tal como quedó el 14 de agosto. El 15 esa arquitectura se
+reemplazó por decisión explícita del dueño del producto — se deja el texto
+original como registro histórico de las razones que sí siguen vigentes (la
+gramática de color, el reparto de tipos de sitio, etc.), pero lo que sigue es
+lo que manda hoy:
+
+- **Un solo mapa unificado, siempre completo.** Ya no hay cuatro mapas detrás
+  de cuatro rutas — las cuatro rutas siguen existiendo como puntos de entrada
+  (enlace compartible en WhatsApp, formulario propio), pero las cuatro
+  cargan el mismo `<MapWorkspace>` con todos los pines a la vez. Lo que
+  filtra ya no es la ruta, es el panel.
+- **`UnifiedPanel` reemplazó el panel por sección.** Una sola fila de chips
+  siempre visible — Todo, Grupos, Necesidades, Sitios, Mascotas, Servicios —
+  en vez del sistema de dos niveles (sección → sub-tabs) que tenía el panel
+  viejo. "Sitios" ya no separa Ayudar/Necesito: un albergue y un acopio
+  aparecen en la misma lista, la distinción sigue siendo legible por tipo y
+  estado de cada fila. Frentes (`neighborhood_need`) quedó construido pero
+  oculto — sin chip propio — hasta que un curador empiece a declarar
+  prioridades.
+- **La barra superior de íconos (`TabBar`) se eliminó.** Cada una de sus
+  acciones ya era alcanzable desde algún chip del panel; mantenerla era
+  redundancia, no una ruta adicional.
+- **Se quitó `situation_report` (el "Balance")** y la pestaña de referencia
+  (líneas oficiales, toggle de barrios) por completo — no solo de la UI, de
+  la base de datos. Los barrios se muestran siempre, sin toggle.
+- **`work_order`: "Yo puedo atender" reemplazó "Reclamar".** El §2 de abajo
+  describe el reclamo original con cuenta de Google y un solo reclamante —
+  eso ya no existe. Ver el detalle correcto en la nota de abajo antes de
+  leer ese párrafo.
+
+---
+
 ## 1. La reorganización — HECHA el 14 de agosto
 
 La app se reordenó **por intención del usuario**, no por tipo de objeto.
@@ -213,15 +249,21 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
   `stale`=gris — cerrado usa gris y no verde, porque `closed_rejected` no es
   un éxito). Motivos de bloqueo y esas cosas, si un curador los necesita, van
   como texto libre en `description`.
-  Se reportan sin cuenta desde "Necesito" (`/reportar/escombros`) y se
-  ven/reclaman en "Ayudar" — la misma regla que ya regía las necesidades de
-  sitio. Reclamar sí exige cuenta (igual que convocar una jornada): el
-  reclamo bloquea el caso 6 días (`CLAIM_DAYS`, el número real de Crisis
-  Cleanup, no las 48 horas que tenía AGENTS.md antes de la corrección en §5)
-  y solo el reclamante o un curador lo cierra. La dirección exacta y el
-  contacto (`work_order_contact`) solo los ve quien reclamó el caso o un
-  curador, y cada lectura queda registrada en `work_order_access` — el
-  guardrail de AGENTS.md, aplicado.
+  Se reportan sin cuenta desde "Necesito" (`/reportar/escombros`) y se ven en
+  "Ayudar" — la misma regla que ya regía las necesidades de sitio.
+  **Actualizado el 15 de agosto:** el reclamo con cuenta de Google descrito
+  originalmente aquí se quitó. Ahora "Yo puedo atender" solo pide nombre y
+  WhatsApp, sin cuenta, y **varias personas distintas pueden atender el mismo
+  caso** — no hay un único reclamante que bloquee a los demás. Atender
+  revela la dirección exacta y el contacto (`work_order_contact`) ahí mismo,
+  una vez; cada revelación sigue quedando registrada en `work_order_access`
+  (con `attendee_id` si fue alguien anónimo, `profile_id` si fue un
+  curador) — el guardrail de AGENTS.md, aplicado sin el muro de login
+  delante. Los campos del propio caso (categoría, descripción) también se
+  pueden editar desde ahí. Un caso cerrado sigue visible 6 horas
+  (`CLOSED_VISIBLE_HOURS` en `work_order.dal.ts`) antes de expirar del mapa
+  público — no son los 6 días de Crisis Cleanup que tenía este párrafo
+  antes; ese número era para el reclamo exclusivo que ya no existe.
   - **Bug encontrado de paso**: a `resource_offer` nunca se le había agregado
     la columna `neighborhood_id`, aunque el trigger que la llena ya existía
     desde el 14 de agosto — cualquier escritura a su `location` fallaba en
@@ -289,9 +331,12 @@ como está, solo no hay un aviso adicional en el mapa).
 
 ## 5. Correcciones que le faltan a `AGENTS.md`
 
-- El reclamo real de Crisis Cleanup es de **6 días**, no 48 horas.
-- Existe un **límite por persona**: ~20 casos con menos del 50 % cerrado bloquea
-  reclamar más.
+- ~~El reclamo real de Crisis Cleanup es de **6 días**, no 48 horas.~~ Moot
+  desde el 15 de agosto: ya no hay reclamo exclusivo, así que no hay un
+  número de Crisis Cleanup que copiar (ver §0).
+- ~~Existe un **límite por persona**: ~20 casos con menos del 50 % cerrado
+  bloquea reclamar más.~~ Moot por la misma razón — nada bloquea a nadie,
+  varias personas pueden atender el mismo caso.
 - Falta anotar la retención de datos personales como pendiente.
 - `components/ui/` ya no es solo shadcn/mapcn: ahora es **coss** (Base UI).
 
