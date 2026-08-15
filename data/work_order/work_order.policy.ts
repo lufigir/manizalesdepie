@@ -14,39 +14,47 @@ export function canReportWorkOrder(): boolean {
 }
 
 /**
- * Anonymous — "yo puedo atender" asks only for a name and a phone, the same
- * low-friction rule joining a grupo already follows. Several people can
- * attend the same case; nobody is a gatekeeper of it any more. What used to
- * live here (an account, because the claimant became custodian of
- * `work_order_contact`) moved to the read itself: attending reveals the
- * contact once, in the same response, logged either way — see
- * `WorkOrderDAL.attend`.
+ * Anonymous — an entry asks only for a name and a phone, the same
+ * low-friction rule reporting anything else here already follows. This
+ * covers all four kinds, including the two that dispute a case: saying
+ * "sigue haciendo falta" has to be at least as easy as saying "ya ayudé",
+ * or the counterweight does not work.
+ *
+ * Open does not mean consequence-free. No single entry decides anything —
+ * `sync_work_order_state` needs two "ya ayudé" from two different numbers
+ * before a case closes — so the thing this predicate lets anyone do is
+ * contribute to a count, not set a state.
  */
-export function canAttendWorkOrder(): boolean {
+export function canPostWorkOrderUpdate(): boolean {
   return true;
 }
 
-/** Open to anyone, the same rule `canConfirmSite` already follows: closing
- *  says "this is done", not "trust me, I did it" — it exposes nothing, so
- *  it does not need to be gated by who is asking. */
-export function canCloseWorkOrder(): boolean {
-  return true;
+/**
+ * Closing a case by hand is a curator's, and only a curator's.
+ *
+ * It used to return true for everybody, which meant one anonymous tap wrote
+ * a terminal status and started the six-hour clock — a single bad actor
+ * could take any case off the map, and `closed_rejected` in particular let
+ * "this case annoys me" be recorded as "this was a lie" about a household
+ * with no way to find out.
+ *
+ * The ordinary way a case ends is now the threshold in the database, which
+ * no one person can reach alone. This is the exception for the two things a
+ * count genuinely cannot decide: a real case that only one person ever
+ * helped with, and a case that actually is fake.
+ */
+export function canCloseWorkOrder(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
 }
 
-/** Open to anyone, same reasoning as `canCloseWorkOrder`: correcting a
- *  case's own category or description fixes a detail, it does not touch
- *  anything sensitive — `work_order_contact` is not editable here. */
+/** Open to anyone: correcting a case's own category or description fixes a
+ *  detail, it does not touch anything sensitive and it takes nothing off
+ *  the map — the contact fields are not editable here. */
 export function canUpdateWorkOrder(): boolean {
   return true;
 }
 
-/** Only a curator marks a work order as checked against its source. */
-export function canVerifyWorkOrder(user: CurrentUser | null): boolean {
-  return user?.role === "curator";
-}
-
-/** Hiding or deleting a case outright — unlike closing it, which anyone may
- *  do to say "this is done" — stays with curators. */
+/** Hiding or deleting a case outright. Curators, like closing one. */
 export function canManageWorkOrder(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }

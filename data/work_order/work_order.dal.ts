@@ -6,39 +6,41 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
-  attendWorkOrderSchema,
   createWorkOrderSchema,
+  postWorkOrderUpdateSchema,
   updateWorkOrderSchema,
-  workOrderAttendeeSchema,
   workOrderSchema,
-  type WorkOrderAttendeeDTO,
+  workOrderUpdateSchema,
   type WorkOrderDTO,
+  type WorkOrderUpdateDTO,
 } from "./work_order.dto";
 import {
-  canAttendWorkOrder,
   canCloseWorkOrder,
   canManageWorkOrder,
+  canPostWorkOrderUpdate,
   canReportWorkOrder,
   canUpdateWorkOrder,
-  canVerifyWorkOrder,
 } from "./work_order.policy";
 
 /** How long a closed case stays on the public map before it drops off on
  *  its own. Long enough that someone already on the way still sees it and a
  *  wrong "cerrado" is easy to catch and undo; short enough that the map
- *  does not fill up with resolved cases nobody needs to see any more. */
+ *  does not fill up with resolved cases nobody needs to see any more.
+ *
+ *  Duplicated as a literal in `sync_work_order_state`, which is where the
+ *  ordinary close happens now. This copy only covers a curator's manual one. */
 const CLOSED_VISIBLE_HOURS = 6;
 
 /**
  * The only path from this application to `work_order` and
- * `work_order_attendance`.
+ * `work_order_update`.
  *
  * `work_order_contact` and `work_order_access` are gone: the contact fields
  * live on `work_order` itself and are public, so there is no second
  * visibility rule to keep and no reveal left to audit.
  *
  * Private constructor and static factories, like `CallDAL` — kept even
- * though most methods here no longer need an identity, because `verify`
+ * though most methods here no longer need an identity, because `close`
  * still does, and a class with a public constructor would let that one slip
  * through unauthenticated by accident.
  */
@@ -154,58 +156,64 @@ export class WorkOrderDAL {
   }
 
   /**
-   * "Yo puedo atender" — anonymous, no account, and several people can do
-   * this for the same case, each leaving a note for the others.
+   * Adds one entry to a case's book — anonymous, no account, several people
+   * per case, each leaving a note for the others.
    *
-   * It returns nothing now. It used to hand back `work_order_contact` in
-   * the same response, because attending was the only way to ever see it;
-   * the card already shows those fields to everyone, so the reveal, the
-   * access log and the round trip that carried them are all gone.
+   * Note what this does NOT do: set a status. The insert lands and
+   * `sync_work_order_state` reads the case's state back out of every entry
+   * on it. That is the whole point of the redesign — one person can say what
+   * they did, and no person can decide what the case is.
    */
-  async attend(input: unknown): Promise<void> {
-    const data = attendWorkOrderSchema.parse(input);
+  async postUpdate(input: unknown): Promise<void> {
+    const data = postWorkOrderUpdateSchema.parse(input);
 
-    if (!canAttendWorkOrder()) throw new Error("Forbidden");
+    if (!canPostWorkOrderUpdate()) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
 
-    const { error } = await supabase.from("work_order_attendance").insert({
+    const { error } = await supabase.from("work_order_update").insert({
       work_order_id: data.workOrderId,
-      name: data.name,
-      phone: data.phone,
-      note: data.note ?? null,
+      kind: data.kind,
+      name: data.name ?? null,
+      phone: data.phone ?? null,
+      note: data.note,
     });
 
     if (error) {
-      log.error("workOrder.attend failed", {
+      log.error("workOrder.postUpdate failed", {
         code: error.code,
         workOrderId: data.workOrderId,
+        kind: data.kind,
       });
-      throw new Error("No se pudo registrar que vas a atender este caso");
+      throw new Error("No se pudo registrar lo que escribiste");
     }
 
-    log.info("work order attended", { workOrderId: data.workOrderId });
+    log.info("work order update posted", {
+      workOrderId: data.workOrderId,
+      kind: data.kind,
+    });
   }
 
-  /** Who is already on a case, oldest first — the order they committed in,
-   *  which is also the order their notes read in as a thread. */
-  async listAttendees(workOrderId: string): Promise<WorkOrderAttendeeDTO[]> {
+  /** A case's book, oldest first — the order things happened in, which is
+   *  the order it reads as a thread. */
+  async listUpdates(workOrderId: string): Promise<WorkOrderUpdateDTO[]> {
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
-      .from("work_order_attendance_public")
-      .select("id, name, phone, note, created_at")
+      .from("work_order_update_public")
+      .select("id, kind, name, phone, note, created_at")
       .eq("work_order_id", workOrderId)
       .order("created_at", { ascending: true });
 
     if (error) {
-      log.error("workOrder.listAttendees failed", { code: error.code, workOrderId });
-      throw new Error("No se pudo cargar quién va a atender este caso");
+      log.error("workOrder.listUpdates failed", { code: error.code, workOrderId });
+      throw new Error("No se pudo cargar lo que ha pasado con este caso");
     }
 
     return (data ?? []).map((row) =>
-      workOrderAttendeeSchema.parse({
+      workOrderUpdateSchema.parse({
         id: row.id,
+        kind: row.kind,
         name: row.name,
         phone: row.phone,
         note: row.note,
@@ -214,16 +222,22 @@ export class WorkOrderDAL {
     );
   }
 
-  /** Closes a case — completed, already done by someone else, or not a real
-   *  case. Honest outcomes, not just "done"; see docs/PLAN.md §4. Open to
-   *  anyone now (see `canCloseWorkOrder`), and starts the clock on
-   *  `CLOSED_VISIBLE_HOURS` instead of leaving a resolved case on the map
-   *  forever. */
+  /**
+   * A curator closing a case by hand. Not the ordinary path.
+   *
+   * The ordinary path is the threshold in `sync_work_order_state`: two "ya
+   * ayudé" from two different numbers. This covers the two things a count
+   * cannot settle — a real case only one person ever helped with, and a
+   * case that genuinely is fake — and `closed_rejected` in particular is
+   * why this is gated at all, because it is the one outcome that calls
+   * somebody a liar. The trigger honours it: once a case is rejected, no
+   * number of later entries moves it again.
+   */
   async close(
     id: string,
-    result: "closed_completed" | "closed_by_others" | "closed_rejected",
+    result: "closed_completed" | "closed_rejected",
   ): Promise<void> {
-    if (!canCloseWorkOrder()) throw new Error("Forbidden");
+    if (!canCloseWorkOrder(this.user)) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
     const now = new Date();
@@ -241,7 +255,11 @@ export class WorkOrderDAL {
       throw new Error("No se pudo cerrar la orden de trabajo");
     }
 
-    log.info("work order closed", { workOrderId: id, result });
+    log.info("work order closed by curator", {
+      workOrderId: id,
+      result,
+      byUser: this.user!.id,
+    });
   }
 
   /** Corrects a case's own category or description — anonymous, like
@@ -265,23 +283,6 @@ export class WorkOrderDAL {
     }
 
     log.info("work order updated", { workOrderId: data.id, fields: Object.keys(patch) });
-  }
-
-  /** Records that a curator checked this against its source. */
-  async verify(id: string): Promise<void> {
-    if (!canVerifyWorkOrder(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("work_order")
-      .update({ verified_by: this.user!.id, verified_at: now, confirmed_at: now })
-      .eq("id", id);
-
-    if (error) {
-      log.error("workOrder.verify failed", { code: error.code, workOrderId: id });
-      throw new Error("No se pudo verificar la orden de trabajo");
-    }
   }
 
   /** A curator hides or republishes a case — reversible, the same
@@ -328,12 +329,11 @@ export class WorkOrderDAL {
       neighborhood: row.neighborhood,
       status: row.status,
       attendeeCount: row.attendee_count,
+      helpedCount: row.helped_count,
       exactAddress: row.exact_address,
       contactName: row.contact_name,
       phone: row.phone,
       notes: row.notes,
-      verified: row.verified,
-      confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,
       createdAt: row.created_at,
       published: row.published,

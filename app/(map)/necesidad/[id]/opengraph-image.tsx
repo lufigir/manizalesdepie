@@ -37,10 +37,11 @@ export const contentType = OG_CONTENT_TYPE;
 export const revalidate = 3600;
 
 /** Same grammar as everywhere else: red needs someone, amber has someone,
- *  grey is over. */
+ *  green means somebody already helped and it is still open, grey is over. */
 const ROLLUP_ACCENT: Record<WorkOrderRollup, OgAccent> = {
   unclaimed: "unclaimed",
   claimed: "claimed",
+  attended: "resolved",
   closed: "neutral",
 };
 

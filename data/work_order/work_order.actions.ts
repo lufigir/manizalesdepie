@@ -7,6 +7,12 @@ import { WorkOrderDAL } from "./work_order.dal";
 /**
  * A server action compiles to a public POST endpoint. It never checks
  * anything itself — it orchestrates: build the DAL, call it, revalidate.
+ *
+ * `closeWorkOrder` used to be the counter-example that proved the rule: it
+ * was reachable by anyone with a crafted request AND it wrote a terminal
+ * status, so a loop over every case id could have emptied the map. It is a
+ * curator's action now, and the ordinary way a case ends is a threshold the
+ * database computes — see `sync_work_order_state`.
  */
 
 export async function reportWorkOrder(input: {
@@ -27,33 +33,44 @@ export async function reportWorkOrder(input: {
   return { id };
 }
 
-/** "Yo puedo atender" — anonymous, with an optional note for whoever else
- *  is on the case. Returns nothing: the contact details it used to hand
- *  back are on the card already. */
-export async function attendWorkOrder(input: {
+/**
+ * One entry in a case's book: "voy", "ya ayudé", "sigue haciendo falta",
+ * "esto no es real". Anonymous, signed with a name and a phone.
+ *
+ * Sends no status and cannot: the case's state is derived from every entry
+ * on it, so this adds one voice to a count rather than deciding anything.
+ */
+export async function postWorkOrderUpdate(input: {
   workOrderId: string;
-  name: string;
-  phone: string;
-  note?: string;
+  kind: string;
+  name?: string;
+  phone?: string;
+  note: string;
 }) {
   const dal = WorkOrderDAL.public();
-  await dal.attend(input);
+  await dal.postUpdate(input);
+  // The card is server-rendered and the status may have just moved with this
+  // entry, so the next reader has to see both.
   revalidatePath("/");
+  revalidatePath(`/necesidad/${input.workOrderId}`);
 }
 
-/** Who is already on a case, with their notes. */
-export async function listWorkOrderAttendees(workOrderId: string) {
+/** Everything that has happened to a case, as a thread. */
+export async function listWorkOrderUpdates(workOrderId: string) {
   const dal = WorkOrderDAL.public();
-  return dal.listAttendees(workOrderId);
+  return dal.listUpdates(workOrderId);
 }
 
+/** Curators only — see `canCloseWorkOrder`. The two verdicts a count cannot
+ *  reach on its own. */
 export async function closeWorkOrder(
   id: string,
-  result: "closed_completed" | "closed_by_others" | "closed_rejected",
+  result: "closed_completed" | "closed_rejected",
 ) {
-  const dal = WorkOrderDAL.public();
+  const dal = await WorkOrderDAL.create();
   await dal.close(id, result);
   revalidatePath("/");
+  revalidatePath("/admin");
 }
 
 export async function updateWorkOrder(input: {
@@ -64,13 +81,6 @@ export async function updateWorkOrder(input: {
   const dal = WorkOrderDAL.public();
   await dal.update(input);
   revalidatePath("/");
-}
-
-export async function verifyWorkOrder(id: string) {
-  const dal = await WorkOrderDAL.create();
-  await dal.verify(id);
-  revalidatePath("/");
-  revalidatePath("/admin");
 }
 
 export async function setWorkOrderPublished(id: string, published: boolean) {

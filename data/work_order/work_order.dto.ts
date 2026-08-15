@@ -13,9 +13,14 @@ import { z } from "zod";
  * claimant wants to say. See docs/PLAN.md §3.1.
  *
  * "Claimed" changed meaning the 15th, when the single Google-gated claimant
- * became several anonymous attendees (see `work_order_attendance`): it now
- * means "at least one person said yo puedo atender", not "exactly one
- * person has custody of this".
+ * became several anonymous attendees: it now means "at least one person said
+ * yo puedo atender", not "exactly one person has custody of this".
+ *
+ * Later the same day, status stopped being something anyone writes at all.
+ * It is derived in the database from `work_order_update` — see
+ * `sync_work_order_state` — because closing used to be one anonymous tap and
+ * a single bad actor could take any case off the map. Nothing in this module
+ * sends a status; it only ever reads one back.
  */
 
 // "water" existed briefly and is gone: every real case tagged with it read
@@ -40,7 +45,13 @@ export type WorkOrderCategory = z.infer<typeof workOrderCategorySchema>;
 export const WORK_ORDER_STATUSES = [
   "unclaimed",
   "claimed",
+  /** Somebody helped and the case is STILL OPEN. The state the old model
+   *  could not express: it jumped from "claimed" to closed, so the only way
+   *  to record having helped was to declare the case over for everyone. */
+  "attended",
   "closed_completed",
+  // Kept because the Postgres enum keeps it — nothing offers it any more.
+  // "Ya lo habían resuelto" is just a `helped` entry now.
   "closed_by_others",
   "closed_rejected",
 ] as const;
@@ -57,10 +68,16 @@ export const workOrderSchema = z.object({
   latitude: z.number(),
   neighborhood: z.string().nullable(),
   status: workOrderStatusSchema,
-  /** How many people have said "yo puedo atender". Several can attend the
+  /** Distinct people who said "yo puedo atender". Several can attend the
    *  same case at once, so there is no single "was it me" flag to give
    *  back the way a lone claimant used to have. */
   attendeeCount: z.number().int().min(0),
+  /** Distinct people who said "ya ayudé". Two of them, from two different
+   *  numbers, is what closes a case — see `sync_work_order_state`. Shown
+   *  beside the count above because "cuántos van" and "cuántos ya fueron"
+   *  are different questions and a reader deciding whether to go needs
+   *  both. */
+  helpedCount: z.number().int().min(0),
   /**
    * How to reach whoever this case is about — public since the 15th of
    * August, when the reveal-on-attend gate was removed (see the migration
@@ -76,8 +93,6 @@ export const workOrderSchema = z.object({
   contactName: z.string().nullable(),
   phone: z.string().nullable(),
   notes: z.string().nullable(),
-  verified: z.boolean(),
-  confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
   createdAt: z.iso.datetime({ offset: true }),
   /** Read by `AdminActions` to show "Ocultar" vs "Publicar" — a curator-only
@@ -93,8 +108,8 @@ const OUT_OF_AREA = "Este mapa solo cubre Manizales y Villamaría.";
 
 /**
  * What the public form may submit. Anonymous, like a site report and like
- * attending one (see `attendWorkOrderSchema`) — nothing about this app's
- * work-order flow asks for an account any more.
+ * posting an update to one (see `postWorkOrderUpdateSchema`) — nothing
+ * about this app's work-order flow asks for an account any more.
  *
  * The contact fields are published on the card, so the form has to say so
  * where they are typed — this schema cannot enforce consent, only the copy
@@ -120,39 +135,69 @@ export const createWorkOrderSchema = z.object({
 export type CreateWorkOrderInput = z.infer<typeof createWorkOrderSchema>;
 
 /**
- * "Yo puedo atender" — anonymous, no account. Name and phone are both
- * required, unlike a grupo's optional whatsapp: a headcount is still useful
- * for a shift, but showing up at someone's damaged house needs to know who
- * is actually coming.
- *
- * The note is what makes several attendees add up to something instead of
- * three people arriving with the same volqueta on the same morning. It is
- * addressed to the other attendees, not to us.
+ * What somebody can say about a case. Four verbs, and none of them is a
+ * status: a person reports what they did or saw, and the case's state is
+ * read out of the pile of those reports.
  */
-export const attendWorkOrderSchema = z.object({
+export const WORK_ORDER_UPDATE_KINDS = [
+  "on_the_way",
+  "helped",
+  "still_needed",
+  "not_real",
+] as const;
+
+export const workOrderUpdateKindSchema = z.enum(WORK_ORDER_UPDATE_KINDS);
+
+export type WorkOrderUpdateKind = z.infer<typeof workOrderUpdateKindSchema>;
+
+/**
+ * One entry in a case's book — anonymous, no account.
+ *
+ * The note is the one thing every entry must carry: it is what makes
+ * several entries add up to something instead of three people arriving with
+ * the same volqueta on the same morning, and it is addressed to the others
+ * on the case, not to us. Name and phone are both optional — leaving them
+ * blank publishes the entry as "Anónimo", the same way a site report or a
+ * grupo already can.
+ *
+ * That trade has one real consequence, documented where it is enforced: a
+ * `helped` entry with no phone still shows in the thread and still counts
+ * toward "attended", but it can never be one of the two DISTINCT phone
+ * numbers `sync_work_order_state` needs to close a case — see the migration
+ * `20260815050000_work_order_update_optional_contact`. Anonymity is free
+ * everywhere except the one action that takes a case off the map.
+ *
+ * Phone, when given, is a bare Colombian mobile number — ten digits, no
+ * indicativo. This app covers Manizales and Villamaría only.
+ */
+export const postWorkOrderUpdateSchema = z.object({
   workOrderId: z.uuid(),
-  name: z.string().trim().min(2, "Escribe tu nombre").max(120),
+  kind: workOrderUpdateKindSchema,
+  name: z.string().trim().min(2, "Escribe tu nombre").max(120).optional(),
   phone: z
     .string()
     .trim()
-    .regex(/^\d{7,15}$/, "Solo dígitos, con indicativo del país"),
-  note: z.string().trim().max(500).optional(),
+    .regex(/^\d{10}$/, "Solo dígitos, sin indicativo (10 dígitos)")
+    .optional(),
+  note: z.string().trim().min(3, "Cuenta qué pasó, en pocas palabras").max(500),
 });
 
-export type AttendWorkOrderInput = z.infer<typeof attendWorkOrderSchema>;
+export type PostWorkOrderUpdateInput = z.infer<typeof postWorkOrderUpdateSchema>;
 
-/** Who is on a case, shown on the card. Public, like the case's own contact
- *  details: coordinating is the point, and a name with no way to reach it
- *  coordinates nothing. */
-export const workOrderAttendeeSchema = z.object({
+/** The book, shown on the card as a thread. Public, like the case's own
+ *  contact details: coordinating is the point, and a name with no way to
+ *  reach it coordinates nothing — but an anonymous entry still says what
+ *  happened, which is worth more than not saying it. */
+export const workOrderUpdateSchema = z.object({
   id: z.uuid(),
-  name: z.string(),
-  phone: z.string(),
+  kind: workOrderUpdateKindSchema,
+  name: z.string().nullable(),
+  phone: z.string().nullable(),
   note: z.string().nullable(),
   createdAt: z.iso.datetime({ offset: true }),
 });
 
-export type WorkOrderAttendeeDTO = z.infer<typeof workOrderAttendeeSchema>;
+export type WorkOrderUpdateDTO = z.infer<typeof workOrderUpdateSchema>;
 
 /**
  * Correcting a case's own details — category or description — after the

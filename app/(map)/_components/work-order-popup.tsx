@@ -41,12 +41,31 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
   const { label: freshLabel, stale } = freshness(order.confirmedAt);
 
-  const attendees =
+  /**
+   * Who is going and who already went, as one line.
+   *
+   * Both halves, because they answer different questions and a reader
+   * deciding whether to drive over needs both: "dos van" and "uno ya ayudó"
+   * are not the same case. It is also where the threshold becomes legible —
+   * seeing "1 persona ya ayudó" next to a case that is still open is what
+   * teaches that helping does not switch it off.
+   */
+  const people = [
     order.attendeeCount === 0
-      ? WORK_ORDER_LABEL.attendeeCountNone
+      ? order.helpedCount === 0
+        ? WORK_ORDER_LABEL.attendeeCountNone
+        : null
       : order.attendeeCount === 1
         ? WORK_ORDER_LABEL.attendeeCountOne
-        : WORK_ORDER_LABEL.attendeeCountMany(order.attendeeCount);
+        : WORK_ORDER_LABEL.attendeeCountMany(order.attendeeCount),
+    order.helpedCount === 0
+      ? null
+      : order.helpedCount === 1
+        ? WORK_ORDER_LABEL.helpedCountOne
+        : WORK_ORDER_LABEL.helpedCountMany(order.helpedCount),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -105,7 +124,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         )}
         <span className="flex items-center gap-1.5">
           <Users className="size-3.5 shrink-0" aria-hidden />
-          {attendees}
+          {people}
         </span>
         <span className={cn(stale && "text-claimed")}>{freshLabel}</span>
       </div>
