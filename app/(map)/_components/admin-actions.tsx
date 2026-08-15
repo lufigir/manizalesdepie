@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BadgeCheck, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ADMIN_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 /**
- * The curator-only strip on a card — hide/publish, verify, delete. Rendered
+ * The curator-only strip on a card — hide/publish, delete. Rendered
  * by each entity's own popup/card only when `useWorkspace().isAdmin` is
  * true; the entity's edit form lives beside this, not inside it, because
  * its fields differ per entity while these three actions never do.
@@ -21,15 +21,10 @@ import { cn } from "@/lib/utils";
 export function AdminActions({
   published,
   onSetPublished,
-  verified,
-  onVerify,
   onDelete,
 }: {
   published: boolean;
   onSetPublished: (published: boolean) => Promise<void>;
-  /** Omitted entirely for entities with no verify step of their own. */
-  verified?: boolean;
-  onVerify?: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
   const [pending, startTransition] = useTransition();
@@ -67,26 +62,6 @@ export function AdminActions({
           </>
         )}
       </span>
-
-      {verified && (
-        <span className="border-verified/30 bg-verified/10 text-verified inline-flex items-center gap-1 rounded border px-1.5 py-1 text-[0.65rem] font-semibold">
-          <BadgeCheck className="size-3" aria-hidden />
-          {ADMIN_LABEL.verified}
-        </span>
-      )}
-
-      {onVerify && !verified && (
-        <Button
-          size="sm"
-          variant="outline"
-          loading={pending}
-          onClick={() => startTransition(onVerify)}
-          className="border-verified/30 bg-verified/10 text-verified"
-        >
-          <BadgeCheck className="size-3" aria-hidden />
-          {ADMIN_LABEL.verify}
-        </Button>
-      )}
 
       <Button
         size="sm"
