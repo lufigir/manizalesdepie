@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { X } from "lucide-react";
 
-import { Map, MapControls, MapPopup } from "@/components/ui/map";
+import { Map, MapControls } from "@/components/ui/map";
 
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
@@ -19,8 +18,6 @@ import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
 import {
   ALL_REPORT_ENTRIES,
-  CHIP_PRIMARY_ACTION,
-  CHIP_REPORT_MENU,
   SITE_TYPE_TAB,
   initialChipForTab,
   tabFromSegment,
@@ -28,16 +25,21 @@ import {
   type TabId,
 } from "@/lib/tabs";
 import { createClient } from "@/lib/supabase/client";
+import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
+import { AnimalPopup } from "./animal-popup";
 import { BarrioHeader } from "./barrio-header";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
 import { CallMarkers } from "./call-markers";
 import { CallPopup } from "./call-popup";
 import { LiveClock } from "./live-clock";
-import { FitToSites, FlyToSelected } from "./map-camera";
+import { MapCard } from "./map-card";
+import { ClearSelectionOnTap, FitToSites, FlyToSelected } from "./map-camera";
 import { ReportMenu } from "./report-menu";
 import { ResourceOfferMarkers } from "./resource-offer-markers";
+import { ResourceOfferPopup } from "./resource-offer-popup";
+import { SharedLinkBar } from "./shared-link-bar";
 import { SightingMarkers } from "./sighting-markers";
 import { WorkOrderMarkers } from "./work-order-markers";
 import { WorkOrderPopup } from "./work-order-popup";
@@ -84,7 +86,13 @@ type Props = {
   /** Set when arriving from a shared link. The map opens already centred on
    *  that pin with its card up, because the question the link was sent to
    *  answer is "¿por dónde queda exactamente?" and it should be answered
-   *  before anyone touches anything. */
+   *  before anyone touches anything.
+   *
+   *  Its presence is also what puts the "Ver todo el mapa" chip on screen
+   *  (see `SharedLinkBar`) — only the five `[id]` routes ever pass it, and
+   *  they are exactly the routes that need a way out. The chip stays after
+   *  the card is closed: the reader is still on a route about one pin, and
+   *  that has to remain visible even once the pin's card is gone. */
   initialSelectedId?: string;
   /** Seeds which chip the panel opens on (see `initialChipForTab`). The tab
    *  layout leaves this off and lets the active route segment decide;
@@ -131,6 +139,13 @@ export function MapWorkspace({
   // there is no such child, so the caller passes the section explicitly.
   const segment = useSelectedLayoutSegment();
 
+  const sharedLink = initialSelectedId !== undefined;
+
+  // Everything that behaves differently rather than just looking different
+  // hangs off this: where a card opens, whether the panel starts shut, and
+  // whether a selection collapses it. See `lib/use-media-query.ts`.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+
   const [activeChip, setActiveChip] = useState<PanelChip>(() =>
     initialChipForTab(forcedTab ?? tabFromSegment(segment)),
   );
@@ -148,17 +163,72 @@ export function MapWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId ?? null,
   );
+  // How much of the map the bottom card is covering, reported by `MapCard`
+  // and spent by the camera (see `FlyToSelected`). Zero whenever the anchored
+  // popup is the one rendering, which points at the pin instead of hiding it.
+  const [cardInset, setCardInset] = useState(0);
   // Which barrio the map is centred on. Zoomed in you are inside one, its
   // outline is off-screen and the wash is invisible, so the layer looks dead
   // even though it is working. This says where you are without a cursor —
   // which also makes it the only version of this that exists on a phone.
   const [centreBarrio, setCentreBarrio] = useState<string | null>(null);
+  // Which barrio the cursor is over, on the inputs that have a cursor. It
+  // took over from a label that followed the pointer around the map (see
+  // `BarrioLayer`): the same fact, in the corner that was already reporting a
+  // barrio name, instead of a second one floating over the thing it names.
+  const [hoverBarrio, setHoverBarrio] = useState<string | null>(null);
   // The barrio being filtered by, set by tapping one on the map. Null is the
   // whole city, which is where everyone starts.
   const [barrio, setBarrio] = useState<BarrioProps | null>(null);
-  // Mobile only: shrinks the panel to just its header so the map can take
-  // the freed space.
-  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  /**
+   * Shut or open, remembered separately for each width.
+   *
+   * They are genuinely different defaults, not one preference read twice. On
+   * a phone the panel and the map are stacked and fighting over the same
+   * screen, so the map — the thing people came for — starts with all of it
+   * and the panel waits as a bar that still says the barrio and the count. On
+   * a desktop they sit side by side and neither costs the other anything, so
+   * the panel starts open.
+   *
+   * One shared flag would mean rotating a phone, or dragging a window across
+   * a breakpoint, silently applying a decision made about the other layout.
+   */
+  const [collapsedByWidth, setCollapsedByWidth] = useState({
+    mobile: true,
+    desktop: false,
+  });
+  const panelCollapsed = isDesktop
+    ? collapsedByWidth.desktop
+    : collapsedByWidth.mobile;
+
+  const setPanelCollapsed = useCallback(
+    (collapsed: boolean) =>
+      setCollapsedByWidth((previous) =>
+        isDesktop
+          ? { ...previous, desktop: collapsed }
+          : { ...previous, mobile: collapsed },
+      ),
+    [isDesktop],
+  );
+
+  /**
+   * Selecting anything, from the map or from the panel's own list.
+   *
+   * On a phone the two surfaces cannot both have the bottom half of the
+   * screen, and the card is the one that was just asked for — so the panel
+   * folds back to its bar. It does NOT unfold again when the card closes:
+   * whoever wants the list back says so, rather than watching two animations
+   * play every time they dismiss something.
+   */
+  const select = useCallback(
+    (id: string | null) => {
+      setSelectedId(id);
+      if (id !== null && !isDesktop) {
+        setCollapsedByWidth((previous) => ({ ...previous, mobile: true }));
+      }
+    },
+    [isDesktop],
+  );
 
   const liveStatus = useLiveSiteStatus();
 
@@ -220,13 +290,70 @@ export function MapWorkspace({
   );
 
   /**
-   * One selection, two kinds of thing with a popup. Animal and offer pins
-   * can still be selected — they just have no card of their own yet, so
-   * selecting one only highlights its marker and scrolls the panel.
+   * One selection, five families, one card.
+   *
+   * Animals and offers used to be the two that could be selected and had
+   * nothing to show for it — the marker grew and that was all. They have
+   * their own cards now (`AnimalPopup`, `ResourceOfferPopup`), which is what
+   * makes "tap anything on this map and it tells you about itself" true
+   * rather than nearly true.
+   *
+   * `coordinates` is null for the ones that genuinely have no point: a lost
+   * animal reported by barrio, a truck lent across the whole city. Those
+   * still open a card — they just open it without moving the camera, because
+   * there is nowhere honest to move it to.
    */
-  const selected = withLiveStatus.find((site) => site.id === selectedId) ?? null;
-  const selectedCall = calls.find((call) => call.id === selectedId) ?? null;
-  const selectedOrder = workOrders.find((order) => order.id === selectedId) ?? null;
+  const selectedEntity = useMemo(() => {
+    if (!selectedId) return null;
+
+    const site = withLiveStatus.find((row) => row.id === selectedId);
+    if (site) {
+      return {
+        coordinates: { longitude: site.longitude, latitude: site.latitude },
+        card: <SitePopup site={site} />,
+      };
+    }
+
+    const call = calls.find((row) => row.id === selectedId);
+    if (call) {
+      return {
+        coordinates: { longitude: call.longitude, latitude: call.latitude },
+        card: <CallPopup call={call} />,
+      };
+    }
+
+    const order = workOrders.find((row) => row.id === selectedId);
+    if (order) {
+      return {
+        coordinates: { longitude: order.longitude, latitude: order.latitude },
+        card: <WorkOrderPopup order={order} />,
+      };
+    }
+
+    const animal = animals.find((row) => row.id === selectedId);
+    if (animal) {
+      return {
+        coordinates:
+          animal.longitude !== null && animal.latitude !== null
+            ? { longitude: animal.longitude, latitude: animal.latitude }
+            : null,
+        card: <AnimalPopup animal={animal} />,
+      };
+    }
+
+    const offer = resourceOffers.find((row) => row.id === selectedId);
+    if (offer) {
+      return {
+        coordinates:
+          offer.longitude !== null && offer.latitude !== null
+            ? { longitude: offer.longitude, latitude: offer.latitude }
+            : null,
+        card: <ResourceOfferPopup offer={offer} />,
+      };
+    }
+
+    return null;
+  }, [selectedId, withLiveStatus, calls, workOrders, animals, resourceOffers]);
 
   /**
    * Some chips are not about places at all.
@@ -236,10 +363,6 @@ export function MapWorkspace({
    * to a zone reference, rather than the other way round.
    */
   const panelLeads = activeChip === "pets" || activeChip === "services";
-
-  const primaryAction = CHIP_PRIMARY_ACTION[activeChip];
-  const reportEntries =
-    activeChip === "all" ? ALL_REPORT_ENTRIES : (CHIP_REPORT_MENU[activeChip] ?? []);
 
   const barrioStatus = useMemo(
     () =>
@@ -266,7 +389,7 @@ export function MapWorkspace({
       cityWorkOrders: workOrders,
       neighborhoodNeeds,
       selectedId,
-      select: setSelectedId,
+      select,
       barrio,
       clearBarrio: () => setBarrio(null),
       selectBarrioByName: (name: string) =>
@@ -288,10 +411,12 @@ export function MapWorkspace({
       workOrders,
       neighborhoodNeeds,
       selectedId,
+      select,
       barrio,
       barrioStatus,
       neighborhoodStatuses,
       panelCollapsed,
+      setPanelCollapsed,
       isAdmin,
     ],
   );
@@ -319,17 +444,30 @@ export function MapWorkspace({
             maxBounds={CITY_BOUNDS}
           >
             {/* Bottom-right because the clock holds the top-right corner.
-                showLocate is the one that earns its place: "¿dónde ayudo hoy?"
-                is answered best by "aquí, a 300 metros". */}
+
+                Two of the four controls are gone. Zoom +/- duplicates a
+                gesture every one of these readers already owns — pinch on a
+                phone, wheel on a desktop — and full screen is a promise this
+                app cannot keep: the map is already the screen, and the panel
+                beside it is not decoration to be hidden, it is where the
+                actions live (it collapses from its own header instead).
+
+                What is left earns its place. "Ubicarme" is the shortest
+                possible answer to "¿dónde ayudo hoy?" — aquí, a 300 metros —
+                and the compass is the only way back to north once the map
+                has been rotated by a two-finger drag nobody meant to make. */}
+            {/* `showZoom={false}` explicitly: mapcn defaults it to true, so
+                dropping the prop brought the +/- back rather than removing
+                it. showFullscreen already defaults to false. */}
             <MapControls
               position="bottom-right"
-              showZoom
+              showZoom={false}
               showLocate
               showCompass
-              showFullscreen
             />
             <BarrioLayer
               onCentreChange={setCentreBarrio}
+              onHoverChange={setHoverBarrio}
               selected={barrio?.name ?? null}
               onSelect={setBarrio}
               statuses={neighborhoodStatuses}
@@ -350,81 +488,52 @@ export function MapWorkspace({
                 ),
               ]}
             />
-            <FlyToSelected site={selected ?? selectedCall ?? selectedOrder} />
+            <FlyToSelected
+              site={selectedEntity?.coordinates ?? null}
+              bottomInset={cardInset}
+            />
 
-            <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={setSelectedId} />
+            {/* A tap on bare map puts the card away. Dragging does not — see
+                `ClearSelectionOnTap`, which leans on MapLibre's own
+                tap-versus-pan distinction rather than inventing one. */}
+            <ClearSelectionOnTap onTap={() => setSelectedId(null)} />
 
-            <CallMarkers calls={calls} selectedId={selectedId} onSelect={setSelectedId} />
+            <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={select} />
+
+            <CallMarkers calls={calls} selectedId={selectedId} onSelect={select} />
 
             <WorkOrderMarkers
               workOrders={workOrders}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={select}
             />
 
             <SightingMarkers
               animals={animals}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={select}
             />
 
             <ResourceOfferMarkers
               resourceOffers={resourceOffers}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={select}
             />
 
-            {/* Anchored to the pin rather than sliding over the map, so the
-                answer and its place on the map stay on screen together.
-                Rendered from state instead of MarkerPopup's built-in click
-                toggle, because a shared link has to open it without a click.
-
-                closeOnClick=false so panning the map does not dismiss the card
-                mid-read; focusAfterOpen=false so the popup does not steal focus
-                and jump the page on a phone. */}
-            {selected && (
-              <MapPopup
-                longitude={selected.longitude}
-                latitude={selected.latitude}
+            {/* One card for every family, in whichever container the screen
+                can actually hold — anchored to the pin beside the map, a
+                drawer along the bottom edge under it. Rendered from state
+                rather than from MarkerPopup's own click toggle, because a
+                shared link has to open it without a click. See `MapCard`. */}
+            {selectedEntity && (
+              <MapCard
+                longitude={selectedEntity.coordinates?.longitude ?? null}
+                latitude={selectedEntity.coordinates?.latitude ?? null}
                 onClose={() => setSelectedId(null)}
-                closeButton
-                closeOnClick={false}
-                focusAfterOpen={false}
-                offset={22}
-                className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
+                onHeightChange={setCardInset}
               >
-                <SitePopup site={selected} />
-              </MapPopup>
-            )}
-
-            {selectedCall && (
-              <MapPopup
-                longitude={selectedCall.longitude}
-                latitude={selectedCall.latitude}
-                onClose={() => setSelectedId(null)}
-                closeButton
-                closeOnClick={false}
-                focusAfterOpen={false}
-                offset={22}
-                className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
-              >
-                <CallPopup call={selectedCall} />
-              </MapPopup>
-            )}
-
-            {selectedOrder && (
-              <MapPopup
-                longitude={selectedOrder.longitude}
-                latitude={selectedOrder.latitude}
-                onClose={() => setSelectedId(null)}
-                closeButton
-                closeOnClick={false}
-                focusAfterOpen={false}
-                offset={22}
-                className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
-              >
-                <WorkOrderPopup order={selectedOrder} />
-              </MapPopup>
+                {selectedEntity.card}
+              </MapCard>
             )}
           </Map>
 
@@ -439,7 +548,14 @@ export function MapWorkspace({
               still seed which chip a fresh visit opens on (see
               `initialChipForTab`); they just have no button of their own to
               click while already inside the app. */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end gap-2 p-2 sm:p-3">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3">
+            {/* Left corner, and only while the reader is on a shared route:
+                the one explicit way back to the whole map. Everything else up
+                here has always lived on the right. */}
+            <div className="pointer-events-auto">
+              {sharedLink && <SharedLinkBar />}
+            </div>
+
             <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
               {/* Hidden below `lg`: the clock is reassurance ("this is
                   live"), not a control, and on a narrower screen the barrio
@@ -449,8 +565,15 @@ export function MapWorkspace({
               </div>
                 {/* One slot, two states. While a barrio is filtered the chip
                     IS the filter and carries the way out of it; otherwise it
-                    just says where the map is centred. Two chips stacked said
-                    the same word twice and neither looked like a control. */}
+                    names a barrio — the one under the cursor if there is a
+                    cursor, and the one the map is centred on otherwise.
+
+                    The hover reading took over from a label that trailed the
+                    pointer across the map. Same fact, and this corner was
+                    already spending itself on a barrio name, so the label was
+                    a second answer to the same question that also covered the
+                    barrio it was naming. Falling back to the centre keeps the
+                    chip alive on a phone, where nothing hovers. */}
                 {barrio ? (
                   <button
                     type="button"
@@ -462,9 +585,9 @@ export function MapWorkspace({
                     <span className="sr-only">{BARRIO_PANEL.clear}</span>
                   </button>
                 ) : (
-                  centreBarrio && (
+                  (hoverBarrio ?? centreBarrio) && (
                     <span className="bg-background/90 rounded-full border px-2.5 py-1 text-[0.7rem] font-medium shadow-sm backdrop-blur">
-                      {centreBarrio}
+                      {hoverBarrio ?? centreBarrio}
                     </span>
                   )
                 )}
@@ -472,32 +595,19 @@ export function MapWorkspace({
           </div>
 
           {/* Bottom-left: the thumb's reach on a phone, and clear of the map
-              controls on the right. "Todo" has no one obvious next step the
-              way a single chip does, so it gets only the "+" — every form in
-              the app, none of them promoted above the rest. */}
-          {(primaryAction || reportEntries.length > 0) && (
-            <div className="absolute bottom-4 left-2 z-10 flex flex-col items-start gap-2">
-              <ReportMenu entries={reportEntries} barrio={barrio?.name ?? null} />
+              controls on the right.
 
-              {primaryAction && (
-                <Link
-                  // The barrio being looked at travels to the form, which opens
-                  // with it already chosen and its map already framed there.
-                  // In the URL rather than in state: the form is another route,
-                  // and this way the link survives a reload and can be pasted.
-                  href={
-                    barrio
-                      ? `${primaryAction.href}?barrio=${encodeURIComponent(barrio.name)}`
-                      : primaryAction.href
-                  }
-                  className="bg-primary text-primary-foreground focus-visible:ring-ring flex items-center gap-2 rounded-full py-3 pr-4 pl-3.5 text-sm font-semibold shadow-lg focus-visible:ring-2 focus-visible:outline-none"
-                >
-                  <primaryAction.icon className="size-4" strokeWidth={2.5} aria-hidden />
-                  {primaryAction.label}
-                </Link>
-              )}
-            </div>
-          )}
+              One button, the same one on every chip, carrying every form in
+              the app. It used to change with the filter: a promoted primary
+              action per chip, plus a "+" holding whatever that chip did not
+              promote. Which meant the way to report a lost animal existed
+              only while the Mascotas filter happened to be open — the filter
+              is about what the reader is LOOKING at, and it was silently
+              deciding what they were allowed to WRITE. Reporting is not a
+              view of the data, so it does not narrow with one. */}
+          <div className="absolute bottom-4 left-2 z-10">
+            <ReportMenu entries={ALL_REPORT_ENTRIES} barrio={barrio?.name ?? null} />
+          </div>
         </div>
 
         {/* Below the map until `lg`, beside it from there, and the only

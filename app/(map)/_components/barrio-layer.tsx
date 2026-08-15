@@ -99,6 +99,7 @@ type Barrios = { type: "FeatureCollection"; features: BarrioFeature[] };
 
 export function BarrioLayer({
   onCentreChange,
+  onHoverChange,
   selected,
   onSelect,
   statuses = [],
@@ -106,6 +107,10 @@ export function BarrioLayer({
   /** Which barrio the map is centred on. Reported continuously, unlike the
    *  hover, which needs a cursor and therefore does not exist on a phone. */
   onCentreChange?: (name: string | null) => void;
+  /** Which barrio the cursor is over, or null. Reported UP rather than drawn
+   *  here: the answer belongs in the chip beside the clock, which already
+   *  exists, already says a barrio name, and does not cover the map. */
+  onHoverChange?: (name: string | null) => void;
   /** The barrio being filtered by, drawn solid so the filter is visible on the
    *  map and not only in the list. */
   selected?: string | null;
@@ -130,10 +135,6 @@ export function BarrioLayer({
   const evacuatedColor = useToken("--unclaimed");
   const utilityColor = useToken("--claimed");
   const [data, setData] = useState<Barrios | null>(null);
-  // The hovered barrio and where to draw its label, in screen pixels.
-  const [tip, setTip] = useState<{ name: string; x: number; y: number } | null>(
-    null,
-  );
 
   const evacuatedNames = useMemo(
     () => statuses.filter((s) => s.evacuated).map((s) => s.name),
@@ -190,23 +191,23 @@ export function BarrioLayer({
   }, [map, data, onCentreChange]);
 
   /**
-   * The label follows the cursor, which needs a listener of its own.
+   * Which barrio the cursor is in, handed straight up.
    *
-   * mapcn's `onHover` fires only when the hovered feature CHANGES, so on its
-   * own the label would appear where the cursor crossed into the barrio and
-   * then sit there while the cursor moved on. This tracks every move and stops
-   * as soon as the pointer leaves the layer.
+   * This used to drive a label pinned to the cursor, which needed a
+   * `mousemove` listener of its own to stop the name from sticking where the
+   * pointer first crossed the boundary. The label is gone: a chip that
+   * follows the cursor covers the map it is describing, and the corner beside
+   * the clock was already saying a barrio name — two answers to "¿dónde
+   * estoy?" on screen at once, one of them in the way.
+   *
+   * mapcn's `onHover` fires only when the hovered feature CHANGES, which is
+   * exactly the right granularity now that nothing tracks the pointer.
    */
   const handleHover = useCallback(
     (event: { feature: { properties: BarrioProps } } | null) => {
-      if (!event) {
-        setTip(null);
-        return;
-      }
-      const { name } = event.feature.properties;
-      setTip((current) => (current?.name === name ? current : { name, x: 0, y: 0 }));
+      onHoverChange?.(event?.feature.properties.name ?? null);
     },
-    [],
+    [onHoverChange],
   );
 
   const handleClick = useCallback(
@@ -408,44 +409,12 @@ export function BarrioLayer({
     };
   }, [map, data, border, halo]);
 
-  // Subscribed on whether a barrio is hovered at all, never on the label's
-  // position: depending on `tip` itself would tear the listener down and build
-  // it again on every single mouse move.
-  const hovering = tip !== null;
-
-  useEffect(() => {
-    if (!map || !hovering) return;
-
-    const track = (event: { point: { x: number; y: number } }) =>
-      setTip((current) =>
-        current ? { ...current, x: event.point.x, y: event.point.y } : null,
-      );
-
-    map.on("mousemove", track);
-    return () => {
-      map.off("mousemove", track);
-    };
-  }, [map, hovering]);
-
   // Skip the first paint rather than flash a wrong colour: the token is only
   // readable once the stylesheet has applied.
   if (!border || !data || !evacuatedColor || !utilityColor) return null;
 
   return (
     <>
-      {/* Follows the cursor, so it never covers the barrio it names. Hidden
-          from assistive tech and from touch: there is no hover on a phone, and
-          the chip beside the clock already says where the map is centred. */}
-      {tip && tip.y > 0 && (
-        <span
-          aria-hidden
-          className="bg-background/90 pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+0.75rem)] rounded-full border px-2.5 py-1 text-[0.7rem] font-medium whitespace-nowrap shadow-sm backdrop-blur"
-          style={{ left: tip.x, top: tip.y }}
-        >
-          {tip.name}
-        </span>
-      )}
-
       <MapGeoJSON<BarrioProps>
         data={data as never}
         id="barrios"

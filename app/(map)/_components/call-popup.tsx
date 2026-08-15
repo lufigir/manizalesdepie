@@ -1,27 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  Check,
-  ChevronRight,
-  Clock,
-  MapPin,
-  Navigation,
-  Pencil,
-  Share2,
-  Users,
-} from "lucide-react";
+import { Clock, MapPin, Navigation, Pencil, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetHeader,
-  SheetPanel,
-  SheetPopup,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
   adminUpdateCall,
@@ -49,6 +32,8 @@ import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
 import { JoinCall } from "./join-call";
+import { MoreDetails } from "./more-details";
+import { ShareButton } from "./share-button";
 import { RelocateCall } from "./relocate-call";
 import { useWorkspace } from "./workspace-context";
 
@@ -64,7 +49,6 @@ import { useWorkspace } from "./workspace-context";
  */
 export function CallPopup({ call }: { call: CallDTO }) {
   const { isAdmin } = useWorkspace();
-  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -98,27 +82,8 @@ export function CallPopup({ call }: { call: CallDTO }) {
   const Icon = CALL_CATEGORY_ICON[call.category];
   const { level, label: confidenceLabel } = confidence(call);
 
-  async function share() {
-    const url = `${window.location.origin}/grupo/${call.id}`;
-
-    // The native sheet puts WhatsApp first on Android — one tap back into the
-    // group the grupo is being organised in.
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: call.title, text: call.title, url });
-      } catch {
-        // Dismissed. Not an error.
-      }
-      return;
-    }
-
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <header className="flex items-start gap-2">
         <span
           className={cn(
@@ -129,105 +94,110 @@ export function CallPopup({ call }: { call: CallDTO }) {
           <Icon className="size-4" strokeWidth={2.5} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-            {CALL_CATEGORY_LABEL[call.category]}
-          </p>
+          {/* State on the eyebrow row, confidence demoted to the meta row
+              below. Two badges on a row of their own said the loud thing and
+              the quiet thing in the same voice; only one of them decides
+              whether somebody gets in the car, and neither should be taking
+              width from the title. */}
+          <div className="flex items-center gap-1.5">
+            <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
+              {CALL_CATEGORY_LABEL[call.category]}
+            </p>
+            <span
+              className={cn(
+                "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
+                CALL_STATE_STYLE[state],
+              )}
+            >
+              {CALL_STATE_LABEL[state]}
+            </span>
+          </div>
           <h2 className="text-sm leading-tight font-bold text-balance">
             {call.title}
           </h2>
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-1">
+      {/* The hour is the one fact this card exists to deliver, so it is the
+          only thing here at full weight. The meeting address rides in the
+          same block rather than in a paragraph of its own: "cuándo y dónde
+          exactamente" is one question, and it should read as one answer. */}
+      <div className="bg-muted/50 flex flex-col gap-0.5 rounded-md px-2 py-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <span className="flex items-center gap-1.5 text-xs font-semibold">
+            <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+            {callWhen(call)}
+          </span>
+          <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
+            <Users className="size-3.5 shrink-0" aria-hidden />
+            {slotsLabel(call)}
+          </span>
+        </div>
+        {(call.meetingAddress || call.neighborhood) && (
+          <p className="text-muted-foreground flex items-start gap-1.5 text-[0.7rem] leading-snug">
+            <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>
+              {call.meetingAddress ?? call.neighborhood}
+              {call.meetingAddress && call.neighborhood && (
+                <span className="opacity-70"> · {call.neighborhood}</span>
+              )}
+            </span>
+          </p>
+        )}
+      </div>
+
+      {call.description && (
+        <div className="flex flex-col gap-1 text-[0.75rem] leading-snug">
+          {/* Clamped rather than shown in full: a long description was the
+              exact thing that pushed this card past the phone's popup cap
+              and off screen. The full text is one tap away, not gone. */}
+          <p className="line-clamp-2">{call.description}</p>
+
+          <MoreDetails
+            title={call.title}
+            meta={
+              <span
+                className={cn(
+                  "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
+                  CONFIDENCE_BADGE[level],
+                )}
+              >
+                {confidenceLabel}
+              </span>
+            }
+          >
+            {call.meetingAddress && (
+              <div>
+                <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                  {CALL_LABEL.meetingPoint}
+                </p>
+                <p>{call.meetingAddress}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                {SHEET_LABEL.description}
+              </p>
+              <p className="leading-snug whitespace-pre-line">
+                {call.description}
+              </p>
+            </div>
+          </MoreDetails>
+        </div>
+      )}
+
+      {/* Without a description there is no "ver más" row to ride on, so the
+          confidence badge stands alone — an informal pin somebody dropped
+          from the street is exactly the case with nothing else to say. */}
+      {!call.description && (
         <span
           className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-            CALL_STATE_STYLE[state],
-          )}
-        >
-          {CALL_STATE_LABEL[state]}
-        </span>
-        <span
-          className={cn(
-            "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
+            "self-start rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
             CONFIDENCE_BADGE[level],
           )}
         >
           {confidenceLabel}
         </span>
-      </div>
-
-      {/* The hour and the headcount used to be two stacked lines; on a
-          popup that already has 6+ blocks, that's a full row of height for
-          two short facts that fit side by side. Wraps back to two lines on
-          its own if the strings run long, so nothing is lost on a narrow
-          screen — just not spent by default. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-        <span className="flex items-center gap-1.5 text-xs font-semibold">
-          <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-          {callWhen(call)}
-        </span>
-        <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
-          <Users className="size-3.5 shrink-0" aria-hidden />
-          {slotsLabel(call)}
-          {call.neighborhood && ` · ${call.neighborhood}`}
-        </span>
-      </div>
-
-      {call.meetingAddress && (
-        <p className="text-muted-foreground flex items-start gap-1.5 text-[0.7rem] leading-snug">
-          <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          {call.meetingAddress}
-        </p>
-      )}
-
-      {call.description && (
-        <p className="flex items-start gap-1 text-[0.75rem] leading-snug">
-          {/* Clamped rather than shown in full: a long description was the
-              exact thing that pushed this card past the phone's popup cap
-              and off screen. The full text is one tap away, not gone. */}
-          <span className="line-clamp-2">{call.description}</span>
-
-          <Sheet>
-            <SheetTrigger
-              render={
-                <button
-                  type="button"
-                  className="text-primary inline-flex shrink-0 items-center gap-0.5 font-semibold"
-                />
-              }
-            >
-              {SHEET_LABEL.moreInfo}
-              <ChevronRight className="size-3" aria-hidden />
-            </SheetTrigger>
-
-            {/* Lateral, matching the site popup's "ver más": the map stays
-                visible next to the sheet instead of disappearing under it. */}
-            <SheetPopup side="right">
-              <SheetHeader>
-                <SheetTitle className="text-base">{call.title}</SheetTitle>
-              </SheetHeader>
-              <SheetPanel className="flex flex-col gap-4 text-sm">
-                {call.meetingAddress && (
-                  <div>
-                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                      {CALL_LABEL.meetingPoint}
-                    </p>
-                    <p>{call.meetingAddress}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                    {SHEET_LABEL.description}
-                  </p>
-                  <p className="leading-snug whitespace-pre-line">
-                    {call.description}
-                  </p>
-                </div>
-              </SheetPanel>
-            </SheetPopup>
-          </Sheet>
-        </p>
       )}
 
       {/* What to bring sits above the buttons on purpose. Gloves and a shovel
@@ -247,7 +217,9 @@ export function CallPopup({ call }: { call: CallDTO }) {
       <JoinCall call={call} />
       <RelocateCall call={call} />
 
-      <div className="flex gap-1.5">
+      {/* Wraps rather than squeezing three labelled controls onto one
+          20rem row. */}
+      <div className="flex flex-wrap gap-1.5">
         <a
           href={`https://www.google.com/maps/dir/?api=1&destination=${call.latitude},${call.longitude}`}
           target="_blank"
@@ -267,18 +239,12 @@ export function CallPopup({ call }: { call: CallDTO }) {
             WhatsApp
           </a>
         )}
-        <button
-          type="button"
-          onClick={share}
-          aria-label={CALL_LABEL.share}
-          className="bg-secondary text-secondary-foreground flex items-center justify-center rounded-md px-3.5 py-2"
-        >
-          {copied ? (
-            <Check className="size-3.5" aria-hidden />
-          ) : (
-            <Share2 className="size-3.5" aria-hidden />
-          )}
-        </button>
+        <ShareButton
+          path={`/grupo/${call.id}`}
+          title={call.title}
+          text={call.description ?? call.title}
+          className="flex-1"
+        />
       </div>
 
       {isAdmin && (

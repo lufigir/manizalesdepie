@@ -1,25 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  Check,
-  ChevronRight,
-  ExternalLink,
-  Navigation,
-  Pencil,
-  Share2,
-} from "lucide-react";
+import { ExternalLink, Navigation, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetHeader,
-  SheetPanel,
-  SheetPopup,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
   adminUpdateSite,
@@ -44,15 +29,22 @@ import {
 import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
+import { MoreDetails } from "./more-details";
+import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
 
 /**
- * The card that opens on the pin itself.
+ * What a site's card says. Where it opens is `MapCard`'s decision, not this
+ * component's — anchored to the pin beside the map, a drawer along the bottom
+ * edge under it.
  *
- * It replaced a bottom sheet, and the reason is spatial: a sheet slides up from
- * the edge and covers the map, so the reader loses the one thing they came for
- * — where this is, relative to everything else. Anchored to the marker, the
- * answer and its place on the map stay on screen together.
+ * That split is the correction to what this comment used to claim. The card
+ * replaced a bottom sheet for a spatial reason that was real: a sheet covers
+ * the map, so the reader loses the one thing they came for. What the reason
+ * did not survive was a phone, where the anchored popup was being pinned
+ * inside a region barely taller than itself. The drawer answers the original
+ * objection a different way — it is not modal, the map above stays live, and
+ * the camera lifts the pin into the space left over.
  *
  * Order inside the card is not cosmetic. What a place REFUSES sits above what
  * it needs, because that is what actually goes wrong: the Red Cross has asked
@@ -62,7 +54,6 @@ import { useWorkspace } from "./workspace-context";
 export function SitePopup({ site }: { site: SiteDTO }) {
   const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
-  const [copied, setCopied] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -113,27 +104,28 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     site.description || site.address || site.sourceUrl || needed.length > 0,
   );
 
-  async function share() {
-    const url = `${window.location.origin}/punto/${site.id}`;
-
-    // The native sheet puts WhatsApp first on Android — one tap back into the
-    // group the question came from.
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: site.name, text: site.name, url });
-      } catch {
-        // Dismissed. Not an error.
-      }
-      return;
-    }
-
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+  /** Freshness and place: the card's quiet line. It shares a row with the
+   *  "ver más" trigger when there is one, which is most of the time. */
+  const metaLine = (
+    <p
+      className={cn(
+        "text-[0.7rem]",
+        stale ? "text-claimed" : "text-muted-foreground",
+      )}
+    >
+      {freshLabel}
+      {site.neighborhood && ` · ${site.neighborhood}`}
+    </p>
+  );
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
+      {/* The badge rides on the EYEBROW row, not beside the title.
+          Under the title it cost a whole row to say one word; beside the
+          title it took that width away from the name of the place, which on
+          a 20rem popup is the line that can least afford it. The eyebrow —
+          one short word in small caps — is the row that had spare width all
+          along. */}
       <header className="flex items-start gap-2">
         <span
           className={cn(
@@ -144,124 +136,89 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           <Icon className="size-4" strokeWidth={2.5} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-            {SITE_TYPE_LABEL[site.type]}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
+              {SITE_TYPE_LABEL[site.type]}
+            </p>
+            {/* Confidence used to ride next to status as a second badge. Cut
+                for the summary, not for the app: it still shows as the
+                marker's solidity on the map itself (CONFIDENCE_MARKER). Full
+                text version is one tap away, in "ver más". */}
+            <span
+              className={cn(
+                "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
+                SITE_STATUS_STYLE[site.status],
+              )}
+            >
+              {SITE_STATUS_LABEL[site.status]}
+            </span>
+          </div>
           <h2 className="text-sm leading-tight font-bold text-balance">
             {site.name}
           </h2>
         </div>
       </header>
 
-      {/* Confidence used to ride next to status as a second badge. Cut for
-          the summary, not for the app: it still shows as the marker's
-          solidity on the map itself (CONFIDENCE_MARKER), which is where it
-          was designed to be read at a glance in the first place — the badge
-          here was saying the same thing twice. Full text version is one tap
-          away, in "ver más". */}
-      <span
-        className={cn(
-          "self-start rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-          SITE_STATUS_STYLE[site.status],
-        )}
-      >
-        {SITE_STATUS_LABEL[site.status]}
-      </span>
+      {!hasMore && metaLine}
 
-      <p
-        className={cn(
-          "text-[0.7rem]",
-          stale ? "text-claimed" : "text-muted-foreground",
-        )}
-      >
-        {freshLabel}
-        {site.neighborhood && ` · ${site.neighborhood}`}
-        {hasMore && (
-          <Sheet>
-            <SheetTrigger
-              render={
-                <button
-                  type="button"
-                  className="text-primary ml-1 inline-flex items-center gap-0.5 align-middle font-semibold"
-                />
-              }
-            >
-              {SHEET_LABEL.moreInfo}
-              <ChevronRight className="size-3" aria-hidden />
-            </SheetTrigger>
-
-            {/* Lateral, not bottom: this is the second attempt at "ver más".
-                A bottom sheet worked but still asked the reader to lose the
-                map — same objection the card itself was built to avoid. From
-                the side, the pin and the map around it stay in view while
-                the detail reads next to them, not over them. */}
-            <SheetPopup side="right">
-              <SheetHeader>
-                <SheetTitle className="text-base">{site.name}</SheetTitle>
-                <p className="text-muted-foreground text-xs">
-                  {confidenceLabel}
-                </p>
-              </SheetHeader>
-              <SheetPanel className="flex flex-col gap-4 text-sm">
-                {site.schedule && (
-                  <div>
-                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                      {SHEET_LABEL.schedule}
-                    </p>
-                    <p>{site.schedule}</p>
-                  </div>
-                )}
-                {needed.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground mb-1 text-[0.65rem] font-semibold tracking-wide uppercase">
-                      {ITEM_MODE_LABEL.needed}
-                    </p>
-                    <ul className="flex flex-wrap gap-1">
-                      {needed.map((item) => (
-                        <li
-                          key={item.id}
-                          className="bg-resolved-surface text-resolved border-resolved/25 rounded px-1.5 py-0.5 text-xs font-medium"
-                        >
-                          {item.label}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {site.address && (
-                  <div>
-                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                      {SHEET_LABEL.address}
-                    </p>
-                    <p>{site.address}</p>
-                  </div>
-                )}
-                {site.description && (
-                  <div>
-                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                      {SHEET_LABEL.description}
-                    </p>
-                    <p className="leading-snug whitespace-pre-line">
-                      {site.description}
-                    </p>
-                  </div>
-                )}
-                {site.sourceUrl && (
-                  <a
-                    href={site.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary flex items-center gap-1.5 text-xs font-semibold"
+      {hasMore && (
+        <MoreDetails title={site.name} subtitle={confidenceLabel} meta={metaLine}>
+          {site.schedule && (
+            <div>
+              <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                {SHEET_LABEL.schedule}
+              </p>
+              <p>{site.schedule}</p>
+            </div>
+          )}
+          {needed.length > 0 && (
+            <div>
+              <p className="text-muted-foreground mb-1 text-[0.65rem] font-semibold tracking-wide uppercase">
+                {ITEM_MODE_LABEL.needed}
+              </p>
+              <ul className="flex flex-wrap gap-1">
+                {needed.map((item) => (
+                  <li
+                    key={item.id}
+                    className="bg-resolved-surface text-resolved border-resolved/25 rounded px-1.5 py-0.5 text-xs font-medium"
                   >
-                    <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-                    {SHEET_LABEL.source}
-                  </a>
-                )}
-              </SheetPanel>
-            </SheetPopup>
-          </Sheet>
-        )}
-      </p>
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {site.address && (
+            <div>
+              <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                {SHEET_LABEL.address}
+              </p>
+              <p>{site.address}</p>
+            </div>
+          )}
+          {site.description && (
+            <div>
+              <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                {SHEET_LABEL.description}
+              </p>
+              <p className="leading-snug whitespace-pre-line">
+                {site.description}
+              </p>
+            </div>
+          )}
+          {site.sourceUrl && (
+            <a
+              href={site.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+              {SHEET_LABEL.source}
+            </a>
+          )}
+        </MoreDetails>
+      )}
 
       {refused.length > 0 && (
         <div className="border-unclaimed/25 bg-unclaimed-surface rounded-md border px-2 py-1.5">
@@ -274,7 +231,9 @@ export function SitePopup({ site }: { site: SiteDTO }) {
         </div>
       )}
 
-      <div className="flex gap-1.5">
+      {/* Wraps rather than squeezing: with three labelled controls on a
+          20rem popup, a second row reads better than three truncated ones. */}
+      <div className="flex flex-wrap gap-1.5">
         <a
           href={`https://www.google.com/maps/dir/?api=1&destination=${site.latitude},${site.longitude}`}
           target="_blank"
@@ -294,24 +253,13 @@ export function SitePopup({ site }: { site: SiteDTO }) {
             {SHEET_LABEL.whatsapp}
           </a>
         )}
-        <button
-          type="button"
-          onClick={share}
-          aria-label={SHEET_LABEL.share}
-          className="bg-secondary text-secondary-foreground flex items-center justify-center rounded-md px-3.5 py-2"
-        >
-          {copied ? (
-            <Check className="size-3.5" aria-hidden />
-          ) : (
-            <Share2 className="size-3.5" aria-hidden />
-          )}
-        </button>
+        <ShareButton path={`/punto/${site.id}`} title={site.name} className="flex-1" />
       </div>
 
       {/* The mechanism that keeps this from becoming a list of places that
           closed on Tuesday. One tap, no account. */}
-      <div className="border-t pt-2">
-        <p className="text-muted-foreground mb-1.5 text-[0.65rem]">
+      <div className="border-t pt-1.5">
+        <p className="text-muted-foreground mb-1 text-[0.65rem]">
           {SHEET_LABEL.confirmPrompt}
         </p>
         <div className="grid grid-cols-3 gap-1">

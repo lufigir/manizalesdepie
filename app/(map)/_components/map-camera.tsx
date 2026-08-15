@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import type { MapMouseEvent as MapLibreMouseEvent } from "maplibre-gl";
 
 import { useMap } from "@/components/ui/map";
 
@@ -59,8 +60,26 @@ export function FitToSites({ sites }: { sites: Located[] }) {
   return null;
 }
 
-/** Flies to the selected pin so its card is never anchored off-screen. */
-export function FlyToSelected({ site }: { site: Located | null }) {
+/**
+ * Flies to the selected pin so its card never covers the thing it describes.
+ *
+ * `bottomInset` is how much of the map the card is sitting on — zero for the
+ * anchored popup, which points at the pin rather than covering it, and the
+ * measured height of the bottom drawer otherwise (see `MapCard`). Centring
+ * the pin in what is LEFT is the whole trick that lets the drawer replace the
+ * popup on a phone without losing what the popup was for.
+ *
+ * A one-shot `offset` rather than the map's `padding` option on purpose:
+ * padding is sticky, so every later `fitBounds` and `flyTo` would inherit a
+ * frame shifted by a card that closed minutes ago.
+ */
+export function FlyToSelected({
+  site,
+  bottomInset = 0,
+}: {
+  site: Located | null;
+  bottomInset?: number;
+}) {
   const { map } = useMap();
 
   useEffect(() => {
@@ -69,12 +88,52 @@ export function FlyToSelected({ site }: { site: Located | null }) {
     map.flyTo({
       center: [site.longitude, site.latitude],
       zoom: Math.max(map.getZoom(), 15),
+      // Half the card's height: the pin lands in the middle of the strip of
+      // map still visible above it.
+      offset: [0, -bottomInset / 2],
       duration: 700,
       // Keeps the animation running even if the user prefers reduced motion
       // elsewhere; losing the pin is worse than the movement.
       essential: true,
     });
-  }, [map, site]);
+  }, [map, site, bottomInset]);
+
+  return null;
+}
+
+/**
+ * A tap on bare map closes whatever card is open.
+ *
+ * MapLibre's own `click` already tells a tap apart from a drag — it does not
+ * fire after a pan — which is the distinction that matters most here: reading
+ * a card and dragging the map to see where the pin sits is one gesture, and
+ * it must not dismiss what it is being used to read.
+ *
+ * The target check does the other half. Markers are DOM elements inside the
+ * canvas container, so a click on one bubbles up and fires this too; without
+ * the check, selecting a pin would immediately deselect it.
+ */
+export function ClearSelectionOnTap({ onTap }: { onTap: () => void }) {
+  const { map } = useMap();
+
+  // The listener is bound once, to the map, and must not be torn down and
+  // rebound every time the parent re-renders a new closure — which is
+  // precisely what `useEffectEvent` is for.
+  const clear = useEffectEvent(() => onTap());
+
+  useEffect(() => {
+    if (!map) return;
+
+    const handle = (event: MapLibreMouseEvent) => {
+      if (event.originalEvent.target !== map.getCanvas()) return;
+      clear();
+    };
+
+    map.on("click", handle);
+    return () => {
+      map.off("click", handle);
+    };
+  }, [map]);
 
   return null;
 }

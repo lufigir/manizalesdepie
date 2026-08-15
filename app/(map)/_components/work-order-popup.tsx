@@ -52,7 +52,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         : WORK_ORDER_LABEL.attendeeCountMany(order.attendeeCount);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <header className="flex items-start gap-2">
         <span
           className={cn(
@@ -63,9 +63,23 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
           <Icon className="size-4" strokeWidth={2.5} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-            {WORK_ORDER_CATEGORY_LABEL[order.category]}
-          </p>
+          {/* Whether anyone has claimed this decides whether to go, so it is
+              up here with the category rather than on a row of its own — and
+              on the eyebrow rather than beside the ask, which is the line
+              that needs every pixel it can get. */}
+          <div className="flex items-center gap-1.5">
+            <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
+              {WORK_ORDER_CATEGORY_LABEL[order.category]}
+            </p>
+            <span
+              className={cn(
+                "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
+                WORK_ORDER_ROLLUP_STYLE[rollup],
+              )}
+            >
+              {WORK_ORDER_ROLLUP_LABEL[rollup]}
+            </span>
+          </div>
           {/* The ask is the heading. A category alone ("Riesgo estructural")
               is a label nobody can act on; "se necesitan lonas para cubrir
               casas" is the thing that makes someone load a truck. */}
@@ -75,36 +89,22 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         </div>
       </header>
 
-      <span
-        className={cn(
-          "self-start rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-          WORK_ORDER_ROLLUP_STYLE[rollup],
-        )}
-      >
-        {WORK_ORDER_ROLLUP_LABEL[rollup]}
-      </span>
-
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+      {/* Block, headcount and freshness: three short facts that were three
+          rows. On one row they read as what they are — the context around
+          the ask, not three separate announcements. */}
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.7rem]">
         {order.neighborhood && (
-          <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
+          <span className="flex items-center gap-1.5">
             <MapPin className="size-3.5 shrink-0" aria-hidden />
             {order.neighborhood}
           </span>
         )}
-        <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
+        <span className="flex items-center gap-1.5">
           <Users className="size-3.5 shrink-0" aria-hidden />
           {attendees}
         </span>
+        <span className={cn(stale && "text-claimed")}>{freshLabel}</span>
       </div>
-
-      <p
-        className={cn(
-          "text-[0.7rem]",
-          stale ? "text-claimed" : "text-muted-foreground",
-        )}
-      >
-        {freshLabel}
-      </p>
 
       {/* Only the approximate point — see the note at the top. Enough to
           drive to the block, which is what someone with a truck needs, and
@@ -113,7 +113,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         href={`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="bg-secondary text-secondary-foreground flex items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-semibold"
+        className="bg-secondary text-secondary-foreground flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold"
       >
         <Navigation className="size-3.5" aria-hidden />
         {CALL_LABEL.directions}

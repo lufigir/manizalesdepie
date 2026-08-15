@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Pencil, Share2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
+import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
 
 type CloseOutcome =
@@ -78,33 +79,8 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     null,
   );
 
-  const [copied, setCopied] = useState(false);
-
   const rollup = workOrderRollup(order.status);
   const open = rollup !== "closed";
-
-  /** Same flow a site and a grupo already have: the native sheet where
-   *  there is one — it puts WhatsApp first on Android, one tap back into
-   *  the group the case came from — and the clipboard everywhere else. */
-  async function share() {
-    const url = `${window.location.origin}/necesidad/${order.id}`;
-    const title = `${WORK_ORDER_CATEGORY_LABEL[order.category]}${
-      order.neighborhood ? ` · ${order.neighborhood}` : ""
-    }`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text: order.description, url });
-      } catch {
-        // Dismissed. Not an error.
-      }
-      return;
-    }
-
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   function submitAttend() {
     setError(null);
@@ -282,7 +258,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
               <Button size="sm" className="flex-1" onClick={() => setAttendOpen(true)}>
                 {WORK_ORDER_LABEL.attend}
               </Button>
-              <ShareButton copied={copied} onShare={share} />
+              <OrderShareButton order={order} />
             </div>
           )}
         </>
@@ -293,7 +269,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
           resolvió" is a useful thing to be able to forward. */}
       {!editOpen && !open && (
         <div className="mt-2 flex">
-          <ShareButton copied={copied} onShare={share} />
+          <OrderShareButton order={order} />
         </div>
       )}
 
@@ -366,28 +342,24 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   );
 }
 
-/** The share control, in both the places a card can put it — beside
- *  "Yo puedo atender" while the case is open, alone once it is closed. */
-function ShareButton({
-  copied,
-  onShare,
-}: {
-  copied: boolean;
-  onShare: () => void;
-}) {
+/**
+ * The share control, in both the places a card can put it — beside "Yo puedo
+ * atender" while the case is open, alone once it is closed.
+ *
+ * A thin wrapper over the shared `ShareButton` rather than its own copy of
+ * the flow: this file used to carry a second implementation of
+ * navigator.share-then-clipboard, and it was the one that crashed on a phone
+ * over plain http, because `navigator.clipboard` does not exist outside a
+ * secure context. One implementation cannot drift from itself.
+ */
+function OrderShareButton({ order }: { order: WorkOrderDTO }) {
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={onShare}
-      aria-label={WORK_ORDER_LABEL.share}
-      title={copied ? WORK_ORDER_LABEL.shareCopied : WORK_ORDER_LABEL.share}
-    >
-      {copied ? (
-        <Check className="size-3.5" aria-hidden />
-      ) : (
-        <Share2 className="size-3.5" aria-hidden />
-      )}
-    </Button>
+    <ShareButton
+      path={`/necesidad/${order.id}`}
+      title={`${WORK_ORDER_CATEGORY_LABEL[order.category]}${
+        order.neighborhood ? ` · ${order.neighborhood}` : ""
+      }`}
+      text={order.description}
+    />
   );
 }

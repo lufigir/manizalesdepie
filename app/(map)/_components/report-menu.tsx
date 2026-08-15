@@ -8,16 +8,13 @@ import type { ReportEntry } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
 /**
- * The secondary write path: whatever a chip can report beyond its one
- * primary action. Renders nothing when a chip's entries are empty —
- * "Mascotas" and "Servicios" have exactly one thing to report, and their
- * primary button already is it.
+ * The write path — the whole of it.
  *
- * Sized and shaped like a real button now, not a quiet icon-only circle:
- * on "Todo" and "Sitios" — the two chips with no primary action of their
- * own — this is the ONLY way in to reporting anything, so it has to read as
- * an invitation on its own, not as an afterthought beside a bigger button
- * that, on those two chips, is not even there.
+ * It stood beside a per-chip primary action until the filter stopped deciding
+ * what anyone is allowed to report (see `ALL_REPORT_ENTRIES`). Now it is the
+ * only button in that corner and it carries every form in the app, unchanged
+ * from chip to chip, so "¿cómo reporto esto?" has exactly one answer wherever
+ * the reader happens to be.
  */
 export function ReportMenu({
   entries,
