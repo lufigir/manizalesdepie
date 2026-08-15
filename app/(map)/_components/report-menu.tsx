@@ -33,16 +33,53 @@ export function ReportMenu({
     <div className="flex flex-col items-start gap-2">
       {open && (
         <div className="flex flex-col items-start gap-1.5">
-          {entries.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={barrio ? `${href}?barrio=${encodeURIComponent(barrio)}` : href}
-              className="bg-background/95 focus-visible:ring-ring flex items-center gap-1.5 rounded-full border py-2 pr-3.5 pl-3 text-xs font-semibold shadow-lg backdrop-blur focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
-              {label}
-            </Link>
-          ))}
+          {entries.map(({ href, label, icon: Icon }) => {
+            const path = href.split("?")[0];
+            let borderStyle = "border-border hover:bg-accent text-foreground rounded-full border";
+            let iconStyle = "text-muted-foreground";
+
+            switch (path) {
+              case "/reportar/necesidad":
+                // Necesidades: Solid border-unclaimed (red)
+                borderStyle = "border-unclaimed/70 text-unclaimed bg-background/95 hover:bg-unclaimed-surface/50 rounded-full border-2";
+                iconStyle = "text-unclaimed";
+                break;
+              case "/reportar/armar-grupo":
+                // Grupos: Square-ish rounded corner (rounded-md/lg), border-group (purple)
+                borderStyle = "border-group/70 text-group bg-background/95 hover:bg-group-surface/50 rounded-lg border-2";
+                iconStyle = "text-group";
+                break;
+              case "/reportar/sitio":
+                // Sitios: Solid border-layer-collection (blue)
+                borderStyle = "border-layer-collection/70 text-layer-collection bg-background/95 hover:bg-accent rounded-full border-2";
+                iconStyle = "text-layer-collection";
+                break;
+              case "/reportar/animal":
+                // Mascotas: Dashed red border (sighting trace)
+                borderStyle = "border-dashed border-2 border-unclaimed/60 text-unclaimed bg-background/95 hover:bg-unclaimed-surface/50 rounded-full";
+                iconStyle = "text-unclaimed";
+                break;
+              case "/reportar/servicios":
+                // Servicios: Dashed gray border
+                borderStyle = "border-dashed border-2 border-muted-foreground/60 text-muted-foreground bg-background/95 hover:bg-accent rounded-full";
+                iconStyle = "text-muted-foreground";
+                break;
+            }
+
+            return (
+              <Link
+                key={href}
+                href={barrio ? `${href}?barrio=${encodeURIComponent(barrio)}` : href}
+                className={cn(
+                  "focus-visible:ring-ring flex items-center gap-1.5 py-2 pr-3.5 pl-3 text-xs font-semibold shadow-lg backdrop-blur focus-visible:ring-2 focus-visible:outline-none",
+                  borderStyle
+                )}
+              >
+                <Icon className={cn("size-3.5", iconStyle)} strokeWidth={2.5} aria-hidden />
+                {label}
+              </Link>
+            );
+          })}
         </div>
       )}
 
@@ -68,3 +105,4 @@ export function ReportMenu({
     </div>
   );
 }
+
