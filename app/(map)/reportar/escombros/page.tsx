@@ -15,7 +15,7 @@ export default async function ReportWorkOrderPage() {
     <ReportLayout
       title={WORK_ORDER_FORM.title}
       subtitle={WORK_ORDER_FORM.subtitle}
-      backHref="/necesito"
+      backHref="/"
     >
       <WorkOrderForm barrios={barrios} />
     </ReportLayout>

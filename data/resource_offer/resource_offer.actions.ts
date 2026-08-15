@@ -24,7 +24,7 @@ export async function proposeResourceOffer(input: {
   const dal = await ResourceOfferDAL.create();
   const { id } = await dal.propose(input);
 
-  revalidatePath("/servicios");
+  revalidatePath("/");
   revalidatePath("/admin");
   return { id };
 }
@@ -32,7 +32,7 @@ export async function proposeResourceOffer(input: {
 export async function verifyResourceOffer(id: string) {
   const dal = await ResourceOfferDAL.create();
   await dal.verify(id);
-  revalidatePath("/servicios");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
@@ -48,20 +48,20 @@ export async function adminUpdateResourceOffer(input: {
 }) {
   const dal = await ResourceOfferDAL.create();
   await dal.adminUpdate(input);
-  revalidatePath("/servicios");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
 export async function setResourceOfferPublished(id: string, published: boolean) {
   const dal = await ResourceOfferDAL.create();
   await dal.setPublished(id, published);
-  revalidatePath("/servicios");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
 export async function deleteResourceOffer(id: string) {
   const dal = await ResourceOfferDAL.create();
   await dal.remove(id);
-  revalidatePath("/servicios");
+  revalidatePath("/");
   revalidatePath("/admin");
 }

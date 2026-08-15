@@ -8,7 +8,13 @@ import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 import { clientEnv } from "@/lib/env";
 
 /**
- * The four sections, plus every shareable pin.
+ * The map itself, plus every shareable pin.
+ *
+ * There used to be four section URLs beside the root (`/necesito`,
+ * `/mascotas`, `/servicios`, and `/ayudar` before that). Each rendered
+ * nothing but the same map with one chip pre-selected — a thinner way to
+ * reach a screen the reader already has one tap away at `/` — so they were
+ * removed rather than indexed as if they were distinct pages.
  *
  * Individual entities are in here because they are the pages worth finding:
  * someone searching for a specific shelter by name should land on its own
@@ -30,17 +36,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ResourceOfferDAL.public().listPublished(),
   ]);
 
-  const sections: MetadataRoute.Sitemap = [
-    // The map itself. `/ayudar` used to sit beside this and seed the same
-    // filter; the root renders the map directly now, so there is one address.
-    { url: base, changeFrequency: "hourly", priority: 1 },
-    { url: `${base}/necesito`, changeFrequency: "hourly", priority: 0.9 },
-    { url: `${base}/mascotas`, changeFrequency: "hourly", priority: 0.7 },
-    { url: `${base}/servicios`, changeFrequency: "hourly", priority: 0.7 },
-  ];
-
   return [
-    ...sections,
+    { url: base, changeFrequency: "hourly", priority: 1 },
     ...sites.map((site) => ({
       url: `${base}/punto/${site.id}`,
       lastModified: new Date(site.confirmedAt),

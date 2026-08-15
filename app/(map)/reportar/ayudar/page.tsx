@@ -24,7 +24,7 @@ export default async function ReportHelpPage() {
   const barrios = await NeighborhoodDAL.public().list();
 
   return (
-    <ReportLayout title={REPORT_SECTION.help.title} backHref="/ayudar">
+    <ReportLayout title={REPORT_SECTION.help.title} backHref="/">
       <ReportForm section="help" barrios={barrios} />
     </ReportLayout>
   );

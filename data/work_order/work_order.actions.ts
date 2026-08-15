@@ -22,7 +22,7 @@ export async function reportWorkOrder(input: {
   const dal = await WorkOrderDAL.create();
   const { id } = await dal.report(input);
 
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
   return { id };
 }
@@ -36,7 +36,7 @@ export async function attendWorkOrder(input: {
 }) {
   const dal = WorkOrderDAL.public();
   const result = await dal.attend(input);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   return result;
 }
 
@@ -46,7 +46,7 @@ export async function closeWorkOrder(
 ) {
   const dal = WorkOrderDAL.public();
   await dal.close(id, result);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
 }
 
 export async function updateWorkOrder(input: {
@@ -56,26 +56,26 @@ export async function updateWorkOrder(input: {
 }) {
   const dal = WorkOrderDAL.public();
   await dal.update(input);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
 }
 
 export async function verifyWorkOrder(id: string) {
   const dal = await WorkOrderDAL.create();
   await dal.verify(id);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
 export async function setWorkOrderPublished(id: string, published: boolean) {
   const dal = await WorkOrderDAL.create();
   await dal.setPublished(id, published);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
 export async function deleteWorkOrder(id: string) {
   const dal = await WorkOrderDAL.create();
   await dal.remove(id);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }

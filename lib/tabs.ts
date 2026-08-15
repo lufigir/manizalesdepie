@@ -3,14 +3,12 @@ import { LifeBuoy, MapPin, Megaphone, PawPrint, Truck, type LucideIcon } from "l
 import type { SiteType } from "@/data/site/site.dto";
 
 /**
- * The app's four top-level sections, organised by INTENT rather than by kind of
- * object.
+ * The app's four intents — "¿qué vengo a hacer?" — organised by INTENT rather
+ * than by kind of object.
  *
  * This replaces the old layer taxonomy, which mixed the two: "Ayudar" was an
  * intention and "Animales" was a kind of row, so the reader had to translate
- * their own situation into our data model before they could pick anything. The
- * question the product answers is "¿dónde ayudo hoy?", and the first screen
- * should be a straight answer to "¿qué vengo a hacer?".
+ * their own situation into our data model before they could pick anything.
  *
  * Two rules fall out of that and are the reason the split is not arbitrary:
  *
@@ -22,41 +20,20 @@ import type { SiteType } from "@/data/site/site.dto";
  * Each section owns its own report form. The section already says what is being
  * reported, so no form has to open by asking what kind of thing this is.
  *
- * What changed once the map became unified (see `MapWorkspace`): these four
- * no longer gate what is DRAWN — the map always shows everything now — nor
- * do they have a switcher of their own any more. `UnifiedPanel`'s own row of
- * chips (see `PanelChip` below) is the one control surface for filtering;
- * all four routes do today is decide which chip a fresh visit opens on (see
- * `initialChipForTab`) — enough to keep `/mascotas` a real, shareable URL,
- * not enough to need a button anywhere once the app is already open.
+ * None of the four has a route of its own any more. They used to (`/ayudar`,
+ * `/necesito`, `/mascotas`, `/servicios`), each seeding one chip in
+ * `UnifiedPanel` and rendering nothing else — but a chip is what a reader
+ * ALREADY has, one tap away, at the bare `/`, so a dedicated URL for "open
+ * with this chip pre-selected" was a second, thinner way to reach a screen
+ * the reader was already on. `TabId` survives as a seed for the five shared
+ * entity routes instead (`/punto/[id]` and friends still pick a starting
+ * chip — see `initialChipForTab` — from the TYPE of the thing that was
+ * shared, not from a route segment).
  */
 
 export type TabId = "help" | "need" | "pets" | "services";
 
-type TabRoute = { id: TabId; segment: string };
-
-/**
- * The sections that still have a URL of their own.
- *
- * "help" is not among them, and that is the point: it is what the ROOT
- * renders. `/ayudar` used to exist and seeded the exact same "Todo" chip the
- * bare domain does, so it was a second address for one screen — and the
- * screen everybody lands on. It was removed rather than aliased.
- */
-const TAB_ROUTES: readonly TabRoute[] = [
-  { id: "need", segment: "necesito" },
-  { id: "pets", segment: "mascotas" },
-  { id: "services", segment: "servicios" },
-];
-
 export const DEFAULT_TAB_ID: TabId = "help";
-
-/** Resolves the segment Next reports for the active child route. `null` is
- *  the root — the map with no section chosen — and an unknown segment falls
- *  back the same way, which lands on "Todo" rather than on blank. */
-export function tabFromSegment(segment: string | null): TabId {
-  return TAB_ROUTES.find((tab) => tab.segment === segment)?.id ?? DEFAULT_TAB_ID;
-}
 
 /**
  * Which section each kind of site belongs to, or `null` for the ones that are

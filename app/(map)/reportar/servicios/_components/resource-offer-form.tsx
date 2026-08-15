@@ -54,7 +54,10 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
     const area = barrio?.name ?? SERVICES_FORM.wholeCity;
 
     try {
-      const { id } = await proposeResourceOffer({
+      // Same as the work-order form: the created id used to travel in the
+      // URL to select the new pin on arrival at `/servicios`; nothing reads
+      // a query-driven selection any more, so it is not carried forward.
+      await proposeResourceOffer({
         type,
         description,
         quantity: quantity ? Number(quantity) : undefined,
@@ -69,7 +72,7 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
           ? new Date(availableUntilLocal).toISOString()
           : undefined,
       });
-      router.push(`/servicios?id=${id}`);
+      router.push("/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : SERVICES_FORM.failed);
     }

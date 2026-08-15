@@ -15,7 +15,7 @@ export default async function ReportServicePage() {
     <ReportLayout
       title={SERVICES_FORM.title}
       subtitle={SERVICES_FORM.subtitle}
-      backHref="/servicios"
+      backHref="/"
     >
       <ResourceOfferForm barrios={barrios} />
     </ReportLayout>

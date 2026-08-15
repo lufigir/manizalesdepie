@@ -68,7 +68,10 @@ export function WorkOrderForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
     }
 
     try {
-      const { id } = await reportWorkOrder({
+      // The created id used to travel in the URL to select the new pin on
+      // arrival at `/ayudar`; nothing reads a query-driven selection any
+      // more (see `MapWorkspace`), so it is not carried forward to `/`.
+      await reportWorkOrder({
         category,
         description,
         longitude: point.lng,
@@ -78,7 +81,7 @@ export function WorkOrderForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         phone: phone || undefined,
         notes: notes || undefined,
       });
-      router.push(`/ayudar?id=${id}`);
+      router.push("/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : WORK_ORDER_FORM.failed);
     }

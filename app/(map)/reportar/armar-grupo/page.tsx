@@ -32,7 +32,7 @@ export default async function ConveneCallPage() {
     <ReportLayout
       title={CALL_FORM.title}
       subtitle={CALL_FORM.subtitle}
-      backHref="/ayudar"
+      backHref="/"
     >
       <CallForm signedIn={user !== null} barrios={barrios} />
     </ReportLayout>

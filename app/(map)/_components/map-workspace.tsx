@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSelectedLayoutSegment } from "next/navigation";
 import { X } from "lucide-react";
 
 import { Map, MapControls } from "@/components/ui/map";
@@ -18,9 +17,9 @@ import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
 import {
   ALL_REPORT_ENTRIES,
+  DEFAULT_TAB_ID,
   SITE_TYPE_TAB,
   initialChipForTab,
-  tabFromSegment,
   type PanelChip,
   type TabId,
 } from "@/lib/tabs";
@@ -135,10 +134,6 @@ export function MapWorkspace({
   children,
   isAdmin = false,
 }: Props) {
-  // In the tab layout this is the active child route; on a shared-pin page
-  // there is no such child, so the caller passes the section explicitly.
-  const segment = useSelectedLayoutSegment();
-
   const sharedLink = initialSelectedId !== undefined;
 
   // Everything that behaves differently rather than just looking different
@@ -146,19 +141,23 @@ export function MapWorkspace({
   // whether a selection collapses it. See `lib/use-media-query.ts`.
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
 
+  /**
+   * Seeded once, from `forcedTab` when the caller is one of the five shared
+   * entity routes, or `DEFAULT_TAB_ID` at the bare `/`.
+   *
+   * This used to also resync from the active child route segment, for the
+   * era when `(tabs)/layout.tsx` had siblings (`/necesito`, `/mascotas`,
+   * `/servicios`) it stayed mounted across while a reader moved between
+   * them. It has none now — every section lives behind a chip inside `/`
+   * instead of its own route — and the five shared-entity routes each own
+   * their page outright, so navigating between e.g. `/punto/a` and
+   * `/grupo/b` remounts `MapWorkspace` fresh with the new `forcedTab`
+   * rather than needing to be told about a change. A plain initializer is
+   * what is left once syncing has nothing to sync from.
+   */
   const [activeChip, setActiveChip] = useState<PanelChip>(() =>
-    initialChipForTab(forcedTab ?? tabFromSegment(segment)),
+    initialChipForTab(forcedTab ?? DEFAULT_TAB_ID),
   );
-
-  // Only fires on a REAL route change (a pasted `/mascotas` link, the back
-  // button) — chip clicks never touch `segment`, so this never fights a
-  // reader's own selection. `segment` is an external signal (the router), so
-  // syncing state from it is exactly the escape hatch this lint rule leaves
-  // open — see the same justification on the effect in `useDraft`.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setActiveChip(initialChipForTab(forcedTab ?? tabFromSegment(segment)));
-  }, [segment, forcedTab]);
 
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId ?? null,

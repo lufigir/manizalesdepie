@@ -9,16 +9,18 @@ import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 import { MapWorkspace } from "../_components/map-workspace";
 
 /**
- * Everything every section shares: one unified map, the filter row above it,
- * and the panel beside it (see `MapWorkspace`, `UnifiedPanel`).
+ * Everything the map needs: loaded once, here, and handed down to
+ * `MapWorkspace` (which renders the filter row and the panel beside it — see
+ * `UnifiedPanel`).
  *
- * The four child routes (`ayudar/`, `necesito/`, …) still exist and each
- * renders nothing of its own — they only carry metadata and seed which filter
- * opens, so `/mascotas` stays a real, shareable URL without gating what the
- * map draws the way it used to.
+ * `(tabs)/page.tsx` — the bare `/` — is the only route left under this
+ * layout. `/necesito`, `/mascotas` and `/servicios` used to sit beside it,
+ * each rendering nothing of its own and existing only to seed one
+ * `UnifiedPanel` chip; they were removed once every chip became reachable in
+ * one tap from `/` anyway, the same reasoning `/ayudar` was dropped under.
  *
  * A Server Component: it reads through the DALs and hands plain data down.
- * Loaded once here rather than per section, because every filter now shows
+ * Loaded once here rather than per family, because every filter now shows
  * counts for every other one.
  */
 export default async function TabsLayout() {

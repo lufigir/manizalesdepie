@@ -34,7 +34,7 @@ export async function conveneCall(formData: FormData) {
     whatsapp: formData.get("whatsapp") || undefined,
   });
 
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
   return { id };
 }
@@ -50,7 +50,7 @@ export async function gatherInformalCall(input: {
   const dal = await CallDAL.create();
   const { id } = await dal.gather(input);
 
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
   return { id };
 }
@@ -65,7 +65,7 @@ export async function relocateInformalCall(input: {
   const dal = CallDAL.public();
   await dal.relocateInformal(input);
 
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -96,7 +96,7 @@ export async function joinCall(input: {
 
   // The counter on the card is server-rendered, so the number the next reader
   // sees has to move with the signup.
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath(`/grupo/${input.callId}`);
   return result;
 }
@@ -104,7 +104,7 @@ export async function joinCall(input: {
 export async function verifyCall(id: string) {
   const dal = await CallDAL.create();
   await dal.verify(id);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
@@ -122,20 +122,20 @@ export async function adminUpdateCall(input: {
 }) {
   const dal = await CallDAL.create();
   await dal.adminUpdate(input);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
 export async function setCallPublished(id: string, published: boolean) {
   const dal = await CallDAL.create();
   await dal.setPublished(id, published);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
 
 export async function deleteCall(id: string) {
   const dal = await CallDAL.create();
   await dal.remove(id);
-  revalidatePath("/ayudar");
+  revalidatePath("/");
   revalidatePath("/admin");
 }
