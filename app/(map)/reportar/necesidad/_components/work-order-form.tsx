@@ -152,11 +152,12 @@ export function WorkOrderForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         )}
       </div>
 
-      {/* The one place this form touches a third party's exact address and
-          phone without their own consent — see AGENTS.md's guardrail on
-          work_order_contact. Marked as its own block on purpose, so the
-          "opcional y privado" copy is read before anyone types into it. */}
-      <div className="flex flex-col gap-3 rounded-lg border p-3">
+      {/* Published on the card, so the warning is part of the block rather
+          than a note somewhere else on the page: whatever goes in here is
+          visible to anyone, and half of these reports are written about
+          somebody else's house. The copy is the only protection this data
+          has left — nothing downstream can take a published address back. */}
+      <div className="border-claimed/40 bg-claimed-surface/40 flex flex-col gap-3 rounded-lg border p-3">
         <div>
           <p className="text-sm font-semibold">{WORK_ORDER_FORM.contactTitle}</p>
           <p className="text-muted-foreground text-xs">{WORK_ORDER_FORM.contactHint}</p>

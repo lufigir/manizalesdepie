@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { BadgeCheck, Eye, EyeOff, Trash2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { ADMIN_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -75,22 +76,23 @@ export function AdminActions({
       )}
 
       {onVerify && !verified && (
-        <button
-          type="button"
-          disabled={pending}
+        <Button
+          size="sm"
+          variant="outline"
+          loading={pending}
           onClick={() => startTransition(onVerify)}
-          className="border-verified/30 bg-verified/10 text-verified inline-flex items-center gap-1 rounded border px-1.5 py-1 text-[0.65rem] font-semibold disabled:opacity-50"
+          className="border-verified/30 bg-verified/10 text-verified"
         >
           <BadgeCheck className="size-3" aria-hidden />
           {ADMIN_LABEL.verify}
-        </button>
+        </Button>
       )}
 
-      <button
-        type="button"
-        disabled={pending}
+      <Button
+        size="sm"
+        variant="outline"
+        loading={pending}
         onClick={() => startTransition(() => onSetPublished(!published))}
-        className="bg-background inline-flex items-center gap-1 rounded border px-1.5 py-1 text-[0.65rem] font-semibold disabled:opacity-50"
       >
         {published ? (
           <>
@@ -103,7 +105,7 @@ export function AdminActions({
             {ADMIN_LABEL.publish}
           </>
         )}
-      </button>
+      </Button>
 
       <div className="ml-auto flex items-center gap-1">
         {confirmingDelete ? (
@@ -111,38 +113,36 @@ export function AdminActions({
             <span className="text-unclaimed text-[0.65rem] font-semibold">
               {ADMIN_LABEL.deleteConfirm}
             </span>
-            <button
-              type="button"
-              disabled={pending}
+            <Button
+              size="sm"
+              variant="destructive"
+              loading={pending}
               onClick={() =>
                 startTransition(async () => {
                   await onDelete();
                   setConfirmingDelete(false);
                 })
               }
-              className="bg-unclaimed text-unclaimed-foreground rounded px-1.5 py-1 text-[0.65rem] font-semibold disabled:opacity-50"
             >
               {ADMIN_LABEL.deleteConfirmShort}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={() => setConfirmingDelete(false)}
-              className="text-muted-foreground rounded px-1.5 py-1 text-[0.65rem] underline"
             >
               {ADMIN_LABEL.cancel}
-            </button>
+            </Button>
           </>
         ) : (
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="destructive-outline"
             onClick={() => setConfirmingDelete(true)}
-            className={cn(
-              "text-unclaimed inline-flex items-center gap-1 rounded px-1.5 py-1 text-[0.65rem] font-semibold",
-            )}
           >
             <Trash2 className="size-3" aria-hidden />
             {ADMIN_LABEL.delete}
-          </button>
+          </Button>
         )}
       </div>
     </div>

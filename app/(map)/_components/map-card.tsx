@@ -3,117 +3,88 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 import { X } from "lucide-react";
 
-import { MapPopup } from "@/components/ui/map";
 import { MAP_CARD } from "@/lib/labels";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
+
+/** How much of the map the open card is covering, so the camera can put the
+ *  pin in what is left. One axis per surface: the drawer eats height from the
+ *  bottom, the sheet eats width from the left. */
+export type CardInset = { bottom: number; left: number };
+
+const NO_INSET: CardInset = { bottom: 0, left: 0 };
 
 /**
  * Where a selected pin's card opens — one component, two answers.
  *
- * The anchored popup was, and still is, the right shape beside the map: the
- * answer and its place on the map stay on screen together, which is the whole
- * reason the card is not a sheet. What that argument never survived is a
- * phone. Below `lg` the map is stacked above the panel, so a card capped at
- * `58dvh` was being anchored inside a region barely bigger than itself,
- * hanging off the top edge and pushing its own pin out of frame.
+ * Both are sheets now: a drawer along the bottom edge under `lg`, a panel
+ * along the left edge from `lg` up. Neither is modal — no backdrop, no focus
+ * trap, no scroll lock — so the map stays live and draggable underneath, and
+ * the camera reframes the pin into whatever space the card leaves (see
+ * `FlyToSelected`).
  *
- * The drawer keeps what the popup was defending. It is NOT modal: no
- * backdrop, no focus trap, no scroll lock. The map above it stays live and
- * draggable, and the camera reframes the pin into the space the drawer
- * leaves (see `FlyToSelected`'s `bottomInset`), so the answer and its place
- * are still on screen together — just stacked instead of anchored.
+ * The desktop half used to be MapLibre's own anchored popup, pointing at the
+ * pin. The argument for it was that the answer and its place stayed on screen
+ * together, and that argument was right — but a popup is sized by whatever it
+ * is anchored to, and the cards outgrew it: a necesidad now carries its
+ * contact block, its attendee list and its actions, and a sitio shows its
+ * schedule, its items, its address and its source with nothing folded away.
+ * All of that inside 20rem hanging off a pin meant a card that covered its
+ * own marker, flipped sides near an edge, and scrolled internally at 58dvh.
+ * A left sheet holds the same content at a stable size and place; the camera
+ * offset keeps the pin visible beside it, which is what the anchoring was
+ * for.
  *
- * It also sits INSIDE the map's own container rather than pinned to the
- * viewport, which is what keeps the collapsed panel's bar reachable
- * underneath and lets the camera measure its inset in plain canvas pixels.
+ * The left edge specifically: the panel owns the right (see `MapWorkspace`'s
+ * aside), so the detail opens opposite it and the map keeps the middle.
  *
- * Base UI's Dialog is deliberately not used here: every one of its jobs
+ * Base UI's Dialog is deliberately not used for either: every one of its jobs
  * (backdrop, focus trap, dismiss-on-outside-press) is a job this surface does
  * not want, and its outside-press dismissal fires on `pointerdown`, which
  * would close the card at the start of every drag across the map.
  */
 export function MapCard({
-  longitude,
-  latitude,
   onClose,
-  onHeightChange,
+  onInsetChange,
   children,
 }: {
-  /** Null for the things that have no point at all — a lost animal, a truck
-   *  somebody lends across the whole city. Those never get the anchored
-   *  popup, at any width: there is nothing to anchor to. */
-  longitude: number | null;
-  latitude: number | null;
   onClose: () => void;
-  /** How much of the map the card is covering, so the camera can lift the
-   *  pin clear of it. Reports 0 on unmount and while the popup is the one
-   *  rendering, which anchors instead of covering. */
-  onHeightChange: (height: number) => void;
+  /** Reports 0 on both axes when the card unmounts. */
+  onInsetChange: (inset: CardInset) => void;
   children: React.ReactNode;
 }) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
-  const located = longitude !== null && latitude !== null;
-
-  if (isDesktop && located) {
-    return (
-      <AnchoredCard longitude={longitude} latitude={latitude} onClose={onClose}>
-        {children}
-      </AnchoredCard>
-    );
-  }
 
   return (
-    <BottomCard onClose={onClose} onHeightChange={onHeightChange}>
-      {children}
-    </BottomCard>
-  );
-}
-
-/** Beside the map: unchanged from what every card did before, including
- *  `closeOnClick={false}` so panning does not dismiss it mid-read and
- *  `focusAfterOpen={false}` so it never scrolls the page out from under
- *  somebody. */
-function AnchoredCard({
-  longitude,
-  latitude,
-  onClose,
-  children,
-}: {
-  longitude: number;
-  latitude: number;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <MapPopup
-      longitude={longitude}
-      latitude={latitude}
+    <CardShell
+      key={isDesktop ? "side" : "bottom"}
+      side={isDesktop ? "left" : "bottom"}
       onClose={onClose}
-      closeButton
-      closeOnClick={false}
-      focusAfterOpen={false}
-      offset={22}
-      className="max-h-[58dvh] w-[min(20rem,calc(100vw-2.5rem))] max-w-none overflow-y-auto"
+      onInsetChange={onInsetChange}
     >
       {children}
-    </MapPopup>
+    </CardShell>
   );
 }
 
 /**
- * Under the map: the drawer.
+ * The surface itself, in whichever edge it is docked to.
  *
- * `max-h`, not `h` — a two-line offer takes two lines. A card that always
- * claimed 55dvh would be covering half the map to show whitespace, and the
- * camera would be lifting the pin clear of nothing.
+ * One component rather than two: the measuring, the Escape handling and the
+ * close control were identical in both, and only the box they sit in differs.
+ *
+ * `max-h`/`max-w`, not fixed — a two-line offer takes two lines. A card that
+ * always claimed its cap would be covering the map to show whitespace, and
+ * the camera would be lifting the pin clear of nothing.
  */
-function BottomCard({
+function CardShell({
+  side,
   onClose,
-  onHeightChange,
+  onInsetChange,
   children,
 }: {
+  side: "left" | "bottom";
   onClose: () => void;
-  onHeightChange: (height: number) => void;
+  onInsetChange: (inset: CardInset) => void;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -122,7 +93,7 @@ function BottomCard({
   // card's own content causes — an admin editing a field would otherwise
   // tear down the ResizeObserver on each keystroke and re-fly the camera
   // under the reader.
-  const report = useEffectEvent((height: number) => onHeightChange(height));
+  const report = useEffectEvent((inset: CardInset) => onInsetChange(inset));
   const close = useEffectEvent(() => onClose());
 
   useEffect(() => {
@@ -130,15 +101,16 @@ function BottomCard({
     if (!element) return;
 
     const observer = new ResizeObserver(([entry]) => {
-      report(entry.contentRect.height);
+      const { width, height } = entry.contentRect;
+      report(side === "left" ? { bottom: 0, left: width } : { bottom: height, left: 0 });
     });
     observer.observe(element);
 
     return () => {
       observer.disconnect();
-      report(0);
+      report(NO_INSET);
     };
-  }, []);
+  }, [side]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -148,13 +120,18 @@ function BottomCard({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const docked =
+    side === "left"
+      ? "inset-y-0 left-0 w-[min(22rem,80vw)] border-r rounded-r-xl shadow-[4px_0_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-left-4"
+      : "inset-x-0 bottom-0 max-h-[55dvh] rounded-t-xl border-t shadow-[0_-4px_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-bottom-4";
+
   return (
     <div
       ref={ref}
       role="dialog"
       aria-modal="false"
       aria-label={MAP_CARD.region}
-      className="bg-background animate-in slide-in-from-bottom-4 fade-in absolute inset-x-0 bottom-0 z-20 flex max-h-[55dvh] flex-col rounded-t-xl border-t shadow-[0_-4px_16px_-4px_rgb(0_0_0/0.15)] duration-200"
+      className={`bg-background animate-in fade-in absolute z-20 flex flex-col duration-200 ${docked}`}
     >
       {/* A bar of its own, rather than a button floating in the corner.
           Floating, it had to be kept clear with padding down the whole right
@@ -162,11 +139,14 @@ function BottomCard({
           make room for one control at the top of it. As a bar it costs 28px
           of height once, and every line underneath gets the full width.
 
-          The pill in the middle is the affordance: it is what a sheet that
-          can be dismissed looks like on this platform, and it says so
-          without a word. */}
+          The pill is the drawer's affordance: it is what a dismissable sheet
+          looks like on a phone, and it says so without a word. The left
+          sheet has an edge of its own to be read against, so it gets the
+          close button alone. */}
       <div className="relative flex h-7 shrink-0 items-center justify-center">
-        <span className="bg-muted-foreground/30 h-1 w-9 rounded-full" aria-hidden />
+        {side === "bottom" && (
+          <span className="bg-muted-foreground/30 h-1 w-9 rounded-full" aria-hidden />
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -177,12 +157,12 @@ function BottomCard({
         </button>
       </div>
 
-      {/* The card's own scroll, so "ver más" can unfold inside it without
-          the drawer growing past the cap and swallowing the map.
+      {/* The card's own scroll, so a long case can run past the edge without
+          the surface growing past its cap and swallowing the map.
 
-          Capped and centred: below `lg` this drawer is as wide as the screen,
-          which on a portrait tablet is 800px of line length for text sized
-          for a phone. The cap costs nothing at 390px and keeps the card
+          Capped and centred: as a bottom drawer this is as wide as the
+          screen, which on a portrait tablet is 800px of line length for text
+          sized for a phone. The cap costs nothing at 390px and keeps the card
           readable at 900. */}
       <div className="mx-auto min-h-0 w-full max-w-xl flex-1 overflow-y-auto overscroll-contain px-3 pt-0.5 pb-3">
         {children}

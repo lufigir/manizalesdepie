@@ -29,7 +29,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
-import { MoreDetails } from "./more-details";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
 
@@ -92,20 +91,9 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     .slice(0, 5);
   const refused = site.items.filter((item) => item.mode === "not_accepted");
 
-  // Confidence, the full schedule, what a site needs, the address, the
-  // description, the source link: all real, all pushed behind "ver más".
-  // The card kept growing every time one more true fact earned a line, and
-  // the fact that mattered least — "hay 6 líneas antes de que aparezca el
-  // botón de cómo llegar" — was never any one of them on its own. `needed`
-  // is the one item that used to live in the summary and moved here: it is
-  // useful, but "no recibe" is the one that is unsafe to miss, so that is
-  // the one that stays.
-  const hasMore = Boolean(
-    site.description || site.address || site.sourceUrl || needed.length > 0,
-  );
-
-  /** Freshness and place: the card's quiet line. It shares a row with the
-   *  "ver más" trigger when there is one, which is most of the time. */
+  /** Freshness, place and confidence: the card's quiet line. Confidence used
+   *  to be the sheet's subtitle behind "ver más"; with nothing folded away
+   *  any more it joins the row it belonged to all along. */
   const metaLine = (
     <p
       className={cn(
@@ -115,6 +103,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     >
       {freshLabel}
       {site.neighborhood && ` · ${site.neighborhood}`}
+      {` · ${confidenceLabel}`}
     </p>
   );
 
@@ -159,10 +148,15 @@ export function SitePopup({ site }: { site: SiteDTO }) {
         </div>
       </header>
 
-      {!hasMore && metaLine}
+      {metaLine}
 
-      {hasMore && (
-        <MoreDetails title={site.name} subtitle={confidenceLabel} meta={metaLine}>
+      {/* Everything true about the place, in the card itself. It used to fold
+          behind "ver más" — a lateral sheet beside the map, an accordion in
+          the drawer under it. Both surfaces scroll on their own, so the fold
+          was buying a shorter card at the price of a tap on facts (the
+          address, what they need, the source) that someone deciding where to
+          drive actually reads. */}
+      <div className="flex flex-col gap-2.5 text-[0.8rem]">
           {site.schedule && (
             <div>
               <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
@@ -217,8 +211,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
               {SHEET_LABEL.source}
             </a>
           )}
-        </MoreDetails>
-      )}
+      </div>
 
       {refused.length > 0 && (
         <div className="border-unclaimed/25 bg-unclaimed-surface rounded-md border px-2 py-1.5">
@@ -325,14 +318,10 @@ export function SitePopup({ site }: { site: SiteDTO }) {
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
-            >
-              <Pencil className="size-2.5" aria-hidden />
+            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3" aria-hidden />
               {ADMIN_LABEL.edit}
-            </button>
+            </Button>
           )}
 
           <AdminActions

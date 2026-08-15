@@ -221,14 +221,10 @@ function AnimalCard({
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
-            >
-              <Pencil className="size-2.5" aria-hidden />
+            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3" aria-hidden />
               {ADMIN_LABEL.edit}
-            </button>
+            </Button>
           )}
 
           <AdminActions

@@ -72,7 +72,7 @@ export function CallMarkers({
                 left the marker. */}
             {selectedId !== call.id && (
               <MarkerTooltip offset={20}>
-                {call.title} · {callWhen(call)}
+                {[call.title, callWhen(call)].filter(Boolean).join(" · ")}
               </MarkerTooltip>
             )}
           </MapMarker>

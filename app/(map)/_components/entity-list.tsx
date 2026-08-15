@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
+import { Button } from "@/components/ui/button";
 import { PANEL_LABEL } from "@/lib/labels";
 
 /**
@@ -99,13 +100,14 @@ export function SectionedEntityList({
           </ul>
 
           {section.hiddenCount > 0 && (
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="outline"
               onClick={section.onSeeMore}
-              className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring mt-0.5 rounded-md px-2 py-1.5 text-left text-[0.7rem] font-semibold underline transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="mt-1 w-full"
             >
               {PANEL_LABEL.seeMore(section.hiddenCount)}
-            </button>
+            </Button>
           )}
         </section>
       ))}

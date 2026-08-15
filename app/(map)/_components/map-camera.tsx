@@ -5,6 +5,8 @@ import type { MapMouseEvent as MapLibreMouseEvent } from "maplibre-gl";
 
 import { useMap } from "@/components/ui/map";
 
+import type { CardInset } from "./map-card";
+
 /**
  * Anything with a coordinate. Both of these care about where something is and
  * about nothing else, so they take the coordinate rather than the entity — which
@@ -63,11 +65,11 @@ export function FitToSites({ sites }: { sites: Located[] }) {
 /**
  * Flies to the selected pin so its card never covers the thing it describes.
  *
- * `bottomInset` is how much of the map the card is sitting on — zero for the
- * anchored popup, which points at the pin rather than covering it, and the
- * measured height of the bottom drawer otherwise (see `MapCard`). Centring
- * the pin in what is LEFT is the whole trick that lets the drawer replace the
- * popup on a phone without losing what the popup was for.
+ * `inset` is how much of the map the card is sitting on, measured by
+ * `MapCard`: the drawer's height under `lg`, the left sheet's width from
+ * `lg` up. Centring the pin in what is LEFT is the whole trick that lets a
+ * sheet replace the anchored popup on either size without losing what the
+ * anchoring was for.
  *
  * A one-shot `offset` rather than the map's `padding` option on purpose:
  * padding is sticky, so every later `fitBounds` and `flyTo` would inherit a
@@ -75,12 +77,13 @@ export function FitToSites({ sites }: { sites: Located[] }) {
  */
 export function FlyToSelected({
   site,
-  bottomInset = 0,
+  inset = { bottom: 0, left: 0 },
 }: {
   site: Located | null;
-  bottomInset?: number;
+  inset?: CardInset;
 }) {
   const { map } = useMap();
+  const { bottom, left } = inset;
 
   useEffect(() => {
     if (!map || !site) return;
@@ -88,15 +91,17 @@ export function FlyToSelected({
     map.flyTo({
       center: [site.longitude, site.latitude],
       zoom: Math.max(map.getZoom(), 15),
-      // Half the card's height: the pin lands in the middle of the strip of
-      // map still visible above it.
-      offset: [0, -bottomInset / 2],
+      // Half of whatever the card covers: the pin lands in the middle of the
+      // strip of map still visible beside or above it. Positive x pushes the
+      // pin right, clear of the left sheet; negative y lifts it above the
+      // drawer.
+      offset: [left / 2, -bottom / 2],
       duration: 700,
       // Keeps the animation running even if the user prefers reduced motion
       // elsewhere; losing the pin is worse than the movement.
       essential: true,
     });
-  }, [map, site, bottomInset]);
+  }, [map, site, bottom, left]);
 
   return null;
 }

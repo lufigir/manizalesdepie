@@ -264,7 +264,10 @@ where s.type = 'shelter';
 -- if it ever reached the form.
 --
 -- Same privacy split as everywhere else in this file: the reporter's name
--- and phone go only into `work_order_contact`, never into the public row.
+-- and phone are columns on `work_order` itself, and public since 15 August
+-- (see the migration `20260815000000_public_work_order_contact`). These rows
+-- come from press reporting, so the names were already published elsewhere —
+-- but they still stay `published = false` until a curator reads them.
 -- `approx_location` is rounded to three decimal places (~100 m) rather than
 -- the source's original precision, which sat close enough to a real
 -- household to be an address in practice — the whole reason
@@ -312,8 +315,8 @@ from (values
    -75.512, 5.078)
 ) as v(id, category, description, lng, lat);
 
-insert into work_order_contact (work_order_id, exact_address, contact_name, phone, notes)
-values
+update work_order w set exact_address = v.exact_address, contact_name = v.contact_name, phone = v.phone, notes = v.notes
+from (values
   ('c793b455-cde0-4506-814b-217fb0982c16', 'Sector La Linda, Manizales (dirección exacta por confirmar)',
    'Guadalupe Nieto M', '3246219748', null),
   ('d23eb76d-f837-4506-bf33-305b56e201e1', 'Sector El Arenillo, Manizales (dirección exacta por confirmar)',
@@ -336,4 +339,6 @@ values
   ('2b44a0e9-e784-4556-bbac-f6080b7a62b4', 'Carrera 29 #38-18, barrio Villanueva, Manizales',
    'Banny Jaramillo', '3103612586', 'Prioridad alta.'),
   ('34d2a43f-98a9-46dd-8243-130df442b65a', 'Barrio Galán, Manizales (dirección exacta por confirmar)',
-   'Santiago Alzate', '3122335959', 'Prioridad alta.');
+   'Santiago Alzate', '3122335959', 'Prioridad alta.')
+) as v (id, exact_address, contact_name, phone, notes)
+where w.id = v.id::uuid;

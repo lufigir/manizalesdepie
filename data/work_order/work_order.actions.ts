@@ -27,17 +27,24 @@ export async function reportWorkOrder(input: {
   return { id };
 }
 
-/** "Yo puedo atender" — anonymous. Returns the contact straight away; see
- *  `WorkOrderDAL.attend`. */
+/** "Yo puedo atender" — anonymous, with an optional note for whoever else
+ *  is on the case. Returns nothing: the contact details it used to hand
+ *  back are on the card already. */
 export async function attendWorkOrder(input: {
   workOrderId: string;
   name: string;
   phone: string;
+  note?: string;
 }) {
   const dal = WorkOrderDAL.public();
-  const result = await dal.attend(input);
+  await dal.attend(input);
   revalidatePath("/");
-  return result;
+}
+
+/** Who is already on a case, with their notes. */
+export async function listWorkOrderAttendees(workOrderId: string) {
+  const dal = WorkOrderDAL.public();
+  return dal.listAttendees(workOrderId);
 }
 
 export async function closeWorkOrder(

@@ -30,7 +30,7 @@ import {
   type PanelSection,
 } from "./entity-list";
 import { ServicesPanel } from "./services-panel";
-import { WorkOrderItem, WorkOrderList } from "./work-order-list";
+import { WorkOrderList } from "./work-order-list";
 import { useWorkspace } from "./workspace-context";
 
 /** How many rows of each family "Todo" previews before handing off to that
@@ -144,8 +144,8 @@ export function UnifiedPanel() {
         workOrders,
         (order) => workOrderUrgency(order, neighborhoodNeeds),
         (order) => (
-          <WorkOrderItem
-            order={order}
+          <EntityCard
+            entity={{ kind: "workOrder", order }}
             selected={order.id === selectedId}
             onSelect={select}
           />

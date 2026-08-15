@@ -9,9 +9,9 @@ import {
   attendWorkOrderSchema,
   createWorkOrderSchema,
   updateWorkOrderSchema,
-  workOrderContactSchema,
+  workOrderAttendeeSchema,
   workOrderSchema,
-  type WorkOrderContactDTO,
+  type WorkOrderAttendeeDTO,
   type WorkOrderDTO,
 } from "./work_order.dto";
 import {
@@ -30,8 +30,12 @@ import {
 const CLOSED_VISIBLE_HOURS = 6;
 
 /**
- * The only path from this application to `work_order`, `work_order_contact`,
- * `work_order_attendance` and `work_order_access`.
+ * The only path from this application to `work_order` and
+ * `work_order_attendance`.
+ *
+ * `work_order_contact` and `work_order_access` are gone: the contact fields
+ * live on `work_order` itself and are public, so there is no second
+ * visibility rule to keep and no reveal left to audit.
  *
  * Private constructor and static factories, like `CallDAL` — kept even
  * though most methods here no longer need an identity, because `verify`
@@ -126,6 +130,13 @@ export class WorkOrderDAL {
         approx_location: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
         published: true,
         reported_by: this.user?.id ?? null,
+        // One insert now, not two. The contact fields used to be written to
+        // a separate table because they had a different visibility rule;
+        // they have the same one as the description now.
+        exact_address: data.exactAddress ?? null,
+        contact_name: data.contactName ?? null,
+        phone: data.phone ?? null,
+        notes: data.notes ?? null,
       })
       .select("id")
       .single();
@@ -133,34 +144,6 @@ export class WorkOrderDAL {
     if (error || !row) {
       log.error("workOrder.report failed", { code: error?.code });
       throw new Error("No se pudo publicar la orden de trabajo");
-    }
-
-    // The contact half, only if there is one to write — see the guardrail
-    // this table exists for. A second insert rather than one statement: the
-    // two tables have two different visibility rules, and keeping the
-    // writes separate is what keeps that true even here.
-    const hasContact =
-      data.exactAddress || data.contactName || data.phone || data.notes;
-    if (hasContact) {
-      const { error: contactError } = await supabase
-        .from("work_order_contact")
-        .insert({
-          work_order_id: row.id,
-          exact_address: data.exactAddress ?? "Sin dirección exacta",
-          contact_name: data.contactName ?? null,
-          phone: data.phone ?? null,
-          notes: data.notes ?? null,
-        });
-
-      if (contactError) {
-        // The work order itself is already published and worth keeping —
-        // losing the contact detail is a smaller failure than losing the
-        // whole report, so this logs rather than throws.
-        log.error("workOrder.report contact insert failed", {
-          code: contactError.code,
-          workOrderId: row.id,
-        });
-      }
     }
 
     log.info("work order reported", {
@@ -172,66 +155,63 @@ export class WorkOrderDAL {
 
   /**
    * "Yo puedo atender" — anonymous, no account, and several people can do
-   * this for the same case. Reveals `work_order_contact` right back in the
-   * same response, which is the whole reason this used to require a
-   * Google-signed identity: now the reveal itself is what gets logged (see
-   * `work_order_access`) instead of a login wall in front of it.
+   * this for the same case, each leaving a note for the others.
+   *
+   * It returns nothing now. It used to hand back `work_order_contact` in
+   * the same response, because attending was the only way to ever see it;
+   * the card already shows those fields to everyone, so the reveal, the
+   * access log and the round trip that carried them are all gone.
    */
-  async attend(input: unknown): Promise<{ contact: WorkOrderContactDTO | null }> {
+  async attend(input: unknown): Promise<void> {
     const data = attendWorkOrderSchema.parse(input);
 
     if (!canAttendWorkOrder()) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
 
-    const { data: attendance, error } = await supabase
-      .from("work_order_attendance")
-      .insert({ work_order_id: data.workOrderId, name: data.name, phone: data.phone })
-      .select("id")
-      .single();
+    const { error } = await supabase.from("work_order_attendance").insert({
+      work_order_id: data.workOrderId,
+      name: data.name,
+      phone: data.phone,
+      note: data.note ?? null,
+    });
 
-    if (error || !attendance) {
+    if (error) {
       log.error("workOrder.attend failed", {
-        code: error?.code,
+        code: error.code,
         workOrderId: data.workOrderId,
       });
       throw new Error("No se pudo registrar que vas a atender este caso");
     }
 
     log.info("work order attended", { workOrderId: data.workOrderId });
+  }
 
-    const { data: contact, error: contactError } = await supabase
-      .from("work_order_contact")
-      .select("exact_address, contact_name, phone, notes")
-      .eq("work_order_id", data.workOrderId)
-      .maybeSingle();
+  /** Who is already on a case, oldest first — the order they committed in,
+   *  which is also the order their notes read in as a thread. */
+  async listAttendees(workOrderId: string): Promise<WorkOrderAttendeeDTO[]> {
+    const supabase = await createServerSupabase();
 
-    if (contactError) {
-      log.error("workOrder.attend contact lookup failed", {
-        code: contactError.code,
-        workOrderId: data.workOrderId,
-      });
+    const { data, error } = await supabase
+      .from("work_order_attendance_public")
+      .select("id, name, phone, note, created_at")
+      .eq("work_order_id", workOrderId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      log.error("workOrder.listAttendees failed", { code: error.code, workOrderId });
+      throw new Error("No se pudo cargar quién va a atender este caso");
     }
 
-    if (contact) {
-      // Logged against the attendance row instead of a profile — there is
-      // no signed-in identity here any more, but the audit trail a curator
-      // could always read back stays exactly as real.
-      await supabase
-        .from("work_order_access")
-        .insert({ work_order_id: data.workOrderId, attendee_id: attendance.id });
-    }
-
-    return {
-      contact: contact
-        ? workOrderContactSchema.parse({
-            exactAddress: contact.exact_address,
-            contactName: contact.contact_name,
-            phone: contact.phone,
-            notes: contact.notes,
-          })
-        : null,
-    };
+    return (data ?? []).map((row) =>
+      workOrderAttendeeSchema.parse({
+        id: row.id,
+        name: row.name,
+        phone: row.phone,
+        note: row.note,
+        createdAt: row.created_at,
+      }),
+    );
   }
 
   /** Closes a case — completed, already done by someone else, or not a real
@@ -322,7 +302,7 @@ export class WorkOrderDAL {
   }
 
   /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
-   *  to `work_order_contact`, `work_order_attendance` and `work_order_access`. */
+   *  to `work_order_attendance`. */
   async remove(id: string): Promise<void> {
     if (!canManageWorkOrder(this.user)) throw new Error("Forbidden");
 
@@ -348,6 +328,10 @@ export class WorkOrderDAL {
       neighborhood: row.neighborhood,
       status: row.status,
       attendeeCount: row.attendee_count,
+      exactAddress: row.exact_address,
+      contactName: row.contact_name,
+      phone: row.phone,
+      notes: row.notes,
       verified: row.verified,
       confirmedCount: row.confirmed_count,
       confirmedAt: row.confirmed_at,

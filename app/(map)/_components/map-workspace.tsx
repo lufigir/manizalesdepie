@@ -33,7 +33,7 @@ import { BarrioLayer, type BarrioProps } from "./barrio-layer";
 import { CallMarkers } from "./call-markers";
 import { CallPopup } from "./call-popup";
 import { LiveClock } from "./live-clock";
-import { MapCard } from "./map-card";
+import { MapCard, type CardInset } from "./map-card";
 import { ClearSelectionOnTap, FitToSites, FlyToSelected } from "./map-camera";
 import { ReportMenu } from "./report-menu";
 import { ResourceOfferMarkers } from "./resource-offer-markers";
@@ -162,10 +162,10 @@ export function MapWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId ?? null,
   );
-  // How much of the map the bottom card is covering, reported by `MapCard`
-  // and spent by the camera (see `FlyToSelected`). Zero whenever the anchored
-  // popup is the one rendering, which points at the pin instead of hiding it.
-  const [cardInset, setCardInset] = useState(0);
+  // How much of the map the open card is covering, reported by `MapCard` and
+  // spent by the camera (see `FlyToSelected`): the drawer's height on a
+  // phone, the left sheet's width beside the map.
+  const [cardInset, setCardInset] = useState<CardInset>({ bottom: 0, left: 0 });
   // Which barrio the map is centred on. Zoomed in you are inside one, its
   // outline is off-screen and the wash is invisible, so the layer looks dead
   // even though it is working. This says where you are without a cursor —
@@ -489,7 +489,7 @@ export function MapWorkspace({
             />
             <FlyToSelected
               site={selectedEntity?.coordinates ?? null}
-              bottomInset={cardInset}
+              inset={cardInset}
             />
 
             {/* A tap on bare map puts the card away. Dragging does not — see
@@ -519,17 +519,15 @@ export function MapWorkspace({
               onSelect={select}
             />
 
-            {/* One card for every family, in whichever container the screen
-                can actually hold — anchored to the pin beside the map, a
-                drawer along the bottom edge under it. Rendered from state
-                rather than from MarkerPopup's own click toggle, because a
-                shared link has to open it without a click. See `MapCard`. */}
+            {/* One card for every family, docked to whichever edge the screen
+                can spare — a sheet along the left beside the map, a drawer
+                along the bottom under it. Rendered from state rather than
+                from MarkerPopup's own click toggle, because a shared link has
+                to open it without a click. See `MapCard`. */}
             {selectedEntity && (
               <MapCard
-                longitude={selectedEntity.coordinates?.longitude ?? null}
-                latitude={selectedEntity.coordinates?.latitude ?? null}
                 onClose={() => setSelectedId(null)}
-                onHeightChange={setCardInset}
+                onInsetChange={setCardInset}
               >
                 {selectedEntity.card}
               </MapCard>

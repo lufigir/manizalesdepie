@@ -72,12 +72,18 @@ row into a response.
 - **A server action is a public POST endpoint.** Anyone can call it with a
   crafted request. Arriving through our form is not a fact you get to assume,
   so the action checks nothing itself and the DAL checks everything.
-- **`work_order_contact` is never joined into a public view or published on a
-  realtime channel.** It holds the exact address and phone of an affected
-  person, frequently reported by a third party who never consented on their
-  behalf, during a looting curfew. The public `work_order` row carries only a
-  block-level `approx_location`. Every read of the contact row is written to
-  `work_order_access`.
+- **A necesidad's contact details are public, and the form says so where they
+  are typed.** This reverses the original guardrail, deliberately, on 15
+  August: `work_order_contact` and `work_order_access` are gone and the
+  fields live on `work_order` itself. The reasoning was that the old gate —
+  reveal-once, in exchange for an unverified name and phone — protected
+  nobody it claimed to while stopping somebody with a volqueta from calling
+  to size up a case before committing to it.
+  The fields are optional and stay optional. A report is frequently written
+  by a neighbour on somebody else's behalf, so the only thing standing
+  between an affected person and a published address is the warning in
+  `WORK_ORDER_FORM.contactHint`. Weaken that copy and the decision above
+  stops being defensible — treat it as load-bearing, not as a nicety.
 - **Realtime goes browser → Postgres directly, so RLS is the guard there, not
   the DAL.** Any new sensitive column must live in a table that no channel
   subscribes to. Do not "temporarily" add one to a published table.

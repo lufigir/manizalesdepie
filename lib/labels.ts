@@ -160,10 +160,6 @@ export const SHEET_LABEL = {
    *  cómo lo encontraste:") wrapped onto a second line above three buttons
    *  that already say what they do. */
   confirmPrompt: "¿Estás ahí? Confirma cómo está:",
-  moreInfo: "Ver más",
-  /** The way back out of the inline expansion the card grows on a phone,
-   *  where there is no lateral sheet to close instead. */
-  lessInfo: "Ver menos",
   description: "Descripción",
   source: "Fuente",
 } as const;
@@ -464,18 +460,20 @@ export const CALL_STATE_STYLE: Record<CallState, string> = {
 };
 
 /**
- * How many people said they would come.
+ * How many people said they would come, or null when nobody has yet.
  *
  * Without a stated total the count is still shown, because "ya somos ocho" is
- * what makes the ninth person go. Zero says so in words rather than as a
- * number: "0 apuntados" reads as a failed event, and "sé el primero" is the
- * same fact pointed at the reader.
+ * what makes the ninth person go. An empty grupo says nothing at all: it used
+ * to read "Sé la primera persona en apuntarte", which is a pitch rather than a
+ * fact, and it sat in the row where every other card states one.
  */
-export function slotsLabel(call: Pick<CallDTO, "slotsTotal" | "slotsTaken">) {
+export function slotsLabel(
+  call: Pick<CallDTO, "slotsTotal" | "slotsTaken">,
+): string | null {
   if (call.slotsTotal !== null) {
     return `${call.slotsTaken} de ${call.slotsTotal} cupos`;
   }
-  if (call.slotsTaken === 0) return "Sé la primera persona en apuntarte";
+  if (call.slotsTaken === 0) return null;
   return call.slotsTaken === 1 ? "1 persona apuntada" : `${call.slotsTaken} personas apuntadas`;
 }
 
@@ -534,16 +532,19 @@ function day(at: Date, now: Date): string {
  * "Hoy 8:00 AM – 12:00 PM". The day comes first because during an emergency
  * the wrong day is the mistake that costs someone a morning.
  *
- * An informal call's `startsAt` is the instant someone reported it, not an
- * hour anyone chose (see `CallDAL.gather`) — printed as a clock time it reads
- * as a scheduled start, which is the one claim this kind of pin cannot back
- * up. It says what is actually known instead: someone is there right now.
+ * An informal call has no hour at all, so this returns null for one: its
+ * `startsAt` is the instant somebody reported it, not a time anyone chose
+ * (see `CallDAL.gather`), and printing it as a clock time would be the one
+ * claim this kind of pin cannot back up. It used to say "Actualmente hay
+ * gente ayudando" instead, which is a claim of its own — nobody checked
+ * whether they were still there. Saying nothing is the honest version, and
+ * the card's state badge ("En curso") already carries what is known.
  */
 export function callWhen(
   call: Pick<CallDTO, "startsAt" | "endsAt" | "informal">,
   now: Date = new Date(),
-): string {
-  if (call.informal) return CALL_LABEL.happeningNow;
+): string | null {
+  if (call.informal) return null;
 
   const starts = new Date(call.startsAt);
   const head = `${day(starts, now)} ${clock(starts)}`;
@@ -564,7 +565,6 @@ export const CALL_LABEL = {
   share: "Compartir",
   ended: "Este grupo ya terminó.",
   endedHint: "Mira los que están abiertos ahora en el mapa.",
-  happeningNow: "Actualmente hay gente ayudando",
   backToMap: "Ver el mapa",
   countOne: "1 grupo",
   countMany: (n: number) => `${n} grupos`,
@@ -1042,10 +1042,29 @@ export const WORK_ORDER_LABEL = {
   attendSubmit: "Confirmar",
   attendCancel: "Ahora no",
   attendedThanks: "Listo, quedaste registrado.",
-  attendContactTitle: "Dirección y contacto",
-  attendContactHint: "Solo se te muestra a ti, una vez. Anótala.",
-  attendNoContact:
-    "Quien reportó esto no dejó una dirección exacta. Escribe al WhatsApp del reporte o pregunta en el barrio.",
+  /**
+   * The contact block, shown to everyone since the 15th of August.
+   *
+   * It used to appear once, only to whoever had just typed a name and a
+   * phone into "Yo puedo atender", and the hint said "anótala" because
+   * there was no second chance. The gate is gone: it never verified
+   * anybody, and someone with a volqueta could not call without first
+   * committing to a case they had no way to size up.
+   */
+  contactTitle: "Dirección y contacto",
+  contactCall: "Llamar",
+  contactWhatsapp: "Escribir por WhatsApp",
+  noContact:
+    "Quien reportó esto no dejó dirección ni contacto. Guíate por el barrio y el punto en el mapa.",
+  /** Said where the fields are typed, not here — see WORK_ORDER_FORM. This
+   *  is the reader's side of the same fact. */
+  contactPublicNote: "Estos datos los dejó quien reportó el caso.",
+  attendNote: "Nota para los demás (opcional)",
+  attendNotePlaceholder: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
+  attendeesShow: "Ver quién va",
+  attendeesHide: "Ocultar",
+  attendeesLoading: "Cargando…",
+  attendeesEmpty: "Nadie se ha registrado todavía.",
   attendeeCountOne: "1 persona va a atenderlo",
   attendeeCountMany: (n: number) => `${n} personas van a atenderlo`,
   attendeeCountNone: "Nadie ha dicho que puede atenderlo todavía",
@@ -1084,9 +1103,16 @@ export const WORK_ORDER_FORM = {
   descriptionPlaceholder:
     "Escombros bloqueando la entrada de dos casas, se necesita volqueta.",
   barrio: "¿En qué barrio?",
-  contactTitle: "Si sabes la dirección exacta y cómo contactar",
+  contactTitle: "¿Dónde exactamente y cómo contactar?",
+  /**
+   * The warning has to be here, where the fields are, and it has to be
+   * blunt. Nothing downstream can undo what someone types into a public
+   * field — not the DAL, not a curator — so this line is the only real
+   * protection left for a person whose neighbour is filling this in on
+   * their behalf. It says "si no es tu casa, pregunta" for that reason.
+   */
   contactHint:
-    "Opcional y privado: solo lo ve quien diga que lo atiende y un curador. Nunca se publica.",
+    "Público: cualquiera que abra el caso lo ve, y es lo que permite que te llamen. Si estás reportando la casa de otra persona, pregúntale antes de poner su dirección o su teléfono.",
   exactAddress: "Dirección exacta",
   contactName: "Nombre de contacto",
   phone: "Teléfono",

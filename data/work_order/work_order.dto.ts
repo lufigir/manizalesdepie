@@ -61,6 +61,21 @@ export const workOrderSchema = z.object({
    *  same case at once, so there is no single "was it me" flag to give
    *  back the way a lone claimant used to have. */
   attendeeCount: z.number().int().min(0),
+  /**
+   * How to reach whoever this case is about — public since the 15th of
+   * August, when the reveal-on-attend gate was removed (see the migration
+   * `20260815000000_public_work_order_contact`).
+   *
+   * Every one of them is nullable and usually will be: the person filling
+   * the form is often a neighbour reporting somebody else's house, and the
+   * form says out loud that these fields are visible to anyone. A case with
+   * nothing here is still a case — the pin and the barrio are what make it
+   * findable.
+   */
+  exactAddress: z.string().nullable(),
+  contactName: z.string().nullable(),
+  phone: z.string().nullable(),
+  notes: z.string().nullable(),
   verified: z.boolean(),
   confirmedCount: z.number().int().min(0),
   confirmedAt: z.iso.datetime({ offset: true }),
@@ -81,10 +96,11 @@ const OUT_OF_AREA = "Este mapa solo cubre Manizales y Villamaría.";
  * attending one (see `attendWorkOrderSchema`) — nothing about this app's
  * work-order flow asks for an account any more.
  *
- * The contact fields are the one place this form touches a third party's
- * exact address and phone without their own consent — see the guardrail in
- * AGENTS.md. All optional: a curator can still follow up on a bare pin, and
- * asking for less is always safe to add back later.
+ * The contact fields are published on the card, so the form has to say so
+ * where they are typed — this schema cannot enforce consent, only the copy
+ * can. They stay optional for exactly that reason: a neighbour reporting
+ * somebody else's house should be able to leave every one of them blank and
+ * still get the pin onto the map.
  */
 export const createWorkOrderSchema = z.object({
   category: workOrderCategorySchema,
@@ -103,25 +119,15 @@ export const createWorkOrderSchema = z.object({
 
 export type CreateWorkOrderInput = z.infer<typeof createWorkOrderSchema>;
 
-/** The sensitive half: `work_order_contact`. Revealed once, straight back to
- *  whoever just attended (see `attendWorkOrderSchema`) — never fetched
- *  separately by identity any more, so there is no policy gate to name here
- *  the way there used to be. Every reveal is still logged; see
- *  `WorkOrderDAL.attend`. */
-export const workOrderContactSchema = z.object({
-  exactAddress: z.string(),
-  contactName: z.string().nullable(),
-  phone: z.string().nullable(),
-  notes: z.string().nullable(),
-});
-
-export type WorkOrderContactDTO = z.infer<typeof workOrderContactSchema>;
-
 /**
  * "Yo puedo atender" — anonymous, no account. Name and phone are both
  * required, unlike a grupo's optional whatsapp: a headcount is still useful
  * for a shift, but showing up at someone's damaged house needs to know who
  * is actually coming.
+ *
+ * The note is what makes several attendees add up to something instead of
+ * three people arriving with the same volqueta on the same morning. It is
+ * addressed to the other attendees, not to us.
  */
 export const attendWorkOrderSchema = z.object({
   workOrderId: z.uuid(),
@@ -130,9 +136,23 @@ export const attendWorkOrderSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{7,15}$/, "Solo dígitos, con indicativo del país"),
+  note: z.string().trim().max(500).optional(),
 });
 
 export type AttendWorkOrderInput = z.infer<typeof attendWorkOrderSchema>;
+
+/** Who is on a case, shown on the card. Public, like the case's own contact
+ *  details: coordinating is the point, and a name with no way to reach it
+ *  coordinates nothing. */
+export const workOrderAttendeeSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  phone: z.string(),
+  note: z.string().nullable(),
+  createdAt: z.iso.datetime({ offset: true }),
+});
+
+export type WorkOrderAttendeeDTO = z.infer<typeof workOrderAttendeeSchema>;
 
 /**
  * Correcting a case's own details — category or description — after the

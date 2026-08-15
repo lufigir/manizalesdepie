@@ -22,7 +22,6 @@ import {
   CALL_STATE_MARKER,
   CALL_STATE_STYLE,
   CONFIDENCE_BADGE,
-  SHEET_LABEL,
   callState,
   callWhen,
   confidence,
@@ -32,7 +31,6 @@ import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
 import { JoinCall } from "./join-call";
-import { MoreDetails } from "./more-details";
 import { ShareButton } from "./share-button";
 import { RelocateCall } from "./relocate-call";
 import { useWorkspace } from "./workspace-context";
@@ -81,6 +79,10 @@ export function CallPopup({ call }: { call: CallDTO }) {
   const state = callState(call);
   const Icon = CALL_CATEGORY_ICON[call.category];
   const { level, label: confidenceLabel } = confidence(call);
+  /** Null until somebody joins an open-ended grupo — see `slotsLabel`. */
+  const slots = slotsLabel(call);
+  /** Null on an informal pin — see `callWhen`. */
+  const when = callWhen(call);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -124,14 +126,20 @@ export function CallPopup({ call }: { call: CallDTO }) {
           exactamente" is one question, and it should read as one answer. */}
       <div className="bg-muted/50 flex flex-col gap-0.5 rounded-md px-2 py-1.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-          <span className="flex items-center gap-1.5 text-xs font-semibold">
-            <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
-            {callWhen(call)}
-          </span>
-          <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
-            <Users className="size-3.5 shrink-0" aria-hidden />
-            {slotsLabel(call)}
-          </span>
+          {/* Absent on an informal pin, which has no hour anybody chose —
+              see `callWhen`. The state badge above carries what is known. */}
+          {when && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold">
+              <Clock className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+              {when}
+            </span>
+          )}
+          {slots && (
+            <span className="text-muted-foreground flex items-center gap-1.5 text-[0.7rem]">
+              <Users className="size-3.5 shrink-0" aria-hidden />
+              {slots}
+            </span>
+          )}
         </div>
         {(call.meetingAddress || call.neighborhood) && (
           <p className="text-muted-foreground flex items-start gap-1.5 text-[0.7rem] leading-snug">
@@ -146,59 +154,23 @@ export function CallPopup({ call }: { call: CallDTO }) {
         )}
       </div>
 
+      {/* In full, not clamped to two lines. The meeting point that used to be
+          repeated behind "ver más" is already in the block above, so the fold
+          was hiding one thing: the rest of this paragraph. */}
       {call.description && (
-        <div className="flex flex-col gap-1 text-[0.75rem] leading-snug">
-          {/* Clamped rather than shown in full: a long description was the
-              exact thing that pushed this card past the phone's popup cap
-              and off screen. The full text is one tap away, not gone. */}
-          <p className="line-clamp-2">{call.description}</p>
-
-          <MoreDetails
-            title={call.title}
-            meta={
-              <span
-                className={cn(
-                  "rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-                  CONFIDENCE_BADGE[level],
-                )}
-              >
-                {confidenceLabel}
-              </span>
-            }
-          >
-            {call.meetingAddress && (
-              <div>
-                <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                  {CALL_LABEL.meetingPoint}
-                </p>
-                <p>{call.meetingAddress}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                {SHEET_LABEL.description}
-              </p>
-              <p className="leading-snug whitespace-pre-line">
-                {call.description}
-              </p>
-            </div>
-          </MoreDetails>
-        </div>
+        <p className="text-[0.75rem] leading-snug whitespace-pre-line">
+          {call.description}
+        </p>
       )}
 
-      {/* Without a description there is no "ver más" row to ride on, so the
-          confidence badge stands alone — an informal pin somebody dropped
-          from the street is exactly the case with nothing else to say. */}
-      {!call.description && (
-        <span
-          className={cn(
-            "self-start rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
-            CONFIDENCE_BADGE[level],
-          )}
-        >
-          {confidenceLabel}
-        </span>
-      )}
+      <span
+        className={cn(
+          "self-start rounded-full border px-1.5 py-0.5 text-[0.65rem] font-semibold",
+          CONFIDENCE_BADGE[level],
+        )}
+      >
+        {confidenceLabel}
+      </span>
 
       {/* What to bring sits above the buttons on purpose. Gloves and a shovel
           are the difference between helping and standing around, and nobody
@@ -284,14 +256,10 @@ export function CallPopup({ call }: { call: CallDTO }) {
               </div>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[0.65rem] underline"
-            >
-              <Pencil className="size-2.5" aria-hidden />
+            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3" aria-hidden />
               {ADMIN_LABEL.edit}
-            </button>
+            </Button>
           )}
 
           <AdminActions

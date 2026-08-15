@@ -1,10 +1,9 @@
 "use client";
 
-import { MapPin, Navigation, Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import {
-  CALL_LABEL,
   WORK_ORDER_CATEGORY_ICON,
   WORK_ORDER_CATEGORY_LABEL,
   WORK_ORDER_LABEL,
@@ -31,13 +30,11 @@ import { WorkOrderActions } from "./work-order-actions";
  * The order inside follows `CallPopup`'s reasoning rather than
  * `SitePopup`'s, because a case is read the same way a shift is: not "what
  * do they receive here" but "what is needed, where, and is anyone on it".
- * So the ask gets the headline, and the block and the headcount sit right
- * under it.
+ * Name, then the ask, then the context around it, then what to do about it.
  *
- * There is no exact address and there never will be — the public row only
- * carries a block-level `approx_location`, and the contact behind it is
- * revealed once, to whoever says they can attend (see AGENTS.md's guardrail
- * and `WorkOrderDAL.attend`).
+ * The pin itself is only a block-level `approx_location`; the exact address
+ * and the phone, when the reporter left them, are shown by
+ * `WorkOrderActions` — public since 15 August, see AGENTS.md.
  */
 export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
   const rollup = workOrderRollup(order.status);
@@ -69,7 +66,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
               that needs every pixel it can get. */}
           <div className="flex items-center gap-1.5">
             <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
-              {WORK_ORDER_CATEGORY_LABEL[order.category]}
+              {WORK_ORDER_LABEL.heading}
             </p>
             <span
               className={cn(
@@ -80,14 +77,21 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
               {WORK_ORDER_ROLLUP_LABEL[rollup]}
             </span>
           </div>
-          {/* The ask is the heading. A category alone ("Riesgo estructural")
-              is a label nobody can act on; "se necesitan lonas para cubrir
-              casas" is the thing that makes someone load a truck. */}
+          {/* The category is the heading, like every other family's name is.
+              The ask used to be, on the argument that "Riesgo estructural" is
+              a label nobody can act on — true, but these descriptions run to
+              142 characters, so as a heading it was five bold lines pushing
+              the whole card below the fold. It is directly underneath, at
+              reading weight, which is what a paragraph is for. */}
           <h2 className="text-sm leading-tight font-bold text-balance">
-            {order.description}
+            {WORK_ORDER_CATEGORY_LABEL[order.category]}
           </h2>
         </div>
       </header>
+
+      <p className="text-[0.8rem] leading-snug whitespace-pre-line">
+        {order.description}
+      </p>
 
       {/* Block, headcount and freshness: three short facts that were three
           rows. On one row they read as what they are — the context around
@@ -106,19 +110,11 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         <span className={cn(stale && "text-claimed")}>{freshLabel}</span>
       </div>
 
-      {/* Only the approximate point — see the note at the top. Enough to
-          drive to the block, which is what someone with a truck needs, and
-          not the doorway of a house in a curfew. */}
-      <a
-        href={`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bg-secondary text-secondary-foreground flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold"
-      >
-        <Navigation className="size-3.5" aria-hidden />
-        {CALL_LABEL.directions}
-      </a>
-
+      {/* Directions moved into the action row inside `WorkOrderActions`, so
+          this card ends the way a sitio's and a grupo's do: the primary
+          action on its own line, the secondary ones beside each other under
+          it. It used to sit above them, which made "cómo llegar" read as the
+          main thing to do with a case nobody had claimed. */}
       <WorkOrderActions order={order} />
     </div>
   );
