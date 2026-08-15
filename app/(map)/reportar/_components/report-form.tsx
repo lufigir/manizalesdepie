@@ -9,13 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
 import { findNearbySites, proposeSite } from "@/data/site/site.actions";
 import type { SiteType } from "@/data/site/site.dto";
-import {
-  REPORT_LABEL,
-  REPORT_SECTION,
-  SITE_TYPE_ICON,
-  SITE_TYPE_LABEL,
-} from "@/lib/labels";
-import { TAB_SITE_TYPES } from "@/lib/tabs";
+import { REPORT_LABEL, SITE_TYPE_ICON, SITE_TYPE_LABEL } from "@/lib/labels";
+import { REPORTABLE_SITE_TYPES } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
 import { useDraft } from "@/app/_hooks/use-draft";
@@ -28,13 +23,7 @@ const START: [number, number] = [-75.5074, 5.0631];
 
 type Nearby = { id: string; name: string; distanceM: number };
 
-export function ReportForm({
-  section,
-  barrios,
-}: {
-  section: "help" | "need";
-  barrios: NeighborhoodDTO[];
-}) {
+export function ReportForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -42,17 +31,13 @@ export function ReportForm({
    * The barrio tapped on the main map, if the reporter came from there.
    *
    * It travels in the URL rather than in client state because the map lives in
-   * a different route: /reportar/ayudar?barrio=Chipre survives a reload, can be
+   * a different route: /reportar/sitio?barrio=Chipre survives a reload, can be
    * shared, and needs nothing shared between two trees.
    */
   const fromMap = useSearchParams().get("barrio");
   const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(
     () => barrios.find((option) => option.name === fromMap) ?? null,
   );
-
-  // What this section is allowed to create, and what it calls the choice.
-  const types = TAB_SITE_TYPES[section];
-  const copy = REPORT_SECTION[section];
 
   /**
    * The whole form is a draft until it is published.
@@ -62,10 +47,8 @@ export function ReportForm({
    * the groundwork for deferred sign-up — a form that survives leaving the page
    * is what lets the account be asked for at the end instead of at the door.
    */
-  // Keyed by section: a draft started in "Necesito" must never come back with
-  // a type that section cannot create.
-  const { value: draft, setValue: setDraft, clear } = useDraft(`report:site:${section}`, {
-    type: types[0] as SiteType,
+  const { value: draft, setValue: setDraft, clear } = useDraft("report:site", {
+    type: REPORTABLE_SITE_TYPES[0] as SiteType,
     name: "",
     description: "",
     address: "",
@@ -133,9 +116,9 @@ export function ReportForm({
       className="flex flex-col gap-5"
     >
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-semibold">{copy.kind}</legend>
+        <legend className="mb-2 text-sm font-semibold">{REPORT_LABEL.kind}</legend>
         <div className="flex flex-wrap gap-1.5">
-          {types.map((option) => {
+          {REPORTABLE_SITE_TYPES.map((option) => {
             const Icon = SITE_TYPE_ICON[option];
             const active = option === draft.type;
             return (

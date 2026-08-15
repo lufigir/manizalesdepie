@@ -62,11 +62,22 @@ export const SITE_TYPE_TAB: Record<SiteType, TabId | null> = {
   vet_clinic: null,
 };
 
-/** What each section's own report form may create. Order is display order. */
-export const TAB_SITE_TYPES: Record<"help" | "need", SiteType[]> = {
-  help: ["collection_point", "blood_donation", "medical_post"],
-  need: ["shelter", "census_point"],
-};
+/**
+ * What the site form may create. Order is display order: the three anyone can
+ * walk into with something in their hands first, then the two an affected
+ * family goes to.
+ *
+ * One list, not one per section. Splitting it in two produced two menu entries
+ * that both said "reportar … ayuda" and both wrote the same table — see
+ * `REPORT_LABEL.title`.
+ */
+export const REPORTABLE_SITE_TYPES: SiteType[] = [
+  "collection_point",
+  "blood_donation",
+  "medical_post",
+  "shelter",
+  "census_point",
+];
 
 export type ReportEntry = { href: string; label: string; icon: LucideIcon };
 
@@ -111,14 +122,23 @@ export function initialChipForTab(tab: TabId): PanelChip {
  * exactly as likely to be the person who then finds a lost dog — and under
  * the old rule, the form for that was not on their screen.
  *
- * Six entries is a long menu, and it is still the right one: the alternative
- * was a shorter menu that is sometimes missing the thing you came to write.
+ * Five entries, five distinct verbs, five distinct icons, and each one named
+ * after the chip that LISTS what it writes — "Necesidades" is read in the
+ * panel and written here, "Sitios" likewise. A reader who learned the filter
+ * has already learned the menu.
+ *
+ * It was six, and two of them ("Reportar dónde ayudar", "Reportar un punto de
+ * ayuda") wrote the same `site` table under the same pin icon with two names
+ * that are synonyms in Spanish. Whatever a menu costs in length, it costs far
+ * more in a choice the reader cannot make.
+ *
+ * Order is urgency: the person who needs something comes before the person
+ * offering it.
  */
 export const ALL_REPORT_ENTRIES: ReportEntry[] = [
-  { href: "/reportar/ayudar", label: "Reportar dónde ayudar", icon: MapPin },
+  { href: "/reportar/necesidad", label: "Reportar una necesidad", icon: LifeBuoy },
+  { href: "/reportar/sitio", label: "Reportar un sitio", icon: MapPin },
   { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
-  { href: "/reportar/necesito", label: "Reportar un punto de ayuda", icon: MapPin },
-  { href: "/reportar/escombros", label: "Pedir ayuda", icon: LifeBuoy },
   { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
   { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
 ];

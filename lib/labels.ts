@@ -259,6 +259,19 @@ export const CONFIDENCE_BADGE: Record<Confidence, string> = {
  * the pin is dragged, never typed as coordinates.
  */
 export const REPORT_LABEL = {
+  /**
+   * One form for every kind of place, after two of them ("Reportar dónde
+   * ayudar" and "Reportar un punto de ayuda") turned out to be the same
+   * sentence twice. Both wrote a `site` row, both carried the same pin icon,
+   * and the only thing separating them was who benefits — a distinction the
+   * reader had to work out BEFORE tapping anything.
+   *
+   * Reading is organised by intent; writing is organised by the object in
+   * front of you. "Esto es un acopio" is decided in a second; "¿esto es dónde
+   * ayudo o es un punto de ayuda?" is not decided at all.
+   */
+  title: "Reportar un sitio",
+  kind: "¿Qué es este lugar?",
   subtitle:
     "Sale al mapa de una vez, marcado como sin confirmar. Otras personas lo confirman o lo corrigen.",
   barrio: "¿En qué barrio?",
@@ -295,25 +308,6 @@ export const REPORT_LABEL = {
   nearbyIgnore: "No es el mismo, publicar igual",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
   back: "Volver al mapa",
-} as const;
-
-/**
- * One form per section, worded for the person standing in it.
- *
- * The generic form used to open with all seven kinds of place at once, which
- * made the first decision of the form the one nobody came to make. Arriving
- * from "Ayudar" already says this is somewhere to give something; arriving from
- * "Necesito" already says it is somewhere to go for help.
- */
-export const REPORT_SECTION = {
-  help: {
-    title: "Reportar dónde ayudar",
-    kind: "¿Qué reciben aquí?",
-  },
-  need: {
-    title: "Reportar un punto de ayuda",
-    kind: "¿Qué es este lugar?",
-  },
 } as const;
 
 /**
@@ -1035,7 +1029,7 @@ export const WORK_ORDER_LABEL = {
   heading: "Necesidades",
   headingHint: "Casos puntuales que alguien con volqueta o manos puede atender",
   empty:
-    "Todavía no hay necesidades puntuales reportadas. Si conoces una, repórtala desde Necesito.",
+    "Todavía no hay necesidades puntuales reportadas. Si conoces una, repórtala desde Reportar.",
   countOne: "1 caso",
   countMany: (n: number) => `${n} casos`,
   // "Yo puedo atender" replaced "Reclamar" the 15th, along with the account
@@ -1076,7 +1070,13 @@ export const WORK_ORDER_LABEL = {
 } as const;
 
 export const WORK_ORDER_FORM = {
-  title: "Reportar escombros o un daño",
+  // The menu entry, the route segment and this title used to be three
+  // different names for one action ("Pedir ayuda" → /reportar/escombros →
+  // "Reportar escombros o un daño"). They are one word now, and it is the
+  // panel's own: the "Necesidades" chip is where these rows are read.
+  // "Reportar" and not "Pedir" because most of these are typed by a neighbour
+  // on behalf of the affected household, not by the household itself.
+  title: "Reportar una necesidad",
   subtitle:
     "Sale al mapa de una vez, sin cuenta. Alguien con volqueta o manos puede decir que lo atiende.",
   category: "¿Qué tipo de caso es?",

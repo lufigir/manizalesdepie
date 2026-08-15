@@ -60,8 +60,15 @@ La app se reordenó **por intención del usuario**, no por tipo de objeto.
   perdía la cámara y parpadeaba. La selección compartida entre mapa y panel va
   por contexto (`workspace-context.ts`), porque un layout no puede pasar props
   a sus children.
-- **Un formulario por sección**: `/reportar/ayudar` y `/reportar/necesito`
-  ofrecen solo los tipos de su sección. El genérico `/reportar` se eliminó.
+- **Un formulario por tipo de cosa reportada**, nombrado igual que el chip que
+  la lista: `/reportar/sitio`, `/reportar/necesidad`, `/reportar/armar-grupo`,
+  `/reportar/animal`, `/reportar/servicios`.
+  **Actualizado el 15 de agosto:** hubo un formulario por sección
+  (`/reportar/ayudar` y `/reportar/necesito`), y los dos escribían en `site`
+  bajo dos nombres sinónimos —"Reportar dónde ayudar" y "Reportar un punto de
+  ayuda"— con el mismo icono. Se leen por intención, se escriben por objeto:
+  "esto es un acopio" se decide en un segundo, "¿esto es dónde ayudo o es un
+  punto de ayuda?" no se decide.
 - **Servicios se muestra vacío**, con texto que dice qué irá ahí. Sin
   formulario: uno que botara lo escrito sería peor que no tener la sección.
 
@@ -249,8 +256,8 @@ cuenta: *dónde trabajar / dónde conseguir servicios / contexto*.
   `stale`=gris — cerrado usa gris y no verde, porque `closed_rejected` no es
   un éxito). Motivos de bloqueo y esas cosas, si un curador los necesita, van
   como texto libre en `description`.
-  Se reportan sin cuenta desde "Necesito" (`/reportar/escombros`) y se ven en
-  "Ayudar" — la misma regla que ya regía las necesidades de sitio.
+  Se reportan sin cuenta desde "Reportar una necesidad"
+  (`/reportar/necesidad`) y se leen en el chip "Necesidades" del panel.
   **Actualizado el 15 de agosto:** el reclamo con cuenta de Google descrito
   originalmente aquí se quitó. Ahora "Yo puedo atender" solo pide nombre y
   WhatsApp, sin cuenta, y **varias personas distintas pueden atender el mismo
