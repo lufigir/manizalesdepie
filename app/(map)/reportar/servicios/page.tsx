@@ -13,6 +13,7 @@ export default async function ReportServicePage() {
 
   return (
     <ReportLayout
+      split={false}
       title={SERVICES_FORM.title}
       subtitle={SERVICES_FORM.subtitle}
       backHref="/"

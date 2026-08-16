@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Phone, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { deleteWorkOrderUpdate } from "@/data/work_order/work_order.actions";
@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useWorkspace } from "./workspace-context";
+import { WhatsappIcon } from "./whatsapp-icon";
 
 /**
  * The book of a case, as a feed.
@@ -176,17 +177,26 @@ function Entry({
           </p>
         )}
 
-        {/* Phone and the curator's delete share the footer row, so neither
-            costs a line of its own. */}
+        {/* WhatsApp and the curator's delete share the footer row, so neither
+            costs a line of its own. The number goes to WhatsApp rather than
+            the dialler, because that is where the coordination of a case
+            actually happens — the same decision the card's contact block
+            makes. */}
         {(update.phone || isAdmin) && (
           <div className="mt-1 flex items-center gap-1">
             {update.phone && (
               <Button
                 size="xs"
                 variant="outline"
-                render={<a href={`tel:${update.phone}`} />}
+                render={
+                  <a
+                    href={`https://wa.me/57${update.phone}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                }
               >
-                <Phone aria-hidden />
+                <WhatsappIcon />
                 {update.phone}
               </Button>
             )}

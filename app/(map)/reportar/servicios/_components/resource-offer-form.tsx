@@ -16,6 +16,7 @@ import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL, SERVICES_FORM } from "@/lib/la
 import { cn } from "@/lib/utils";
 
 import { BarrioPicker } from "../../_components/barrio-picker";
+import { Field } from "../../_components/field";
 
 /**
  * "Tengo con qué ayudar." Anonymous, one screen, no pin to drag, four
@@ -111,7 +112,7 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         </div>
       </fieldset>
 
-      <Field label={SERVICES_FORM.description}>
+      <Field label={SERVICES_FORM.description} required>
         <Textarea
           required
           rows={2}
@@ -148,7 +149,11 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         )}
       </div>
 
-      <Field label={SERVICES_FORM.whatsapp} hint={SERVICES_FORM.whatsappHint}>
+      <Field
+        label={SERVICES_FORM.whatsapp}
+        hint={SERVICES_FORM.whatsappHint}
+        required
+      >
         <Input
           required
           inputMode="numeric"
@@ -172,23 +177,5 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         {SERVICES_FORM.hint}
       </p>
     </form>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-semibold">{label}</span>
-      {children}
-      {hint && <span className="text-muted-foreground text-xs">{hint}</span>}
-    </label>
   );
 }
