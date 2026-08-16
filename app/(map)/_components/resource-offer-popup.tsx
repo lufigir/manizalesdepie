@@ -6,7 +6,7 @@ import {
   deleteResourceOffer,
   setResourceOfferPublished,
 } from "@/data/resource_offer/resource_offer.actions";
-import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
+import { type ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import {
   RESOURCE_TYPE_ICON,
   RESOURCE_TYPE_LABEL,
@@ -24,16 +24,11 @@ import { useWorkspace } from "./workspace-context";
 
 /**
  * The card that opens when a service is selected — from its pin, or from its
- * tile in the Servicios grid.
+ * row in the panel.
  *
- * Not the grid's tile. That one is a browsing surface: a wall of everything
- * on offer, where the whole tile is one big link to WhatsApp. This one
- * answers a narrower question — "¿esto sigue en pie?" — so how long ago
- * anybody vouched for it rides beside the place instead of in fine print.
- *
- * There is no "Cómo llegar" and there should not be. An offer's point is the
- * barrio's own centroid, not a doorway: "tengo una volqueta" is a
- * barrio-level fact, and a navigation button would dress it up as an address.
+ * The panel row is an index; this card holds the offer, the contact and the
+ * ways to correct the listing. There is no "Cómo llegar" — an offer's point
+ * is the barrio centroid, not a doorway.
  */
 export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
   const { isAdmin } = useWorkspace();
@@ -62,15 +57,7 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         </div>
       </header>
 
-      {/* Where, then how long ago anybody vouched for it. There used to be an
-          availability window at full weight above this row; the form asked
-          for it 46 times and got an answer none of them, so what an offer
-          actually promises is `expiresAt` and what a reader actually wants
-          is how stale this is. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-        {/* `area` is barrio text the offerer typed and `neighborhood` is that
-            same barrio stamped by geometry; shown once, preferring the
-            stamped one, exactly as the grid tile does. */}
         <span className="flex items-center gap-1.5 text-xs font-semibold">
           <MapPin className="size-3.5 shrink-0" aria-hidden />
           {offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide}
@@ -85,9 +72,6 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         </span>
       </div>
 
-      {/* Same shape as every other card: the forward on its own row at full
-          weight, then the ways to reach the offerer. The offer only carries
-          `whatsapp`, so that number is both the call and the chat. */}
       <ShareButton
         path={`/servicio/${offer.id}`}
         title={RESOURCE_TYPE_LABEL[offer.type]}
@@ -95,8 +79,6 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         className="w-full"
       />
 
-      {/* Boxed like the work order's contact block: the ways to reach the
-          offerer read as one section, not as a loose pair of buttons. */}
       <div className="bg-muted/40 rounded-md border p-2 text-[0.7rem] leading-snug">
         <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
           {SERVICES_LABEL.contactTitle}
