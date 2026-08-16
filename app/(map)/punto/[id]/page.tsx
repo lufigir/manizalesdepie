@@ -92,7 +92,7 @@ export default async function SharedSitePage({ params }: Params) {
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={site.id}
         tab={tab}
-        isAdmin={user?.role === "curator"}
+        user={user}
       />
     </main>
   );

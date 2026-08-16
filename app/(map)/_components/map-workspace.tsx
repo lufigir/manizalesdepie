@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 
 import { Map, MapControls } from "@/components/ui/map";
 
+import type { CurrentUser } from "@/data/user/require-user";
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type {
@@ -28,6 +29,7 @@ import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { AnimalPopup } from "./animal-popup";
+import { AccountMenu } from "./account-menu";
 import { BarrioHeader } from "./barrio-header";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
 import { LiveClock } from "./live-clock";
@@ -99,9 +101,10 @@ type Props = {
    *  to say that belongs to no family and so does not belong inside
    *  `UnifiedPanel`. Nothing passes it today. */
   children?: React.ReactNode;
-  /** A curator, signed in — see `WorkspaceValue.isAdmin`. Resolved once,
-   *  server-side, by whichever route rendered this. */
-  isAdmin?: boolean;
+  /** The signed-in reader, or null. Resolved once, server-side, by whichever
+   *  route rendered this; the account bubble and the curator-only strips read
+   *  from it rather than fetching their own session. */
+  user?: CurrentUser | null;
 };
 
 /**
@@ -127,10 +130,11 @@ export function MapWorkspace({
   initialSelectedId,
   tab: forcedTab,
   children,
-  isAdmin = false,
+  user = null,
 }: Props) {
   const sharedLink = initialSelectedId !== undefined;
   const router = useRouter();
+  const isAdmin = user?.role === "curator";
 
   // Everything that behaves differently rather than just looking different
   // hangs off this: where a card opens, whether the panel starts shut, and
@@ -535,10 +539,13 @@ export function MapWorkspace({
               `initialChipForTab`); they just have no button of their own to
               click while already inside the app. */}
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3">
-            {/* Left corner, and only while the reader is on a shared route:
-                the one explicit way back to the whole map. Everything else up
-                here has always lived on the right. */}
-            <div className="pointer-events-auto">
+            {/* Left corner. The account bubble is always here — the one
+                control every visit can count on — and beside it, only while
+                the reader is on a shared route, the one explicit way back to
+                the whole map. Everything else up here has always lived on
+                the right. */}
+            <div className="pointer-events-auto flex shrink-0 flex-col items-start gap-1.5">
+              <AccountMenu user={user} />
               {sharedLink && <SharedLinkBar />}
             </div>
 

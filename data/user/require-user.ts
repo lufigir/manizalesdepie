@@ -9,6 +9,10 @@ export type CurrentUser = {
   id: string;
   email: string | null;
   fullName: string;
+  /** The Google profile picture, if the provider sent one. Read off the
+   *  access-token claims, not the `profile` row: it is provider data, and
+   *  the JWT is refreshed with the provider's latest copy. */
+  avatarUrl: string | null;
   role: "visitor" | "contributor" | "curator";
 };
 
@@ -26,6 +30,16 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const userId = claims?.claims.sub;
   if (!userId) return null;
 
+  const meta = claims?.claims.user_metadata;
+  // Google names the photo `avatar_url`; the OIDC field it came from is
+  // `picture`. Read either, so a provider that maps differently still works.
+  const avatarUrl =
+    typeof meta?.avatar_url === "string" && meta.avatar_url
+      ? meta.avatar_url
+      : typeof meta?.picture === "string" && meta.picture
+        ? meta.picture
+        : null;
+
   const { data: profile } = await supabase
     .from("profile")
     .select("role, full_name")
@@ -38,6 +52,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     id: userId,
     email: typeof claims?.claims.email === "string" ? claims.claims.email : null,
     fullName: profile.full_name,
+    avatarUrl,
     role: profile.role,
   };
 });

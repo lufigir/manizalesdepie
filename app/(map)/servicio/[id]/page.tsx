@@ -86,7 +86,7 @@ export default async function SharedResourceOfferPage({ params }: Params) {
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={offer.id}
         tab="services"
-        isAdmin={user?.role === "curator"}
+        user={user}
       />
     </main>
   );

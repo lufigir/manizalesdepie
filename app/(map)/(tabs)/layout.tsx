@@ -56,7 +56,7 @@ export default async function TabsLayout() {
         workOrders={workOrders}
         neighborhoodStatuses={neighborhoodStatuses}
         neighborhoodNeeds={neighborhoodNeeds}
-        isAdmin={user?.role === "curator"}
+        user={user}
       />
     </main>
   );

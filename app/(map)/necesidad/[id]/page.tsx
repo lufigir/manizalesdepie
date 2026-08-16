@@ -92,7 +92,7 @@ export default async function SharedWorkOrderPage({ params }: Params) {
         // A case is something to go and do, so a shared one opens on
         // "Ayudar" whatever the reader was looking at last.
         tab="help"
-        isAdmin={user?.role === "curator"}
+        user={user}
       />
     </main>
   );

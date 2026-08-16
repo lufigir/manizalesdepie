@@ -4,16 +4,12 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AUTH_LABEL } from "@/lib/labels";
-import { createClient } from "@/lib/supabase/client";
+import { startGoogleSignIn } from "@/lib/supabase/client";
 
 /**
- * Starts the PKCE redirect to Google.
- *
- * `redirectTo` is built from `window.location.origin`, not from
- * NEXT_PUBLIC_SITE_URL: the same build runs on localhost, on a per-commit
- * preview URL and in production, and hardcoding the production origin would
- * bounce every developer and every preview through the live site. The origins
- * still have to be allow-listed in Supabase — that list is the actual guard.
+ * Starts the Google sign-in — one tap, straight to the provider, no page in
+ * between. `next` travels into the callback query string so the reader lands
+ * back where they were heading.
  */
 export function GoogleButton({ next }: { next: string }) {
   const [loading, setLoading] = useState(false);
@@ -23,18 +19,11 @@ export function GoogleButton({ next }: { next: string }) {
     setLoading(true);
     setFailed(false);
 
-    const supabase = createClient();
-    const callback = new URL("/auth/callback", window.location.origin);
-    callback.searchParams.set("next", next);
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: callback.toString() },
-    });
+    const started = await startGoogleSignIn(next);
 
     // On success the browser is already navigating to Google, so the spinner
     // deliberately stays up until the page is replaced.
-    if (error) {
+    if (!started) {
       setFailed(true);
       setLoading(false);
     }

@@ -86,7 +86,7 @@ export default async function SharedAnimalPage({ params }: Params) {
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={animal.id}
         tab="pets"
-        isAdmin={user?.role === "curator"}
+        user={user}
       />
     </main>
   );

@@ -127,6 +127,20 @@ export const AUTH_LABEL = {
   subtitle:
     "Solo necesitas cuenta para hacerte cargo de un caso. Reportar y ver el mapa nunca la piden.",
   google: "Continuar con Google",
+  /** The bubble top-left of the map when nobody is signed in. "Entrar" and
+   *  nothing else: what the account is FOR is said on the login screen. */
+  enter: "Entrar",
+  /** Screen-reader name for the bubble itself, since the visible text changes
+   *  with the session. */
+  menuLabel: "Tu cuenta",
+  /** How a role reads to the person holding it, on the account bubble. The
+   *  role drives what they can DO (curator actions), so it is named rather
+   *  than left as the machine word. */
+  roles: {
+    visitor: "Visitante",
+    contributor: "Colaborador",
+    curator: "Curador",
+  } as const,
   signOut: "Cerrar sesión",
   back: "Volver al mapa",
   failed: "No se pudo iniciar sesión. Vuelve a intentarlo.",
