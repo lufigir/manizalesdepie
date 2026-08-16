@@ -290,7 +290,6 @@ export const REPORT_LABEL = {
   subtitle:
     "Sale al mapa de una vez, marcado como sin confirmar. Otras personas lo confirman o lo corrigen.",
   barrio: "¿En qué barrio?",
-  where: "Ajusta el punto",
   whereHint:
     "El mapa ya está en el barrio. Arrastra unos metros hasta el sitio exacto.",
   whereLocked: "Elige el barrio y el mapa se abre ahí.",
@@ -388,7 +387,6 @@ export const ANIMAL_FORM = {
   kind: "¿Qué pasó?",
   species: "¿Qué animal es?",
   photo: "Foto",
-  photoHint: "Se reduce en tu teléfono antes de subirla, para que no gaste datos.",
   photoPick: "Elegir foto",
   photoChange: "Cambiar foto",
   petName: "Nombre (si lo sabes)",
@@ -398,11 +396,9 @@ export const ANIMAL_FORM = {
     "Perro criollo café, collar azul, mediano, cojea de una pata.",
   when: "¿Cuándo fue?",
   zone: "¿En qué barrio?",
-  where: "Marca en el mapa dónde lo viste (opcional)",
   whereHint:
     "Es dónde lo VIERON, no dónde está. Se dibuja punteado para que nadie lo confunda.",
   whatsapp: "Tu WhatsApp",
-  whatsappHint: "Obligatorio: es como te avisan si lo encuentran.",
   submit: "Publicar en el tablero",
   submitting: "Publicando…",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",

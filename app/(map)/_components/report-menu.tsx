@@ -41,7 +41,7 @@ export function ReportMenu({
   return (
     <div className="flex flex-col items-start gap-2">
       {open && (
-        <div className="bg-background/95 flex w-56 flex-col rounded-xl border p-1.5 shadow-lg backdrop-blur">
+        <div className="bg-background/95 flex w-max min-w-56 flex-col rounded-xl border p-1.5 shadow-lg backdrop-blur">
           <p className="text-muted-foreground px-2 pt-1 pb-1.5 text-[0.55rem] leading-none font-semibold tracking-widest uppercase">
             {REPORT_MENU.heading}
           </p>
@@ -49,16 +49,16 @@ export function ReportMenu({
             <Link
               key={href}
               href={barrio ? `${href}?barrio=${encodeURIComponent(barrio)}` : href}
-              className="hover:bg-accent focus-visible:ring-ring flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="hover:bg-accent focus-visible:ring-ring flex items-center gap-2 rounded-lg px-2.5 py-2.5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Icon
-                className={cn("size-4 shrink-0", tone)}
+                className={cn("size-4.5 shrink-0", tone)}
                 strokeWidth={2.5}
                 aria-hidden
               />
               <span className="min-w-0 flex-1 truncate">{label}</span>
               <ChevronRight
-                className="text-muted-foreground/60 size-3 shrink-0"
+                className="text-muted-foreground/60 size-4 shrink-0"
                 aria-hidden
               />
             </Link>
@@ -75,16 +75,16 @@ export function ReportMenu({
         aria-expanded={open}
         aria-label={open ? REPORT_MENU.closeLabel : REPORT_MENU.openLabel}
         className={cn(
-          "focus-visible:ring-ring flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold shadow-lg transition-colors focus-visible:ring-2 focus-visible:outline-none",
+          "focus-visible:ring-ring flex items-center gap-2 rounded-xl px-4 py-3 text-base font-semibold shadow-lg transition-colors focus-visible:ring-2 focus-visible:outline-none",
           open
             ? "bg-background/95 text-foreground border backdrop-blur"
             : "bg-primary text-primary-foreground hover:bg-primary/90",
         )}
       >
         {open ? (
-          <X className="size-4" strokeWidth={2.5} aria-hidden />
+          <X className="size-5" strokeWidth={2.5} aria-hidden />
         ) : (
-          <Plus className="size-4" strokeWidth={2.5} aria-hidden />
+          <Plus className="size-5" strokeWidth={2.5} aria-hidden />
         )}
         {open ? REPORT_MENU.close : REPORT_MENU.open}
       </button>

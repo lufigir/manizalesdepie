@@ -29,7 +29,7 @@ export default async function ReportSitePage() {
 
   return (
     <ReportLayout title={REPORT_LABEL.title} backHref="/">
-      <ReportForm barrios={barrios} />
+      {(header) => <ReportForm barrios={barrios} header={header} />}
     </ReportLayout>
   );
 }

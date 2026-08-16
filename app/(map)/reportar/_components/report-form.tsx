@@ -11,21 +11,41 @@ import { findNearbySites, proposeSite } from "@/data/site/site.actions";
 import type { SiteType } from "@/data/site/site.dto";
 import { REPORT_LABEL, SITE_TYPE_ICON, SITE_TYPE_LABEL } from "@/lib/labels";
 import { REPORTABLE_SITE_TYPES } from "@/lib/tabs";
+import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { useDraft } from "@/app/_hooks/use-draft";
 
 import { BarrioPicker } from "./barrio-picker";
+import { Field, RequiredMark } from "./field";
 import { PinPicker } from "./pin-picker";
+import {
+  REPORT_FIELDS_PANE,
+  REPORT_SPLIT,
+  ReportMapPane,
+} from "./report-layout";
 
 /** Central Manizales. Only where the picker opens before a barrio is chosen. */
 const START: [number, number] = [-75.5074, 5.0631];
 
 type Nearby = { id: string; name: string; distanceM: number };
 
-export function ReportForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
+export function ReportForm({
+  barrios,
+  header,
+}: {
+  barrios: NeighborhoodDTO[];
+  /** The title block, from `ReportLayout`. Placed over the fields column so
+   *  the map gets the full height of its own; on a phone it is just the top
+   *  of the page, exactly where it always sat. */
+  header: React.ReactNode;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // From `lg` the barrio, the written address and the map move into their
+  // own column instead of sitting inline between the other fields — see the
+  // render below.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
 
   /**
    * The barrio tapped on the main map, if the reporter came from there.
@@ -59,6 +79,10 @@ export function ReportForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   const [point, setPoint] = useState({ lng: START[0], lat: START[1] });
   const [nearby, setNearby] = useState<Nearby[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True once "Publicar" was hit with no barrio. Gates the map's red frame
+  // to that moment (and to the barrio still being missing) instead of wearing
+  // it from the first render.
+  const [attempted, setAttempted] = useState(false);
 
   const field = useCallback(
     (key: keyof typeof draft) => (value: string) =>
@@ -79,6 +103,7 @@ export function ReportForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
     // on the city centre — a coordinate that looks deliberate and is not. Worse
     // than an empty field: it would send someone to the wrong place.
     if (!barrio) {
+      setAttempted(true);
       setError(REPORT_LABEL.barrioRequired);
       return;
     }
@@ -110,109 +135,125 @@ export function ReportForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
     }
   }
 
-  return (
-    <form
-      action={(formData) => startTransition(() => submit(formData))}
-      className="flex flex-col gap-5"
-    >
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-semibold">{REPORT_LABEL.kind}</legend>
-        <div className="flex flex-wrap gap-1.5">
-          {REPORTABLE_SITE_TYPES.map((option) => {
-            const Icon = SITE_TYPE_ICON[option];
-            const active = option === draft.type;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setDraft((c) => ({ ...c, type: option }))}
-                aria-pressed={active}
-                className={cn(
-                  "focus-visible:ring-ring flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                  active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "hover:bg-accent",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-                {SITE_TYPE_LABEL[option]}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      {/* Barrio, then the written reference, then the map. That order is the
-          change: finding your own street on a map of the whole city was the
-          hard part, and naming the barrio is the easy version of the same
-          question. The map comes last because by then it is already framed. */}
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold">{REPORT_LABEL.barrio}</label>
-        <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
+  const kindField = (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-semibold">{REPORT_LABEL.kind}</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {REPORTABLE_SITE_TYPES.map((option) => {
+          const Icon = SITE_TYPE_ICON[option];
+          const active = option === draft.type;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setDraft((c) => ({ ...c, type: option }))}
+              aria-pressed={active}
+              className={cn(
+                "focus-visible:ring-ring flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                active
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "hover:bg-accent",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+              {SITE_TYPE_LABEL[option]}
+            </button>
+          );
+        })}
       </div>
+    </fieldset>
+  );
 
-      <Field label={REPORT_LABEL.address} hint={REPORT_LABEL.addressHint}>
-        <Input
-          name="address"
-          required
-          value={draft.address}
-          onChange={(e) => field("address")(e.target.value)}
-          placeholder={REPORT_LABEL.addressPlaceholder}
-        />
-      </Field>
+  // Barrio and the pin it frames: one pair, so the two travel together into
+  // the map pane on a desktop instead of splitting across the fields either
+  // side of it. There the barrio floats over the map (see `ReportMapPane`);
+  // here on a phone they stay stacked. The written reference comes next —
+  // naming the barrio is the easy version of the question, the street is the
+  // precise one.
+  const barrioField = (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-semibold">
+        {REPORT_LABEL.barrio}
+        <RequiredMark />
+      </label>
+      <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
+    </div>
+  );
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold">{REPORT_LABEL.where}</label>
-        <PinPicker
-          center={START}
-          focusLongitude={barrio?.longitude ?? null}
-          focusLatitude={barrio?.latitude ?? null}
-          onMove={handleMove}
-        />
-        <p className="text-muted-foreground text-xs">
-          {barrio ? REPORT_LABEL.whereHint : REPORT_LABEL.whereLocked}
-        </p>
-      </div>
+  const addressField = (
+    <Field label={REPORT_LABEL.address} hint={REPORT_LABEL.addressHint} required>
+      <Input
+        name="address"
+        required
+        value={draft.address}
+        onChange={(e) => field("address")(e.target.value)}
+        placeholder={REPORT_LABEL.addressPlaceholder}
+      />
+    </Field>
+  );
 
-      <Field label={REPORT_LABEL.name}>
-        <Input
-          name="name"
-          required
-          value={draft.name}
-          onChange={(e) => field("name")(e.target.value)}
-          placeholder={REPORT_LABEL.namePlaceholder}
-        />
-      </Field>
+  // Aimed at the chosen barrio: finding your own street on a map of the whole
+  // city was the hard part, and naming the barrio reframes the camera to walk
+  // over distance instead.
+  const mapField = (
+    <PinPicker
+      center={START}
+      focusLongitude={barrio?.longitude ?? null}
+      focusLatitude={barrio?.latitude ?? null}
+      onMove={handleMove}
+      className="lg:h-full"
+    />
+  );
 
-      <Field label={REPORT_LABEL.description}>
-        <Textarea
-          name="description"
-          rows={3}
-          value={draft.description}
-          onChange={(e) => field("description")(e.target.value)}
-          placeholder={REPORT_LABEL.descriptionPlaceholder}
-        />
-      </Field>
+  const nameField = (
+    <Field label={REPORT_LABEL.name} required>
+      <Input
+        name="name"
+        required
+        value={draft.name}
+        onChange={(e) => field("name")(e.target.value)}
+        placeholder={REPORT_LABEL.namePlaceholder}
+      />
+    </Field>
+  );
 
-      <Field label={REPORT_LABEL.schedule}>
-        <Input
-          name="schedule"
-          value={draft.schedule}
-          onChange={(e) => field("schedule")(e.target.value)}
-          placeholder={REPORT_LABEL.schedulePlaceholder}
-        />
-      </Field>
+  const descriptionField = (
+    <Field label={REPORT_LABEL.description}>
+      <Textarea
+        name="description"
+        rows={3}
+        value={draft.description}
+        onChange={(e) => field("description")(e.target.value)}
+        placeholder={REPORT_LABEL.descriptionPlaceholder}
+      />
+    </Field>
+  );
 
-      <Field label={REPORT_LABEL.whatsapp} hint={REPORT_LABEL.whatsappHint}>
-        <Input
-          name="whatsapp"
-          inputMode="numeric"
-          value={draft.whatsapp}
-          onChange={(e) => field("whatsapp")(e.target.value)}
-          placeholder={REPORT_LABEL.whatsappPlaceholder}
-        />
-      </Field>
+  const scheduleField = (
+    <Field label={REPORT_LABEL.schedule}>
+      <Input
+        name="schedule"
+        value={draft.schedule}
+        onChange={(e) => field("schedule")(e.target.value)}
+        placeholder={REPORT_LABEL.schedulePlaceholder}
+      />
+    </Field>
+  );
 
+  const whatsappField = (
+    <Field label={REPORT_LABEL.whatsapp} hint={REPORT_LABEL.whatsappHint}>
+      <Input
+        name="whatsapp"
+        inputMode="numeric"
+        value={draft.whatsapp}
+        onChange={(e) => field("whatsapp")(e.target.value)}
+        placeholder={REPORT_LABEL.whatsappPlaceholder}
+      />
+    </Field>
+  );
+
+  const footer = (
+    <>
       {nearby && (
         <div className="border-claimed/30 bg-claimed-surface flex flex-col gap-2 rounded-lg border p-3">
           <p className="text-claimed text-sm font-semibold">
@@ -263,24 +304,57 @@ export function ReportForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
       <Button type="submit" size="lg" loading={pending}>
         {pending ? REPORT_LABEL.submitting : REPORT_LABEL.submit}
       </Button>
-    </form>
+    </>
   );
-}
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+  const formAction = (formData: FormData) => startTransition(() => submit(formData));
+
+  // From `lg` the "where" block gets its own column instead of sitting
+  // inline between the fields — see `ReportLayout` for why the page can
+  // afford it. Below `lg` this is exactly the single flowing column it
+  // always was.
+  if (!isDesktop) {
+    return (
+      <div className="flex flex-col gap-6">
+        {header}
+        <form action={formAction} className="flex flex-col gap-5">
+          {kindField}
+          {barrioField}
+          {addressField}
+          {mapField}
+          <p className="text-muted-foreground text-xs">
+            {barrio ? REPORT_LABEL.whereHint : REPORT_LABEL.whereLocked}
+          </p>
+          {nameField}
+          {descriptionField}
+          {scheduleField}
+          {whatsappField}
+          {footer}
+        </form>
+      </div>
+    );
+  }
+
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-semibold">{label}</span>
-      {children}
-      {hint && <span className="text-muted-foreground text-xs">{hint}</span>}
-    </label>
+    <div className={REPORT_SPLIT}>
+      <div className="flex min-h-0 flex-col overflow-hidden">
+        <div className="shrink-0 pb-5">{header}</div>
+        <form action={formAction} className={REPORT_FIELDS_PANE}>
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-2">
+            {kindField}
+            {nameField}
+            {addressField}
+            {descriptionField}
+            {scheduleField}
+            {whatsappField}
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 pt-4">{footer}</div>
+        </form>
+      </div>
+
+      <ReportMapPane control={barrioField} invalid={attempted && !barrio}>
+        {mapField}
+      </ReportMapPane>
+    </div>
   );
 }

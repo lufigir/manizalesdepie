@@ -210,7 +210,7 @@ export function UnifiedPanel() {
           vanish past the edge. Wrapping guarantees every chip is
           always visible without depending on a gesture some inputs cannot
           make. */}
-      <div className="grid shrink-0 grid-cols-5 border-b">
+      <div className="grid shrink-0 grid-cols-5 border-b bg-accent/40">
         {chips.map((option) => (
           <button
             key={option.id}

@@ -17,10 +17,17 @@ import {
   WORK_ORDER_CATEGORY_LABEL,
   WORK_ORDER_FORM,
 } from "@/lib/labels";
+import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { BarrioPicker } from "../../_components/barrio-picker";
+import { Field, RequiredMark } from "../../_components/field";
 import { PinPicker } from "../../_components/pin-picker";
+import {
+  REPORT_FIELDS_PANE,
+  REPORT_SPLIT,
+  ReportMapPane,
+} from "../../_components/report-layout";
 
 const START: [number, number] = [-75.5074, 5.0631];
 
@@ -33,15 +40,27 @@ const START: [number, number] = [-75.5074, 5.0631];
 export function WorkOrderForm({
   barrios,
   userName,
+  header,
 }: {
   barrios: NeighborhoodDTO[];
   /** The signed-in reader's name, or null. Seeds the contact field only —
    *  reporting still requires no account. */
   userName: string | null;
+  /** The title block, from `ReportLayout`. Placed over the fields column so
+   *  the map gets the full height of its own; on a phone it is just the top
+   *  of the page, exactly where it always sat. */
+  header: React.ReactNode;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // True once "Publicar" was hit with no barrio. Gates the map's red frame
+  // to that moment (and to the barrio still being missing) instead of wearing
+  // it from the first render.
+  const [attempted, setAttempted] = useState(false);
+  // From `lg` the map moves into its own column instead of sitting inline
+  // between the fields — see the render below.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
 
   const fromMap = useSearchParams().get("barrio");
   const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(
@@ -71,6 +90,7 @@ export function WorkOrderForm({
     setError(null);
 
     if (!barrio) {
+      setAttempted(true);
       setError(WORK_ORDER_FORM.barrio);
       return;
     }
@@ -95,100 +115,108 @@ export function WorkOrderForm({
     }
   }
 
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        startTransition(submit);
-      }}
-      className="flex flex-col gap-5"
-    >
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-semibold">
-          {WORK_ORDER_FORM.category}
-        </legend>
-        <div className="flex flex-wrap gap-1.5">
-          {WORK_ORDER_CATEGORIES.map((option) => {
-            const Icon = WORK_ORDER_CATEGORY_ICON[option];
-            const active = option === category;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setCategory(option)}
-                aria-pressed={active}
-                className={cn(
-                  "focus-visible:ring-ring flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
-                  active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "hover:bg-accent",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-                {WORK_ORDER_CATEGORY_LABEL[option]}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
+  const categoryField = (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-semibold">
+        {WORK_ORDER_FORM.category}
+      </legend>
+      <div className="flex flex-wrap gap-1.5">
+        {WORK_ORDER_CATEGORIES.map((option) => {
+          const Icon = WORK_ORDER_CATEGORY_ICON[option];
+          const active = option === category;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setCategory(option)}
+              aria-pressed={active}
+              className={cn(
+                "focus-visible:ring-ring flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                active
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "hover:bg-accent",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+              {WORK_ORDER_CATEGORY_LABEL[option]}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
 
-      <Field label={WORK_ORDER_FORM.description}>
-        <Textarea
-          required
-          rows={3}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          placeholder={WORK_ORDER_FORM.descriptionPlaceholder}
+  const descriptionField = (
+    <Field label={WORK_ORDER_FORM.description} required>
+      <Textarea
+        required
+        rows={3}
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
+        placeholder={WORK_ORDER_FORM.descriptionPlaceholder}
+      />
+    </Field>
+  );
+
+  // Barrio and the pin it frames: one pair, so the two travel together into
+  // the map pane on a desktop instead of splitting across the fields either
+  // side of it. There the barrio floats over the map (see `ReportMapPane`);
+  // here on a phone they stay stacked.
+  const barrioField = (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-semibold">
+        {WORK_ORDER_FORM.barrio}
+        <RequiredMark />
+      </label>
+      <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
+    </div>
+  );
+
+  const mapField = ready ? (
+    <PinPicker
+      center={[point.lng, point.lat]}
+      focusLongitude={barrio?.longitude ?? null}
+      focusLatitude={barrio?.latitude ?? null}
+      onMove={handleMove}
+      className="lg:h-full"
+    />
+  ) : (
+    <div className="bg-muted h-56 rounded-xl border lg:h-full" />
+  );
+
+  // Published on the card, so the warning is part of the block rather than a
+  // note somewhere else on the page: whatever goes in here is visible to
+  // anyone, and half of these reports are written about somebody else's
+  // house. The copy is the only protection this data has left — nothing
+  // downstream can take a published address back.
+  const contactBlock = (
+    <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3">
+      <div>
+        <p className="text-sm font-semibold">{WORK_ORDER_FORM.contactTitle}</p>
+        <p className="text-muted-foreground text-xs">{WORK_ORDER_FORM.contactHint}</p>
+      </div>
+      <Field label={WORK_ORDER_FORM.exactAddress}>
+        <Input value={exactAddress} onChange={(e) => setExactAddress(e.target.value)} />
+      </Field>
+      <Field label={WORK_ORDER_FORM.contactName}>
+        <Input value={contactName} onChange={(e) => setContactName(e.target.value)} />
+      </Field>
+      <Field label={WORK_ORDER_FORM.phone}>
+        <Input
+          inputMode="numeric"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="3001234567"
         />
       </Field>
+      <Field label={WORK_ORDER_FORM.notes}>
+        <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+    </div>
+  );
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold">{WORK_ORDER_FORM.barrio}</label>
-        <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {ready ? (
-          <PinPicker
-            center={[point.lng, point.lat]}
-            focusLongitude={barrio?.longitude ?? null}
-            focusLatitude={barrio?.latitude ?? null}
-            onMove={handleMove}
-          />
-        ) : (
-          <div className="bg-muted h-56 rounded-xl border" />
-        )}
-      </div>
-
-      {/* Published on the card, so the warning is part of the block rather
-          than a note somewhere else on the page: whatever goes in here is
-          visible to anyone, and half of these reports are written about
-          somebody else's house. The copy is the only protection this data
-          has left — nothing downstream can take a published address back. */}
-      <div className="border-claimed/40 bg-claimed-surface/40 flex flex-col gap-3 rounded-lg border p-3">
-        <div>
-          <p className="text-sm font-semibold">{WORK_ORDER_FORM.contactTitle}</p>
-          <p className="text-muted-foreground text-xs">{WORK_ORDER_FORM.contactHint}</p>
-        </div>
-        <Field label={WORK_ORDER_FORM.exactAddress}>
-          <Input value={exactAddress} onChange={(e) => setExactAddress(e.target.value)} />
-        </Field>
-        <Field label={WORK_ORDER_FORM.contactName}>
-          <Input value={contactName} onChange={(e) => setContactName(e.target.value)} />
-        </Field>
-        <Field label={WORK_ORDER_FORM.phone}>
-          <Input
-            inputMode="numeric"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="3001234567"
-          />
-        </Field>
-        <Field label={WORK_ORDER_FORM.notes}>
-          <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </Field>
-      </div>
-
+  const footer = (
+    <>
       {error && (
         <p role="alert" className="text-unclaimed text-sm font-medium">
           {error}
@@ -198,15 +226,50 @@ export function WorkOrderForm({
       <Button type="submit" size="lg" loading={pending}>
         {pending ? WORK_ORDER_FORM.submitting : WORK_ORDER_FORM.submit}
       </Button>
-    </form>
+    </>
   );
-}
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    startTransition(submit);
+  }
+
+  // From `lg` the map gets its own column instead of sitting inline between
+  // the fields — see `ReportLayout` for why the page can afford it. Below
+  // `lg` this is exactly the single flowing column it always was.
+  if (!isDesktop) {
+    return (
+      <div className="flex flex-col gap-6">
+        {header}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {categoryField}
+          {descriptionField}
+          {barrioField}
+          {mapField}
+          {contactBlock}
+          {footer}
+        </form>
+      </div>
+    );
+  }
+
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-semibold">{label}</span>
-      {children}
-    </label>
+    <div className={REPORT_SPLIT}>
+      <div className="flex min-h-0 flex-col overflow-hidden">
+        <div className="shrink-0 pb-5">{header}</div>
+        <form onSubmit={handleSubmit} className={REPORT_FIELDS_PANE}>
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto pr-2">
+            {categoryField}
+            {descriptionField}
+            {contactBlock}
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 pt-4">{footer}</div>
+        </form>
+      </div>
+
+      <ReportMapPane control={barrioField} invalid={attempted && !barrio}>
+        {mapField}
+      </ReportMapPane>
+    </div>
   );
 }

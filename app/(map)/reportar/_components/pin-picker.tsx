@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { MapPin } from "lucide-react";
 
 import { Map, MapControls, useMap } from "@/components/ui/map";
+import { cn } from "@/lib/utils";
 
 /**
  * Places the pin by moving the map under a fixed crosshair, rather than by
@@ -17,8 +18,10 @@ import { Map, MapControls, useMap } from "@/components/ui/map";
  */
 function ReportCentre({
   onMove,
+  onUserMove,
 }: {
   onMove: (lngLat: { lng: number; lat: number }) => void;
+  onUserMove?: () => void;
 }) {
   const { map } = useMap();
 
@@ -31,10 +34,16 @@ function ReportCentre({
     // moveend, not move: the value is only needed when the gesture settles, and
     // firing per frame would re-render the form sixty times a second.
     map.on("moveend", report);
+    // A drag is the only thing that makes the pin a placement. Everything else
+    // that moves the camera — the mount report above, a barrio re-frame from
+    // `FocusOn` — is programmatic and must not count as the reporter choosing
+    // a spot, or a form that never saw a finger would still record one.
+    if (onUserMove) map.on("dragend", onUserMove);
     return () => {
       map.off("moveend", report);
+      if (onUserMove) map.off("dragend", onUserMove);
     };
-  }, [map, onMove]);
+  }, [map, onMove, onUserMove]);
 
   return null;
 }
@@ -79,6 +88,8 @@ export function PinPicker({
   focusLongitude = null,
   focusLatitude = null,
   onMove,
+  onUserMove,
+  className,
 }: {
   center: [number, number];
   /** Where to re-frame when the barrio changes. Null leaves the camera alone,
@@ -86,20 +97,29 @@ export function PinPicker({
   focusLongitude?: number | null;
   focusLatitude?: number | null;
   onMove: (lngLat: { lng: number; lat: number }) => void;
+  /** Fired when the reporter drags the map by hand. Lets a form tell a
+   *  deliberate placement from a programmatic re-frame, so it can refuse to
+   *  record a pin the reporter never placed. */
+  onUserMove?: () => void;
+  /** Extra classes on the map's own frame. Only ever adds height (the map
+   *  column on a desktop wants this filling it, not fixed at the mobile
+   *  card's 224px), never a replacement — the border, radius and clipping
+   *  stay the same shape everywhere this is used. */
+  className?: string;
 }) {
   return (
-    <div className="relative h-56 overflow-hidden rounded-xl border">
+    <div className={cn("relative h-56 overflow-hidden rounded-xl border", className)}>
       <Map className="h-full w-full" center={center} zoom={15}>
         <MapControls position="bottom-right" showZoom showLocate />
         <FocusOn longitude={focusLongitude} latitude={focusLatitude} />
-        <ReportCentre onMove={onMove} />
+        <ReportCentre onMove={onMove} onUserMove={onUserMove} />
       </Map>
 
       {/* The crosshair sits in the overlay, not on the map, so it never moves.
           pointer-events-none keeps every gesture going to the map underneath. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <MapPin
-          className="text-unclaimed size-8 -translate-y-3 drop-shadow-md"
+          className="text-primary size-8 -translate-y-3 drop-shadow-md"
           strokeWidth={2.5}
           aria-hidden
         />

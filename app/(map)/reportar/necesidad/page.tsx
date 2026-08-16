@@ -25,7 +25,13 @@ export default async function ReportWorkOrderPage() {
       subtitle={WORK_ORDER_FORM.subtitle}
       backHref="/"
     >
-      <WorkOrderForm barrios={barrios} userName={user?.fullName ?? null} />
+      {(header) => (
+        <WorkOrderForm
+          barrios={barrios}
+          userName={user?.fullName ?? null}
+          header={header}
+        />
+      )}
     </ReportLayout>
   );
 }
