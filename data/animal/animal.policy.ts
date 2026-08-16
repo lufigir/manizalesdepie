@@ -1,8 +1,31 @@
+import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
 import type { CurrentUser } from "@/data/user/require-user";
+
+import type { AnimalDTO } from "./animal.dto";
 
 /**
  * Pure predicates. No database, no session lookup, no side effects.
  */
+
+export type AnimalMapCoordinates = { longitude: number; latitude: number };
+
+/** Where to draw the pin: the exact sighting when one was placed, otherwise
+ *  the barrio centroid named in `zone`. Returns null when there is neither. */
+export function animalMapCoordinates(
+  animal: AnimalDTO,
+  barriosByName: ReadonlyMap<string, NeighborhoodDTO>,
+): AnimalMapCoordinates | null {
+  if (animal.longitude !== null && animal.latitude !== null) {
+    return { longitude: animal.longitude, latitude: animal.latitude };
+  }
+
+  if (!animal.zone) return null;
+
+  const barrio = barriosByName.get(animal.zone);
+  if (!barrio) return null;
+
+  return { longitude: barrio.longitude, latitude: barrio.latitude };
+}
 
 /** Anyone may report an animal, with no account. Someone who just found a dog
  *  in the street is exactly the person least likely to have one. */

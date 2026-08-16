@@ -1,15 +1,47 @@
 "use client";
 
-import { AnimalBoard } from "./animal-board";
+import { useMemo } from "react";
+
+import { ANIMAL_LABEL } from "@/lib/labels";
+import { animalUrgency } from "@/lib/urgency";
+
+import { EntityCard } from "./entity-card";
 import { useWorkspace } from "./workspace-context";
 
-/** The photo board, wired to the same selection the sighting markers use. */
+/**
+ * Mascotas in the panel — same index row as necesidades. The photo board with
+ * inline actions lived here once; selecting a row now opens `AnimalPopup` on
+ * the map edge, where the detail and contact live.
+ */
 export function AnimalPanel() {
   const { animals, selectedId, select } = useWorkspace();
 
+  const sorted = useMemo(
+    () => [...animals].sort((a, b) => animalUrgency(b) - animalUrgency(a)),
+    [animals],
+  );
+
+  if (sorted.length === 0) {
+    return (
+      <p className="text-muted-foreground p-6 text-center text-sm text-balance">
+        {ANIMAL_LABEL.empty}
+      </p>
+    );
+  }
+
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <AnimalBoard animals={animals} selectedId={selectedId} onSelect={select} />
+    <div className="p-1.5">
+      <ul className="flex flex-col gap-1.5">
+        {sorted.map((animal) => (
+          <li key={animal.id}>
+            <EntityCard
+              entity={{ kind: "animal", animal }}
+              selected={animal.id === selectedId}
+              onSelect={select}
+            />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

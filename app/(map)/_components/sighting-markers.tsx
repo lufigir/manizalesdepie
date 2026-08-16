@@ -1,52 +1,62 @@
 "use client";
 
+import { PawPrint } from "lucide-react";
+
 import { MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/map";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import { ANIMAL_LABEL } from "@/lib/labels";
+import { animalMapCoordinates } from "@/data/animal/animal.policy";
+import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
+import { ANIMAL_LABEL, ANIMAL_MARKER } from "@/lib/labels";
 import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
 
 import { SelectedMarkerLabel } from "./marker-label";
 
+type Located = AnimalDTO & { longitude: number; latitude: number };
+
 /**
  * Where an animal was last SEEN — never where it is.
  *
- * Drawn as a dashed ring with no fill, deliberately unlike every other marker
- * on this map. A solid pin means "this is here", and for a lost animal that is
- * false by definition: it was somewhere, once, and has been moving since. The
- * marker has to look like a trace rather than a location or it will be read as
- * one, and someone will search the wrong block.
+ * Solid circle in `layer-shelter` with a paw, the same read as a sitio pin:
+ * icon for what kind of thing, fill for which family. The wording everywhere
+ * still says "visto", not "está", because a pin at the barrio centroid is an
+ * approximation when nobody placed a sighting — not a claim the animal lives
+ * on that corner.
  *
- * Reports with no coordinate at all simply do not appear — most will be like
- * that, and the board beside the map is where they live.
+ * Exact coordinate when the reporter placed one; otherwise the centroid of the
+ * barrio they named in `zone`.
  */
 export function SightingMarkers({
   animals,
+  barriosByName,
   selectedId,
   onSelect,
   offsets,
 }: {
   animals: AnimalDTO[];
+  barriosByName: ReadonlyMap<string, NeighborhoodDTO>;
   selectedId: string | null;
   onSelect: (id: string) => void;
   /** Fixed nudge for the sightings sharing one exact coordinate with anything
    *  else on the map — see `lib/marker-fan.ts`. */
   offsets: FanOffsets;
 }) {
-  const located = animals.filter(
-    (animal) =>
-      animal.longitude !== null &&
-      animal.latitude !== null &&
-      animal.resolvedAt === null,
-  );
+  const located = animals.flatMap((animal): Located[] => {
+    if (animal.resolvedAt !== null) return [];
+
+    const point = animalMapCoordinates(animal, barriosByName);
+    if (!point) return [];
+
+    return [{ ...animal, longitude: point.longitude, latitude: point.latitude }];
+  });
 
   return (
     <>
       {located.map((animal) => (
         <MapMarker
           key={animal.id}
-          longitude={animal.longitude!}
-          latitude={animal.latitude!}
+          longitude={animal.longitude}
+          latitude={animal.latitude}
           offset={offsets.get(animal.id)}
           onClick={() => onSelect(animal.id)}
         >
@@ -54,13 +64,16 @@ export function SightingMarkers({
             <span className="relative block">
               <span
                 className={cn(
-                  "border-unclaimed bg-unclaimed/15 block size-6 rounded-full border-2 border-dashed transition-transform",
+                  "ring-background flex size-7 items-center justify-center rounded-full shadow-md ring-2 transition-transform",
+                  ANIMAL_MARKER,
                   selectedId === animal.id && "scale-125",
                 )}
                 aria-label={`${ANIMAL_LABEL[animal.kind]}: ${
                   animal.petName ?? ANIMAL_LABEL[animal.species]
                 }. ${ANIMAL_LABEL.seenAt} aquí.`}
-              />
+              >
+                <PawPrint className="size-4" strokeWidth={2.5} aria-hidden />
+              </span>
               {selectedId === animal.id && (
                 <SelectedMarkerLabel>
                   {ANIMAL_LABEL.seenAt} aquí ·{" "}
@@ -70,7 +83,7 @@ export function SightingMarkers({
             </span>
           </MarkerContent>
           {selectedId !== animal.id && (
-            <MarkerTooltip offset={18}>
+            <MarkerTooltip offset={20}>
               {ANIMAL_LABEL.seenAt} aquí ·{" "}
               {animal.petName ?? ANIMAL_LABEL[animal.species]}
             </MarkerTooltip>

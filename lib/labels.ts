@@ -397,12 +397,16 @@ export const ANIMAL_FORM = {
   when: "¿Cuándo fue?",
   zone: "¿En qué barrio?",
   whereHint:
-    "Es dónde lo VIERON, no dónde está. Se dibuja punteado para que nadie lo confunda.",
+    "Es dónde lo VIERON, no dónde está. Si no marcas un punto, usamos el centro del barrio.",
   whatsapp: "Tu WhatsApp",
   submit: "Publicar en el tablero",
   submitting: "Publicando…",
   failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
 } as const;
+
+/** Map pin fill — the same hue as albergue sitios (`layer-shelter`), with a
+ *  paw so a pet reads at a glance before the icon resolves. */
+export const ANIMAL_MARKER = "bg-layer-shelter text-background";
 
 /** Badge styling per kind. Found and sighted are good news and read as such;
  *  lost is the one that needs eyes on it. */
@@ -578,7 +582,8 @@ export const PANEL_LABEL = {
    *  report a mistake in the data has to be able to find a human, and
    *  anyone else should never notice it is there. */
   contactButton: "Reportar error o contactar",
-  contactEmail: "hi@felipego.com",
+  contactEmail: "luisgir827@gmail.com",
+  madeIn: "Hecho en Manizales ❤️",
   /** "Todo" shows only the two most urgent of each family; this opens that
    *  family's own chip, where the rest live. The count is what makes it
    *  worth tapping — "ver 9 más" says how much is behind it. */
@@ -1179,9 +1184,9 @@ export const WORK_ORDER_UPDATE_PLACEHOLDER: Record<WorkOrderUpdateKind, string> 
  * report — and a curator, not this entry, is what actually rejects a case.
  */
 export const WORK_ORDER_UPDATE_DEFAULT_NOTE: Record<WorkOrderUpdateKind, string> = {
-  on_the_way: "Voy para allá.",
-  helped: "Ya ayudé en este caso.",
-  still_needed: "Pasé y sigue haciendo falta.",
+  on_the_way: "Voy a intentar ayudar pronto.",
+  helped: "Ya aporté con algo en este caso.",
+  still_needed: "Contacté y sigue haciendo falta ayuda.",
   not_real: "Creo que este caso no es real.",
 };
 
