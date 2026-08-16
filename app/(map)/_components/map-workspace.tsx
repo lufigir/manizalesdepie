@@ -8,6 +8,7 @@ import { Map, MapControls } from "@/components/ui/map";
 import type { CurrentUser } from "@/data/user/require-user";
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
+import { animalMapCoordinates } from "@/data/animal/animal.policy";
 import type {
   NeighborhoodDTO,
   NeighborhoodNeedDTO,
@@ -364,6 +365,14 @@ export function MapWorkspace({
     [resourceOffers, barrio],
   );
 
+  const barriosByName = useMemo(
+    () =>
+      new globalThis.Map<string, NeighborhoodDTO>(
+        barrios.map((row) => [row.name, row]),
+      ),
+    [barrios],
+  );
+
   /**
    * One selection, four families, one card.
    *
@@ -373,10 +382,10 @@ export function MapWorkspace({
    * makes "tap anything on this map and it tells you about itself" true
    * rather than nearly true.
    *
-   * `coordinates` is null for the ones that genuinely have no point: a lost
-   * animal reported by barrio, a truck lent across the whole city. Those
-   * still open a card — they just open it without moving the camera, because
-   * there is nowhere honest to move it to.
+   * `coordinates` is null for the ones that genuinely have no point: an animal
+   * with no barrio named, a truck lent across the whole city. Those still open
+   * a card — they just open it without moving the camera, because there is
+   * nowhere honest to move it to.
    */
   const selectedEntity = useMemo(() => {
     if (!selectedId) return null;
@@ -400,10 +409,7 @@ export function MapWorkspace({
     const animal = animals.find((row) => row.id === selectedId);
     if (animal) {
       return {
-        coordinates:
-          animal.longitude !== null && animal.latitude !== null
-            ? { longitude: animal.longitude, latitude: animal.latitude }
-            : null,
+        coordinates: animalMapCoordinates(animal, barriosByName),
         card: <AnimalPopup animal={animal} />,
       };
     }
@@ -420,16 +426,7 @@ export function MapWorkspace({
     }
 
     return null;
-  }, [selectedId, withLiveStatus, workOrders, animals, resourceOffers]);
-
-  /**
-   * Some chips are not about places at all.
-   *
-   * A lost animal has no location — that is what lost means — and a service
-   * moves by definition. For those the panel is the product and the map shrinks
-   * to a zone reference, rather than the other way round.
-   */
-  const panelLeads = activeChip === "pets" || activeChip === "services";
+  }, [selectedId, withLiveStatus, workOrders, animals, resourceOffers, barriosByName]);
 
   /**
    * The nudge for pins landing on one identical coordinate.
@@ -442,8 +439,23 @@ export function MapWorkspace({
    * the camera — so it is memoised on the data alone.
    */
   const markerOffsets = useMemo(
-    () => fanOutCollisions([mapSites, workOrders, animals, resourceOffers]),
-    [mapSites, workOrders, animals, resourceOffers],
+    () =>
+      fanOutCollisions([
+        mapSites,
+        workOrders,
+        animals
+          .filter((animal) => animal.resolvedAt === null)
+          .map((animal) => {
+            const point = animalMapCoordinates(animal, barriosByName);
+            return {
+              id: animal.id,
+              longitude: point?.longitude ?? null,
+              latitude: point?.latitude ?? null,
+            };
+          }),
+        resourceOffers,
+      ]),
+    [mapSites, workOrders, animals, resourceOffers, barriosByName],
   );
 
   const barrioStatus = useMemo(
@@ -554,10 +566,10 @@ export function MapWorkspace({
               sites={[
                 ...mapSites,
                 ...workOrders,
-                ...animals.filter(
-                  (a): a is AnimalDTO & { longitude: number; latitude: number } =>
-                    a.longitude !== null && a.latitude !== null,
-                ),
+                ...animals.flatMap((animal) => {
+                  const point = animalMapCoordinates(animal, barriosByName);
+                  return point ? [point] : [];
+                }),
                 ...resourceOffers.filter(
                   (o): o is ResourceOfferDTO & { longitude: number; latitude: number } =>
                     o.longitude !== null && o.latitude !== null,
@@ -590,6 +602,7 @@ export function MapWorkspace({
 
             <SightingMarkers
               animals={animals}
+              barriosByName={barriosByName}
               selectedId={selectedId}
               onSelect={select}
               offsets={markerOffsets}
@@ -732,18 +745,11 @@ export function MapWorkspace({
             "bg-background flex min-h-0 shrink-0 flex-col overflow-hidden border-t transition-[height,width] duration-300 lg:h-auto lg:border-t-0 lg:border-l",
             panelCollapsed
               ? "h-12 lg:w-11"
-              : panelLeads
-                ? // A photo board and a card grid read badly in a column
-                  // sized for one-line rows, so those two chips get a wider
-                  // panel — a wider panel, not the inverted layout this used
-                  // to do, where the map shrank to a fixed 38% and the panel
-                  // grew. The map stays the bigger half; it is still a map.
-                  "h-[62dvh] lg:w-[32rem] xl:w-[40rem]"
-                : // Just over half the screen on a phone. The panel is where
-                  // every action lives now, and a third of a phone screen was
-                  // not enough to read a card and its buttons without
-                  // scrolling for each one.
-                  "h-[58dvh] lg:w-[26rem] xl:w-[30rem]",
+              : // Just over half the screen on a phone. The panel is where
+                // every action lives now, and a third of a phone screen was
+                // not enough to read a card and its buttons without
+                // scrolling for each one.
+                "h-[58dvh] lg:w-[26rem] xl:w-[30rem]",
           )}
         >
           {/* The header is the collapse control at every width now — see
@@ -765,27 +771,32 @@ export function MapWorkspace({
                   human should not be something you have to scroll a list of
                   emergencies to the end to find. */}
               <div className="shrink-0 border-t px-2 py-1">
-                <a
-                  href={`mailto:${PANEL_LABEL.contactEmail}`}
-                  className="text-muted-foreground hover:text-foreground hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="shrink-0"
-                    aria-hidden="true"
+                <div className="flex items-center justify-between gap-2">
+                  <a
+                    href={`mailto:${PANEL_LABEL.contactEmail}`}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
                   >
-                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                  </svg>
-                  {PANEL_LABEL.contactButton}
-                </a>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="shrink-0"
+                      aria-hidden="true"
+                    >
+                      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                    </svg>
+                    {PANEL_LABEL.contactButton}
+                  </a>
+                  <p className="text-muted-foreground px-2 py-1.5 text-xs">
+                    {PANEL_LABEL.madeIn}
+                  </p>
+                </div>
               </div>
             </div>
           )}
