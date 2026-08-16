@@ -84,17 +84,39 @@ row into a response.
   between an affected person and a published address is the warning in
   `WORK_ORDER_FORM.contactHint`. Weaken that copy and the decision above
   stops being defensible — treat it as load-bearing, not as a nicety.
-- **No single person closes a `work_order`.** Closing used to be one
+- **A `work_order` never closes itself. It cools.** Closing was once one
   anonymous tap that wrote a terminal status, so one bad actor could empty
-  the map and "no es un caso real" could be recorded about a household that
-  would never find out. Since 15 August `status` is not writable by the
-  application at all: entries go into `work_order_update` — *voy*, *ya
-  ayudé*, *sigue haciendo falta*, *no es real* — and `sync_work_order_state`
-  derives the status from them. Two "ya ayudé" from two distinct phones
-  close a case; one "sigue haciendo falta" after the last of them reopens
-  it. `closed_rejected` is a curator's, because it is the outcome that calls
-  somebody a liar. If a feature ever needs to set a status directly, it is
-  the feature that is wrong.
+  the map. Since 15 August `status` is not writable by the application at
+  all: entries go into `work_order_update` — *voy*, *ya ayudé*, *sigue
+  haciendo falta*, *no es real* — and `sync_work_order_state` derives the
+  status from them. Until 16 August two "ya ayudé" from two distinct phones
+  also **closed** the case; that threshold is gone, because the premise
+  under it was false — help arriving is not the same event as a household
+  no longer needing help, and reading it as one took pins off the map over
+  families still waiting. The tally now only ever writes `unclaimed`,
+  `claimed` or `attended`. What a second "ya ayudé" buys is a **colour**:
+  `workOrderRollup` paints a well-attended case green so it stops competing
+  with a case nobody has visited, while it stays listed and contactable.
+  "Sigue haciendo falta" still outranks every help before it and puts the
+  case back to full red. Closing survives only as a curator's decision —
+  `closed_completed` and `closed_rejected`, both statements somebody is
+  accountable for — and `sync_work_order_state` freezes every closed state
+  against later entries. If a feature ever needs to set a status directly,
+  it is the feature that is wrong.
+- **Moving a pin is a neighbour's correction, not a curator's privilege —
+  but only inside its own barrio.** Almost every coordinate here is a best
+  guess: a form filled in on a street, or a press report geocoded by
+  approximation. The person who knows the block is almost never the person
+  with an account, so `canRelocate` (in `data/geo/relocation.policy.ts`) lets
+  anyone move a `site` or a `work_order` anywhere inside the barrio it
+  already resolves to. A curator moves it anywhere in the covered area; a pin
+  that resolves to no barrio at all (Villamaría, where we hold no polygons)
+  has no boundary to respect and anyone may move it. Walking a pin across the
+  city is the destructive version and is the only thing refused, because the
+  barrio drives the panel's filter, the frente weighting and every count
+  anyone reads. The barrio is never written by the application — the
+  `*_sets_neighborhood` triggers re-derive it from the new point, which is
+  why `neighborhood_id` stays out of the update.
 - **Realtime goes browser → Postgres directly, so RLS is the guard there, not
   the DAL.** Any new sensitive column must live in a table that no channel
   subscribes to. Do not "temporarily" add one to a published table.

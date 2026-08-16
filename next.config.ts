@@ -27,7 +27,10 @@ const csp = [
   `style-src 'self' 'unsafe-inline'`,
   // Supabase Storage serves the animal photos. blob: is here for the local
   // preview the report form shows before anything is uploaded.
-  `img-src 'self' data: blob: https://*.supabase.co https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com`,
+  // googleusercontent is where Google hosts the profile picture that comes
+  // back on the OIDC claims: without it the account bubble renders a broken
+  // <img> and silently falls back to nothing.
+  `img-src 'self' data: blob: https://*.supabase.co https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://*.googleusercontent.com`,
   `font-src 'self' data:`,
   `connect-src ${connectSources}`,
   `frame-src https://challenges.cloudflare.com`,
