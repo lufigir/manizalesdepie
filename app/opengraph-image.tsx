@@ -1,8 +1,7 @@
 import { ImageResponse } from "next/og";
-import { CallDAL } from "@/data/call/call.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
-import { OG_LABEL, callState } from "@/lib/labels";
+import { OG_LABEL } from "@/lib/labels";
 
 import {
   OG_CONTENT_TYPE,
@@ -23,8 +22,8 @@ import { OgMapIcon } from "./_components/og-icons";
  *
  * Under the question, the count. It is the only card here with no single
  * entity behind it, so it would otherwise be the one that says least — and
- * "142 puntos · 12 grupos abiertos" is the difference between a map that is
- * being kept and one somebody put up in August and abandoned.
+ * "142 puntos · 37 necesidades" is the difference between a map that is being
+ * kept and one somebody put up in August and abandoned.
  */
 export const alt = `${OG_LABEL.siteName} — ${OG_LABEL.tagline}`;
 export const size = OG_SIZE;
@@ -34,24 +33,19 @@ export const contentType = OG_CONTENT_TYPE;
 export const revalidate = 3600;
 
 export default async function Image() {
-  const [fonts, logo, sites, calls, workOrders] = await Promise.all([
+  const [fonts, logo, sites, workOrders] = await Promise.all([
     ogFonts(),
     ogLogo(),
     SiteDAL.public().listPublished(),
-    CallDAL.public().listPublished(),
     WorkOrderDAL.public().listPublished(),
   ]);
-
-  // Only the grupos somebody could still join. A count that includes last
-  // week's finished shifts is a bigger number and a worse promise.
-  const openCalls = calls.filter((call) => callState(call) !== "ended").length;
 
   return new ImageResponse(
     (
       <OgCard
         eyebrow={OG_LABEL.siteName}
         title={OG_LABEL.homeTitle}
-        meta={OG_LABEL.homeCounts(sites.length, openCalls, workOrders.length)}
+        meta={OG_LABEL.homeCounts(sites.length, workOrders.length)}
         icon={OgMapIcon}
         logo={logo}
         accent="resolved"

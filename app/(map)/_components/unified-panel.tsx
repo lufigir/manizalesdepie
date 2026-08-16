@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
-  CALL_LABEL,
   LIST_LABEL,
   PANEL_LABEL,
   SECTION_EMPTY,
@@ -15,7 +14,6 @@ import {
 import type { PanelChip } from "@/lib/tabs";
 import {
   animalUrgency,
-  callUrgency,
   resourceOfferUrgency,
   siteUrgency,
   workOrderUrgency,
@@ -47,7 +45,7 @@ const PREVIEW_PER_SECTION = 2;
  * A single, always-present row of chips (see `PanelChip` in `lib/tabs.ts`)
  * replaces the two-tier system this used to have — a top-level section that
  * gated which sub-chips even existed. Managing everything from here is the
- * whole point now: whichever chip is open, the other five are still one tap
+ * whole point now: whichever chip is open, the other four are still one tap
  * away, no trip back to the map's own (now icon-only, secondary) filter row
  * required.
  *
@@ -62,7 +60,6 @@ export function UnifiedPanel() {
     activeChip,
     setActiveChip,
     sites,
-    calls,
     workOrders,
     animals,
     resourceOffers,
@@ -88,9 +85,9 @@ export function UnifiedPanel() {
     {
       id: "all",
       label: PANEL_LABEL.all,
-      count: sites.length + calls.length + workOrders.length + animals.length + resourceOffers.length,
+      count:
+        sites.length + workOrders.length + animals.length + resourceOffers.length,
     },
-    { id: "calls", label: CALL_LABEL.heading, count: calls.length },
     { id: "workOrders", label: WORK_ORDER_LABEL.heading, count: workOrders.length },
     { id: "sites", label: PANEL_LABEL.sites, count: sites.length },
     { id: "pets", label: PANEL_LABEL.pets, count: animals.filter((a) => a.resolvedAt === null).length },
@@ -152,19 +149,6 @@ export function UnifiedPanel() {
         ),
       ),
       section(
-        "calls",
-        CALL_LABEL.heading,
-        calls,
-        (call) => callUrgency(call, neighborhoodNeeds),
-        (call) => (
-          <EntityCard
-            entity={{ kind: "call", call }}
-            selected={call.id === selectedId}
-            onSelect={select}
-          />
-        ),
-      ),
-      section(
         "sites",
         PANEL_LABEL.sites,
         sites,
@@ -206,7 +190,6 @@ export function UnifiedPanel() {
     ];
   }, [
     sites,
-    calls,
     workOrders,
     animals,
     resourceOffers,
@@ -222,8 +205,8 @@ export function UnifiedPanel() {
           scrollbar (`overflow-x-auto` plus a no-scrollbar utility) reads
           fine on a phone, where a swipe is the everyday gesture — on a
           desktop with a plain mouse there is no obvious way to trigger a
-          horizontal scroll at all, so six chips that do not fit just
-          silently vanish past the edge. Wrapping guarantees every chip is
+          horizontal scroll at all, so chips that do not fit just silently
+          vanish past the edge. Wrapping guarantees every chip is
           always visible without depending on a gesture some inputs cannot
           make. */}
       <div className="flex shrink-0 flex-wrap gap-1.5 border-b p-2">
@@ -284,23 +267,6 @@ export function UnifiedPanel() {
           />
         )}
 
-        {activeChip === "calls" && (
-          <FlatEntityList
-            items={calls.map((call) => ({
-              id: call.id,
-              node: (
-                <EntityCard
-                  entity={{ kind: "call", call }}
-                  selected={call.id === selectedId}
-                  onSelect={select}
-                />
-              ),
-            }))}
-            selectedId={selectedId}
-            emptyLabel={CALL_LABEL.empty}
-          />
-        )}
-
         {activeChip === "workOrders" && (
           <WorkOrderList
             workOrders={workOrders}
@@ -343,7 +309,7 @@ export function UnifiedPanel() {
 /** A single-family chip's content: the same rows as the mixed list, no group
  *  header (the chip's own label already says what family this is), and no
  *  urgency reordering (each list already arrives sorted the way that family
- *  reads best — soonest-first for grupos, newest-confirmed for sitios). */
+ *  reads best — newest-confirmed for sitios). */
 function FlatEntityList({
   items,
   selectedId,

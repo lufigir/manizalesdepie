@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { CallDAL } from "@/data/call/call.dal";
 import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
@@ -28,9 +27,8 @@ import { clientEnv } from "@/lib/env";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = clientEnv.NEXT_PUBLIC_SITE_URL;
 
-  const [sites, calls, workOrders, animals, resourceOffers] = await Promise.all([
+  const [sites, workOrders, animals, resourceOffers] = await Promise.all([
     SiteDAL.public().listPublished(),
-    CallDAL.public().listPublished(),
     WorkOrderDAL.public().listPublished(),
     AnimalDAL.public().listPublished(),
     ResourceOfferDAL.public().listPublished(),
@@ -43,12 +41,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(site.confirmedAt),
       changeFrequency: "daily" as const,
       priority: 0.8,
-    })),
-    ...calls.map((call) => ({
-      url: `${base}/grupo/${call.id}`,
-      lastModified: new Date(call.confirmedAt),
-      changeFrequency: "daily" as const,
-      priority: 0.6,
     })),
     ...workOrders.map((order) => ({
       url: `${base}/necesidad/${order.id}`,

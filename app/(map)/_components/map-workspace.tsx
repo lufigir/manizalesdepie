@@ -7,7 +7,6 @@ import { Map, MapControls } from "@/components/ui/map";
 
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import type { CallDTO } from "@/data/call/call.dto";
 import type {
   NeighborhoodNeedDTO,
   NeighborhoodStatusDTO,
@@ -30,8 +29,6 @@ import { cn } from "@/lib/utils";
 import { AnimalPopup } from "./animal-popup";
 import { BarrioHeader } from "./barrio-header";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
-import { CallMarkers } from "./call-markers";
-import { CallPopup } from "./call-popup";
 import { LiveClock } from "./live-clock";
 import { MapCard, type CardInset } from "./map-card";
 import { ClearSelectionOnTap, FitToSites, FlyToSelected } from "./map-camera";
@@ -68,8 +65,6 @@ const CITY_BOUNDS: [[number, number], [number, number]] = [
 
 type Props = {
   sites: SiteDTO[];
-  /** Grupos. */
-  calls?: CallDTO[];
   /** Animal reports. Not sites: they mostly have no location at all. */
   animals?: AnimalDTO[];
   /** Resource offers — a truck, a warehouse, a spare room. Pinned at the
@@ -88,7 +83,7 @@ type Props = {
    *  before anyone touches anything.
    *
    *  Its presence is also what puts the "Ver todo el mapa" chip on screen
-   *  (see `SharedLinkBar`) — only the five `[id]` routes ever pass it, and
+   *  (see `SharedLinkBar`) — only the four `[id]` routes ever pass it, and
    *  they are exactly the routes that need a way out. The chip stays after
    *  the card is closed: the reader is still on a route about one pin, and
    *  that has to remain visible even once the pin's card is gone. */
@@ -99,9 +94,9 @@ type Props = {
    *  property of the pin that was shared. Only a seed — the reader can still
    *  pick a different chip afterwards. */
   tab?: TabId;
-  /** Extra content rendered above the panel — today only `/grupo/[id]`'s
-   *  attendee list, which is not part of any family and does not belong
-   *  inside `UnifiedPanel`. */
+  /** Extra content rendered above the panel, for a route that has something
+   *  to say that belongs to no family and so does not belong inside
+   *  `UnifiedPanel`. Nothing passes it today. */
   children?: React.ReactNode;
   /** A curator, signed in — see `WorkspaceValue.isAdmin`. Resolved once,
    *  server-side, by whichever route rendered this. */
@@ -112,18 +107,17 @@ type Props = {
  * The map, the (now icon-only) quick-jump row, and the one panel that
  * carries all the actual filtering.
  *
- * Every family draws on the map unconditionally now — sites, grupos, casos,
- * located animal sightings, located resource offers — nothing is hidden for
- * belonging to the "wrong" section. What changed hands to `UnifiedPanel` is
- * the filtering itself: its own row of chips (Todo, Grupos, Necesidades,
- * Sitios, Mascotas, Servicios) is the one control surface for what the panel
- * lists, and it never gates the map. `activeChip` is that state, shared
+ * Every family draws on the map unconditionally — casos, sitios, located
+ * animal sightings, located resource offers — nothing is hidden for belonging
+ * to the "wrong" section. What changed hands to `UnifiedPanel` is the
+ * filtering itself: its own row of chips (Todo, Necesidades, Sitios,
+ * Mascotas, Servicios) is the one control surface for what the panel lists,
+ * and it never gates the map. `activeChip` is that state, shared
  * through the workspace context so `UnifiedPanel` can read and change it and
  * this component's own primary button can jump straight to one.
  */
 export function MapWorkspace({
   sites,
-  calls = [],
   animals = [],
   resourceOffers = [],
   workOrders = [],
@@ -142,16 +136,16 @@ export function MapWorkspace({
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
 
   /**
-   * Seeded once, from `forcedTab` when the caller is one of the five shared
+   * Seeded once, from `forcedTab` when the caller is one of the four shared
    * entity routes, or `DEFAULT_TAB_ID` at the bare `/`.
    *
    * This used to also resync from the active child route segment, for the
    * era when `(tabs)/layout.tsx` had siblings (`/necesito`, `/mascotas`,
    * `/servicios`) it stayed mounted across while a reader moved between
    * them. It has none now — every section lives behind a chip inside `/`
-   * instead of its own route — and the five shared-entity routes each own
+   * instead of its own route — and the four shared-entity routes each own
    * their page outright, so navigating between e.g. `/punto/a` and
-   * `/grupo/b` remounts `MapWorkspace` fresh with the new `forcedTab`
+   * `/necesidad/b` remounts `MapWorkspace` fresh with the new `forcedTab`
    * rather than needing to be told about a change. A plain initializer is
    * what is left once syncing has nothing to sync from.
    */
@@ -263,12 +257,6 @@ export function MapWorkspace({
     [mapSites, barrio],
   );
 
-  const panelCalls = useMemo(
-    () =>
-      barrio ? calls.filter((call) => call.neighborhood === barrio.name) : calls,
-    [calls, barrio],
-  );
-
   const panelWorkOrders = useMemo(
     () =>
       barrio
@@ -289,7 +277,7 @@ export function MapWorkspace({
   );
 
   /**
-   * One selection, five families, one card.
+   * One selection, four families, one card.
    *
    * Animals and offers used to be the two that could be selected and had
    * nothing to show for it — the marker grew and that was all. They have
@@ -310,14 +298,6 @@ export function MapWorkspace({
       return {
         coordinates: { longitude: site.longitude, latitude: site.latitude },
         card: <SitePopup site={site} />,
-      };
-    }
-
-    const call = calls.find((row) => row.id === selectedId);
-    if (call) {
-      return {
-        coordinates: { longitude: call.longitude, latitude: call.latitude },
-        card: <CallPopup call={call} />,
       };
     }
 
@@ -352,7 +332,7 @@ export function MapWorkspace({
     }
 
     return null;
-  }, [selectedId, withLiveStatus, calls, workOrders, animals, resourceOffers]);
+  }, [selectedId, withLiveStatus, workOrders, animals, resourceOffers]);
 
   /**
    * Some chips are not about places at all.
@@ -378,14 +358,9 @@ export function MapWorkspace({
       // The panel's lists, narrowed to the barrio. The map draws the full,
       // unfiltered sets above instead.
       sites: panelSites,
-      calls: panelCalls,
       animals,
       resourceOffers: panelResourceOffers,
       workOrders: panelWorkOrders,
-      // Same two lists, city-wide — what FrontsList counts against, since a
-      // barrio being filtered by must not hide every other barrio's numbers.
-      cityCalls: calls,
-      cityWorkOrders: workOrders,
       neighborhoodNeeds,
       selectedId,
       select,
@@ -402,12 +377,9 @@ export function MapWorkspace({
     [
       activeChip,
       panelSites,
-      panelCalls,
       animals,
       panelResourceOffers,
       panelWorkOrders,
-      calls,
-      workOrders,
       neighborhoodNeeds,
       selectedId,
       select,
@@ -451,7 +423,7 @@ export function MapWorkspace({
                 beside it is not decoration to be hidden, it is where the
                 actions live (it collapses from its own header instead).
 
-                What is left earns its place. "Ubicarme" is the shortest
+                What is left earns its place. "Ubice" is the shortest
                 possible answer to "¿dónde ayudo hoy?" — aquí, a 300 metros —
                 and the compass is the only way back to north once the map
                 has been rotated by a two-finger drag nobody meant to make. */}
@@ -475,7 +447,6 @@ export function MapWorkspace({
             <FitToSites
               sites={[
                 ...mapSites,
-                ...calls,
                 ...workOrders,
                 ...animals.filter(
                   (a): a is AnimalDTO & { longitude: number; latitude: number } =>
@@ -498,8 +469,6 @@ export function MapWorkspace({
             <ClearSelectionOnTap onTap={() => setSelectedId(null)} />
 
             <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={select} />
-
-            <CallMarkers calls={calls} selectedId={selectedId} onSelect={select} />
 
             <WorkOrderMarkers
               workOrders={workOrders}

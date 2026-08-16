@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { callCategorySchema } from "@/data/call/call.dto";
+import { workOrderCategorySchema } from "@/data/work_order/work_order.dto";
 
 /**
  * A barrio, as the report forms need it: a name to pick and a coordinate to
@@ -63,14 +63,18 @@ export const neighborhoodStatusSchema = z.object({
 export type NeighborhoodStatusDTO = z.infer<typeof neighborhoodStatusSchema>;
 
 /**
- * A frente: "este barrio necesita X", declared by the curator team so that
- * armar un grupo starts from a problem already on record instead of someone
- * inventing the category, the priority and the barrio from nothing.
+ * A frente: "este barrio necesita X", declared by hand so that a barrio's
+ * standing problem is on record instead of having to be inferred from the
+ * individual cases inside it.
  *
- * `category` is `CallCategory`, not a category of its own — a frente's
- * category IS the kind of work a grupo there does, and reusing the type is
- * what lets "Armar un grupo aquí" prefill the form without translating
- * between two vocabularies for the same idea.
+ * `category` is `WorkOrderCategory`, not a category of its own. It used to be
+ * `CallCategory`, on the reasoning that a frente's category IS the kind of
+ * work a grupo does there — with the grupos gone (see the migration
+ * `20260815060000_drop_calls`) the only thing a frente can describe is the
+ * kind of necesidad a barrio is full of, so it takes the vocabulary the
+ * cases themselves use. That also makes the match in `lib/urgency.ts` exact
+ * rather than the near-miss it always was: a frente now weights the cases in
+ * its own category instead of falling back to the whole barrio.
  */
 export const NEED_PRIORITIES = ["critical", "high", "normal"] as const;
 
@@ -87,7 +91,7 @@ export const neighborhoodNeedSchema = z.object({
   municipality: municipalitySchema,
   longitude: z.number(),
   latitude: z.number(),
-  category: callCategorySchema,
+  category: workOrderCategorySchema,
   priority: needPrioritySchema,
   note: z.string().nullable(),
   confirmedAt: z.iso.datetime({ offset: true }),

@@ -1,4 +1,4 @@
-import { LifeBuoy, MapPin, Megaphone, PawPrint, Truck, type LucideIcon } from "lucide-react";
+import { LifeBuoy, MapPin, PawPrint, Truck, type LucideIcon } from "lucide-react";
 
 import type { SiteType } from "@/data/site/site.dto";
 
@@ -84,13 +84,15 @@ export type ReportEntry = { href: string; label: string; icon: LucideIcon };
 /**
  * `UnifiedPanel`'s own chips — the one filter surface the app has now, always
  * on screen together, wrapping onto a second row rather than hiding any of
- * them behind a scroll or a section of their own. "fronts" (the
- * neighborhood_need dashboard, see `FrontsList`) is deliberately not one of
- * these yet: the table and the component both exist and work, but with
- * nothing declared in it today a chip for it would open on an empty screen.
- * Add it back once the curator team starts declaring frentes.
+ * them behind a scroll or a section of their own.
+ *
+ * "calls" is gone with the grupos it filtered. What is left is one chip per
+ * kind of thing that PERSISTS: a necesidad stays true until somebody fixes
+ * it, a sitio until it closes, a mascota until it turns up. A grupo was true
+ * for one morning, which is why it never belonged on a map in the first
+ * place — see `20260815060000_drop_calls`.
  */
-export type PanelChip = "all" | "calls" | "workOrders" | "sites" | "pets" | "services";
+export type PanelChip = "all" | "workOrders" | "sites" | "pets" | "services";
 
 /** Which chip a fresh visit to each route opens the panel on. "Ayudar" seeds
  *  "all" — it is the section most people arrive at, and now that the map
@@ -118,11 +120,11 @@ export function initialChipForTab(tab: TabId): PanelChip {
  * secondary menu holding whatever that filter did not promote. The reason it
  * is gone is that the two things were never the same axis. A chip narrows
  * what the panel LISTS; it says nothing about what the reader has to report.
- * Someone filtering on "Grupos" because they are looking for a shift is
+ * Someone filtering on "Sitios" because they are looking for an acopio is
  * exactly as likely to be the person who then finds a lost dog — and under
  * the old rule, the form for that was not on their screen.
  *
- * Five entries, five distinct verbs, five distinct icons, and each one named
+ * Four entries, four distinct verbs, four distinct icons, and each one named
  * after the chip that LISTS what it writes — "Necesidades" is read in the
  * panel and written here, "Sitios" likewise. A reader who learned the filter
  * has already learned the menu.
@@ -140,5 +142,4 @@ export const ALL_REPORT_ENTRIES: ReportEntry[] = [
   { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
   { href: "/reportar/sitio", label: "Reportar un sitio", icon: MapPin },
   { href: "/reportar/necesidad", label: "Reportar una necesidad", icon: LifeBuoy },
-  { href: "/reportar/armar-grupo", label: "Armar un grupo", icon: Megaphone },
 ];

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "¿Dónde ayudo hoy?",
   description:
-    "Mapa vivo de la ayuda en Manizales y Villamaría: acopios, albergues, donación de sangre, grupos y necesidades.",
+    "Mapa vivo de la ayuda en Manizales y Villamaría: necesidades, acopios, albergues y donación de sangre.",
 };
 
 /**

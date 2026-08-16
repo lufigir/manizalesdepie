@@ -54,15 +54,12 @@ const COLOR = {
   unclaimed: "#c0433c",
   claimed: "#c58a2b",
   resolved: "#2f8f6d",
-  /** Matches `--group`. A grupo is off the status axis entirely — see
-   *  `CallState` — and the unfurled card has to agree with the pin. */
-  group: "#8a4bc4",
   neutral: "#5d7684",
 } as const;
 
 export type OgAccent = keyof Pick<
   typeof COLOR,
-  "unclaimed" | "claimed" | "resolved" | "group" | "neutral"
+  "unclaimed" | "claimed" | "resolved" | "neutral"
 >;
 
 /** Satori parses `rgba()` reliably and 8-digit hex less so, so opacity on a

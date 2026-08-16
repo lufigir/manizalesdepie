@@ -1,5 +1,4 @@
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
@@ -26,7 +25,6 @@ import { MapWorkspace } from "../_components/map-workspace";
 export default async function TabsLayout() {
   const [
     sites,
-    calls,
     animals,
     resourceOffers,
     workOrders,
@@ -41,7 +39,6 @@ export default async function TabsLayout() {
     // database query. `getCurrentUser` is request-cached, so this costs
     // nothing extra over the `isAdmin` read below.
     SiteDAL.create().then((dal) => dal.listPublished()),
-    CallDAL.create().then((dal) => dal.listPublished()),
     AnimalDAL.create().then((dal) => dal.listPublished()),
     ResourceOfferDAL.create().then((dal) => dal.listPublished()),
     WorkOrderDAL.create().then((dal) => dal.listPublished()),
@@ -54,7 +51,6 @@ export default async function TabsLayout() {
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
-        calls={calls}
         animals={animals}
         resourceOffers={resourceOffers}
         workOrders={workOrders}

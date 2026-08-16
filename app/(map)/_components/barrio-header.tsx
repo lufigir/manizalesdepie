@@ -47,7 +47,6 @@ export function BarrioHeader() {
     panelCollapsed,
     setPanelCollapsed,
     sites,
-    calls,
     workOrders,
     animals,
     resourceOffers,
@@ -55,7 +54,6 @@ export function BarrioHeader() {
 
   const total =
     sites.length +
-    calls.length +
     workOrders.length +
     animals.filter((animal) => animal.resolvedAt === null).length +
     resourceOffers.length;

@@ -44,11 +44,6 @@ export function ReportMenu({
                 borderStyle = "border-unclaimed/70 text-unclaimed bg-background/95 hover:bg-unclaimed-surface/50 rounded-full border-2";
                 iconStyle = "text-unclaimed";
                 break;
-              case "/reportar/armar-grupo":
-                // Grupos: Square-ish rounded corner (rounded-md/lg), border-group (purple)
-                borderStyle = "border-group/70 text-group bg-background/95 hover:bg-group-surface/50 rounded-lg border-2";
-                iconStyle = "text-group";
-                break;
               case "/reportar/sitio":
                 // Sitios: Solid border-resolved (green)
                 borderStyle = "border-resolved/70 text-resolved bg-background/95 hover:bg-resolved-surface/50 rounded-full border-2";

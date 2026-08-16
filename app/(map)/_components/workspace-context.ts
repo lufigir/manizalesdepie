@@ -3,7 +3,6 @@
 import { createContext, useContext } from "react";
 
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import type { CallDTO } from "@/data/call/call.dto";
 import type {
   NeighborhoodNeedDTO,
   NeighborhoodStatusDTO,
@@ -26,8 +25,8 @@ import type { PanelChip } from "@/lib/tabs";
  * children. Hence a context: one owner, the workspace, and every panel reads it.
  */
 export type WorkspaceValue = {
-  /** `UnifiedPanel`'s own chip — Todo, Grupos, Necesidades, Sitios, Mascotas
-   *  or Servicios, always shown together now (see `lib/tabs.ts`). Client
+  /** `UnifiedPanel`'s own chip — Todo, Necesidades, Sitios, Mascotas or
+   *  Servicios, always shown together now (see `lib/tabs.ts`). Client
    *  state, not the route: the map draws every family at once regardless of
    *  which chip is open. Seeded from the route segment on first render (see
    *  `MapWorkspace`), free to change after. */
@@ -38,8 +37,6 @@ export type WorkspaceValue = {
    *  every one regardless of the active chip; this list is what the panel
    *  narrows further. */
   sites: SiteDTO[];
-  /** Grupos, narrowed to the barrio like `sites`. */
-  calls: CallDTO[];
   /** Every animal report, unfiltered — the board (and "Todo") decide for
    *  themselves which to show. Most carry no coordinate at all, so barrio
    *  narrowing does not apply to them the way it does to everything else
@@ -52,17 +49,10 @@ export type WorkspaceValue = {
   /** Individual household requests — "Necesidades" — narrowed to the barrio
    *  like `sites`. */
   workOrders: WorkOrderDTO[];
-  /** `calls` and `workOrders`, but city-wide — never narrowed to the barrio
-   *  filter. `FrontsList` counts every grupo and every case in a barrio
-   *  whether or not that barrio happens to be the one currently selected, so
-   *  it reads from these instead of the narrowed lists above. */
-  cityCalls: CallDTO[];
-  cityWorkOrders: WorkOrderDTO[];
   /** Every frente on record — "este barrio necesita X". Read by
-   *  `lib/urgency.ts`'s priority weighting and by `FrontsList`, which has no
-   *  chip of its own yet (see `PanelChip` in `lib/tabs.ts`) but still exists
-   *  for when the curator team starts declaring frentes. City-wide, like
-   *  `neighborhoodStatuses`. */
+   *  `lib/urgency.ts`'s priority weighting, which is the only consumer left:
+   *  the dashboard that used to list frentes was built around "armar un grupo
+   *  aquí" and went with the grupos. City-wide, like `neighborhoodStatuses`. */
   neighborhoodNeeds: NeighborhoodNeedDTO[];
   selectedId: string | null;
   select: (id: string | null) => void;

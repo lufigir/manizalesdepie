@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
@@ -63,11 +62,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedSitePage({ params }: Params) {
   const { id } = await params;
 
-  const [site, sites, calls, animals, neighborhoodStatuses, user] =
+  const [site, sites, animals, neighborhoodStatuses, user] =
     await Promise.all([
       SiteDAL.public().findById(id),
       SiteDAL.public().listPublished(),
-      CallDAL.public().listPublished(),
       AnimalDAL.public().listPublished(),
       NeighborhoodDAL.public().statuses(),
       getCurrentUser(),
@@ -90,7 +88,6 @@ export default async function SharedSitePage({ params }: Params) {
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
         sites={withShared}
-        calls={calls}
         animals={animals}
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={site.id}

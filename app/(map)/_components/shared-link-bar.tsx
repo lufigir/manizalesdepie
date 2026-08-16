@@ -6,8 +6,8 @@ import { SHARED_LINK } from "@/lib/labels";
 /**
  * The way out of a shared link.
  *
- * `/punto/[id]`, `/grupo/[id]`, `/necesidad/[id]`, `/mascota/[id]` and
- * `/servicio/[id]` all render the whole map, opened on one pin. Nothing is
+ * `/punto/[id]`, `/necesidad/[id]`, `/mascota/[id]` and `/servicio/[id]`
+ * all render the whole map, opened on one pin. Nothing is
  * hidden and nothing is filtered — the map is the context that makes the pin
  * mean something — but somebody who arrived from a WhatsApp group has no idea
  * they are on a route with a way out, and closing the card leaves them on a

@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     // shared link promising something the app no longer has is worse than
     // a shorter list.
     description:
-      "Dónde ayudar hoy en Manizales y Villamaría: acopios, albergues, donación de sangre, grupos, necesidades y mascotas.",
+      "Dónde ayudar hoy en Manizales y Villamaría: necesidades, acopios, albergues, donación de sangre y mascotas.",
     url: clientEnv.NEXT_PUBLIC_SITE_URL,
     locale: "es_CO",
     type: "website",

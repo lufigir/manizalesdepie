@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
 import { SiteDAL } from "@/data/site/site.dal";
@@ -61,12 +60,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedResourceOfferPage({ params }: Params) {
   const { id } = await params;
 
-  const [offer, resourceOffers, sites, calls, neighborhoodStatuses, user] =
+  const [offer, resourceOffers, sites, neighborhoodStatuses, user] =
     await Promise.all([
       ResourceOfferDAL.public().findById(id),
       ResourceOfferDAL.public().listPublished(),
       SiteDAL.public().listPublished(),
-      CallDAL.public().listPublished(),
       NeighborhoodDAL.public().statuses(),
       getCurrentUser(),
     ]);
@@ -84,7 +82,6 @@ export default async function SharedResourceOfferPage({ params }: Params) {
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
-        calls={calls}
         resourceOffers={withShared}
         neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={offer.id}
