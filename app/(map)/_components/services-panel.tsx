@@ -59,7 +59,7 @@ function ServicesGrid({
 }
 
 function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
-  const { isAdmin } = useWorkspace();
+  const { isAdmin, select } = useWorkspace();
   const [pending, startTransition] = useTransition();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -86,11 +86,20 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
   return (
     <li>
       <div className="flex h-full flex-col gap-1.5 rounded-lg border p-3">
-        <a
-          href={`https://wa.me/${offer.whatsapp}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="focus-visible:ring-ring hover:bg-accent -m-1 flex flex-1 flex-col gap-1.5 rounded-md p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        {/*
+         * A tile in a browsing grid used to BE the WhatsApp link — the whole
+         * card, one tap, straight out of the app. That was fine when the
+         * card said nothing a WhatsApp thread wouldn't, but it also meant
+         * there was no way to just look: no share, no way to flag it as
+         * wrong, and a stray tap sent someone into a stranger's WhatsApp
+         * with nothing typed. It opens the same card `ResourceOfferPopup`
+         * does everywhere else on the map now — WhatsApp is one of the
+         * things that card offers, not the only thing the tile can do.
+         */}
+        <button
+          type="button"
+          onClick={() => select(offer.id)}
+          className="focus-visible:ring-ring hover:bg-accent -m-1 flex flex-1 flex-col gap-1.5 rounded-md p-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <div className="flex items-start gap-2">
             <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
@@ -124,7 +133,7 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
               {freshLabel}
             </span>
           </div>
-        </a>
+        </button>
 
         {isAdmin && (
           <div className="border-t pt-1.5">
