@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
 
 import { Map, MapControls } from "@/components/ui/map";
 
@@ -10,12 +9,13 @@ import type { CurrentUser } from "@/data/user/require-user";
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import type {
+  NeighborhoodDTO,
   NeighborhoodNeedDTO,
   NeighborhoodStatusDTO,
 } from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
-import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
+import { PANEL_LABEL } from "@/lib/labels";
 import {
   ALL_REPORT_ENTRIES,
   DEFAULT_TAB_ID,
@@ -24,17 +24,24 @@ import {
   type PanelChip,
   type TabId,
 } from "@/lib/tabs";
+import { fanOutCollisions } from "@/lib/marker-fan";
 import { createClient } from "@/lib/supabase/client";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { AnimalPopup } from "./animal-popup";
 import { AccountMenu } from "./account-menu";
+import { AttendanceStats } from "./attendance-stats";
 import { BarrioHeader } from "./barrio-header";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
-import { LiveClock } from "./live-clock";
 import { MapCard, type CardInset } from "./map-card";
 import { ClearSelectionOnTap, FitToSites, FlyToSelected } from "./map-camera";
+import {
+  RelocateBarrioFocus,
+  RelocateCentre,
+  RelocateOverlay,
+  type Relocating,
+} from "./relocate-overlay";
 import { ReportMenu } from "./report-menu";
 import { ResourceOfferMarkers } from "./resource-offer-markers";
 import { ResourceOfferPopup } from "./resource-offer-popup";
@@ -101,6 +108,10 @@ type Props = {
    *  to say that belongs to no family and so does not belong inside
    *  `UnifiedPanel`. Nothing passes it today. */
   children?: React.ReactNode;
+  /** Every barrio, for the picker inside the relocation overlay. Empty on the
+   *  shared-entity routes, which do not load them: relocating from a shared
+   *  link still works, it just aims by dragging alone. */
+  barrios?: NeighborhoodDTO[];
   /** The signed-in reader, or null. Resolved once, server-side, by whichever
    *  route rendered this; the account bubble and the curator-only strips read
    *  from it rather than fetching their own session. */
@@ -127,6 +138,7 @@ export function MapWorkspace({
   workOrders = [],
   neighborhoodStatuses = [],
   neighborhoodNeeds = [],
+  barrios = [],
   initialSelectedId,
   tab: forcedTab,
   children,
@@ -135,6 +147,7 @@ export function MapWorkspace({
   const sharedLink = initialSelectedId !== undefined;
   const router = useRouter();
   const isAdmin = user?.role === "curator";
+  const userName = user?.fullName ?? null;
 
   // Everything that behaves differently rather than just looking different
   // hangs off this: where a card opens, whether the panel starts shut, and
@@ -166,16 +179,14 @@ export function MapWorkspace({
   // spent by the camera (see `FlyToSelected`): the drawer's height on a
   // phone, the left sheet's width beside the map.
   const [cardInset, setCardInset] = useState<CardInset>({ bottom: 0, left: 0 });
-  // Which barrio the map is centred on. Zoomed in you are inside one, its
-  // outline is off-screen and the wash is invisible, so the layer looks dead
-  // even though it is working. This says where you are without a cursor —
-  // which also makes it the only version of this that exists on a phone.
-  const [centreBarrio, setCentreBarrio] = useState<string | null>(null);
-  // Which barrio the cursor is over, on the inputs that have a cursor. It
-  // took over from a label that followed the pointer around the map (see
-  // `BarrioLayer`): the same fact, in the corner that was already reporting a
-  // barrio name, instead of a second one floating over the thing it names.
-  const [hoverBarrio, setHoverBarrio] = useState<string | null>(null);
+  /*
+   * `centreBarrio` and `hoverBarrio` used to live here.
+   *
+   * They fed the chip in the top-right corner and nothing else, so they went
+   * with it — along with the `onCentreChange` handler below, which ran a
+   * point-in-polygon test over 114 barrios on every single map move to
+   * produce a label nobody was reading.
+   */
   // The barrio being filtered by, set by tapping one on the map. Null is the
   // whole city, which is where everyone starts.
   const [barrio, setBarrio] = useState<BarrioProps | null>(null);
@@ -242,10 +253,67 @@ export function MapWorkspace({
    * `replace`, not `push`: the shared URL and `/` are the same visit, and
    * pushing would make Back re-open a card the reader just dismissed.
    */
+  /**
+   * The pin being corrected, or null.
+   *
+   * While it is set the map is a picker: a crosshair sits over the centre,
+   * the card is out of the way, and the only two outcomes are saving the new
+   * coordinate or cancelling. Nothing else about the map changes — the pins
+   * stay where they are, including the one being moved, so the reader can see
+   * how far they have taken it from where it was.
+   */
+  const [relocating, setRelocating] = useState<Relocating | null>(null);
+  const [relocatePoint, setRelocatePoint] = useState({ lng: 0, lat: 0 });
+  const [relocateBarrio, setRelocateBarrio] = useState<NeighborhoodDTO | null>(
+    null,
+  );
+
+  /*
+   * The setters are listed as dependencies, which looks redundant — they are
+   * stable by React's own contract — and is not optional here. The React
+   * Compiler infers them, and `react-hooks/preserve-manual-memoization` drops
+   * the whole component out of optimization when the inferred list and the
+   * written one disagree. `startRelocate` in particular has to keep its
+   * identity: it rides the workspace context, so a fresh closure per render
+   * would rebuild that object for every consumer of it.
+   */
+  const startRelocate = useCallback(
+    (target: Relocating) => {
+      setRelocating(target);
+      setRelocatePoint({ lng: target.longitude, lat: target.latitude });
+      setRelocateBarrio(null);
+    },
+    [setRelocating, setRelocatePoint, setRelocateBarrio],
+  );
+
+  const stopRelocate = useCallback(() => {
+    setRelocating(null);
+    setRelocateBarrio(null);
+  }, [setRelocating, setRelocateBarrio]);
+
+  // Stable so `RelocateCentre`'s effect does not re-subscribe to moveend on
+  // every render — the same hazard `PinPicker` documents.
+  const handleRelocateMove = useCallback(
+    (lngLat: { lng: number; lat: number }) => setRelocatePoint(lngLat),
+    [setRelocatePoint],
+  );
+
   const dismiss = useCallback(() => {
     setSelectedId(null);
     if (sharedLink) router.replace("/");
   }, [sharedLink, router]);
+
+  /** A tap on bare map means nothing while a pin is being aimed: the card is
+   *  already out of the way, and on a shared route `dismiss` would navigate
+   *  out from under the overlay mid-correction.
+   *
+   *  Free to change identity on every mode switch — `ClearSelectionOnTap`
+   *  binds it through `useEffectEvent`, so the MapLibre listener is not
+   *  rebound. */
+  const dismissOnTap = useCallback(() => {
+    if (relocating) return;
+    dismiss();
+  }, [dismiss, relocating]);
 
   const liveStatus = useLiveSiteStatus();
 
@@ -367,6 +435,21 @@ export function MapWorkspace({
    */
   const panelLeads = activeChip === "pets" || activeChip === "services";
 
+  /**
+   * The nudge for pins landing on one identical coordinate.
+   *
+   * Computed here rather than inside each marker component because a
+   * collision does not respect families: an offer pinned at a barrio centroid
+   * and a need reported from that same centroid stack just as thoroughly as
+   * two offers do, and four per-family fans would leave that pair untouched.
+   * One pass over everything the map draws, and the answer does not depend on
+   * the camera — so it is memoised on the data alone.
+   */
+  const markerOffsets = useMemo(
+    () => fanOutCollisions([mapSites, workOrders, animals, resourceOffers]),
+    [mapSites, workOrders, animals, resourceOffers],
+  );
+
   const barrioStatus = useMemo(
     () =>
       barrio
@@ -397,6 +480,8 @@ export function MapWorkspace({
       panelCollapsed,
       setPanelCollapsed,
       isAdmin,
+      userName,
+      startRelocate,
     }),
     [
       activeChip,
@@ -413,6 +498,8 @@ export function MapWorkspace({
       panelCollapsed,
       setPanelCollapsed,
       isAdmin,
+      userName,
+      startRelocate,
     ],
   );
 
@@ -461,8 +548,6 @@ export function MapWorkspace({
               showCompass
             />
             <BarrioLayer
-              onCentreChange={setCentreBarrio}
-              onHoverChange={setHoverBarrio}
               selected={barrio?.name ?? null}
               onSelect={setBarrio}
               statuses={neighborhoodStatuses}
@@ -490,26 +575,34 @@ export function MapWorkspace({
             {/* A tap on bare map puts the card away. Dragging does not — see
                 `ClearSelectionOnTap`, which leans on MapLibre's own
                 tap-versus-pan distinction rather than inventing one. */}
-            <ClearSelectionOnTap onTap={dismiss} />
+            <ClearSelectionOnTap onTap={dismissOnTap} />
 
-            <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={select} />
+            <SiteMarkers
+              sites={mapSites}
+              selectedId={selectedId}
+              onSelect={select}
+              offsets={markerOffsets}
+            />
 
             <WorkOrderMarkers
               workOrders={workOrders}
               selectedId={selectedId}
               onSelect={select}
+              offsets={markerOffsets}
             />
 
             <SightingMarkers
               animals={animals}
               selectedId={selectedId}
               onSelect={select}
+              offsets={markerOffsets}
             />
 
             <ResourceOfferMarkers
               resourceOffers={resourceOffers}
               selectedId={selectedId}
               onSelect={select}
+              offsets={markerOffsets}
             />
 
             {/* One card for every family, docked to whichever edge the screen
@@ -517,7 +610,10 @@ export function MapWorkspace({
                 along the bottom under it. Rendered from state rather than
                 from MarkerPopup's own click toggle, because a shared link has
                 to open it without a click. See `MapCard`. */}
-            {selectedEntity && (
+            {/* The card steps aside while a pin is being corrected: the
+                whole screen is the handle for aiming, and the card is a
+                sheet along the edge that would be covering the ground. */}
+            {selectedEntity && !relocating && (
               <MapCard
                 onClose={dismiss}
                 onInsetChange={setCardInset}
@@ -525,7 +621,30 @@ export function MapWorkspace({
                 {selectedEntity.card}
               </MapCard>
             )}
+
+            {relocating && (
+              <>
+                <RelocateCentre
+                  longitude={relocating.longitude}
+                  latitude={relocating.latitude}
+                  onMove={handleRelocateMove}
+                />
+                <RelocateBarrioFocus barrio={relocateBarrio} />
+              </>
+            )}
           </Map>
+
+          {relocating && (
+            <RelocateOverlay
+              target={relocating}
+              point={relocatePoint}
+              barrios={barrios}
+              barrio={relocateBarrio}
+              onBarrioChange={setRelocateBarrio}
+              onDone={stopRelocate}
+              onCancel={stopRelocate}
+            />
+          )}
 
           {/* Only the clock and the barrio chip live up here now. The old
               section switcher (Todo/Ayudar/Necesito/Mascotas/Servicios) was
@@ -538,7 +657,14 @@ export function MapWorkspace({
               still seed which chip a fresh visit opens on (see
               `initialChipForTab`); they just have no button of their own to
               click while already inside the app. */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3",
+              // Out of the way while aiming: none of it is actionable then,
+              // and the account bubble sits exactly where a thumb drags.
+              relocating && "hidden",
+            )}
+          >
             {/* Left corner. The account bubble is always here — the one
                 control every visit can count on — and beside it, only while
                 the reader is on a shared route, the one explicit way back to
@@ -549,41 +675,31 @@ export function MapWorkspace({
               {sharedLink && <SharedLinkBar />}
             </div>
 
-            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
-              {/* Hidden below `lg`: the clock is reassurance ("this is
-                  live"), not a control, and on a narrower screen the barrio
-                  chip below it matters more. */}
-              <div className="hidden lg:block">
-                <LiveClock />
-              </div>
-                {/* One slot, two states. While a barrio is filtered the chip
-                    IS the filter and carries the way out of it; otherwise it
-                    names a barrio — the one under the cursor if there is a
-                    cursor, and the one the map is centred on otherwise.
+            {/*
+              The barrio chip that used to live here is gone, both of its
+              states.
 
-                    The hover reading took over from a label that trailed the
-                    pointer across the map. Same fact, and this corner was
-                    already spending itself on a barrio name, so the label was
-                    a second answer to the same question that also covered the
-                    barrio it was naming. Falling back to the centre keeps the
-                    chip alive on a phone, where nothing hovers. */}
-                {barrio ? (
-                  <button
-                    type="button"
-                    onClick={() => setBarrio(null)}
-                    className="bg-primary text-primary-foreground focus-visible:ring-ring flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold shadow-sm focus-visible:ring-2 focus-visible:outline-none"
-                  >
-                    {barrio.name}
-                    <X className="size-3" strokeWidth={3} aria-hidden />
-                    <span className="sr-only">{BARRIO_PANEL.clear}</span>
-                  </button>
-                ) : (
-                  (hoverBarrio ?? centreBarrio) && (
-                    <span className="bg-background/90 rounded-full border px-2.5 py-1 text-[0.7rem] font-medium shadow-sm backdrop-blur">
-                      {hoverBarrio ?? centreBarrio}
-                    </span>
-                  )
-                )}
+              Naming the barrio under the cursor was a fact the map already
+              draws and nobody was reading, and it only ever existed on a
+              device with a cursor. Carrying the active filter was a second
+              copy of a control the panel header already holds — and that
+              header now goes primary with its "Ver toda la ciudad" chip
+              inside it, at every width, which is both more visible than this
+              chip was and attached to the counts the filter changes.
+
+              What the corner carries instead is the answer to the question
+              the whole product is for. See `AttendanceStats`.
+            */}
+            {/*
+              The clock that used to sit above this is gone too. It said "this
+              page is live", which is the weakest thing a corner of this map
+              could be saying — and it said it only on a desktop, where it was
+              also the least needed. The counts below carry the same
+              reassurance by moving when the city moves, and they carry a fact
+              as well.
+            */}
+            <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
+              <AttendanceStats />
             </div>
           </div>
 
@@ -598,9 +714,13 @@ export function MapWorkspace({
               is about what the reader is LOOKING at, and it was silently
               deciding what they were allowed to WRITE. Reporting is not a
               view of the data, so it does not narrow with one. */}
-          <div className="absolute bottom-4 left-2 z-10">
-            <ReportMenu entries={ALL_REPORT_ENTRIES} barrio={barrio?.name ?? null} />
-          </div>
+          {/* Hidden while aiming: the relocation panel owns the bottom edge,
+              and reporting something new is not the job in hand. */}
+          {!relocating && (
+            <div className="absolute bottom-4 left-2 z-10">
+              <ReportMenu entries={ALL_REPORT_ENTRIES} barrio={barrio?.name ?? null} />
+            </div>
+          )}
         </div>
 
         {/* Below the map until `lg`, beside it from there, and the only

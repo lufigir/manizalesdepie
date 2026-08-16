@@ -3,6 +3,7 @@
 import { MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/map";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL } from "@/lib/labels";
+import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
 
 import { SelectedMarkerLabel } from "./marker-label";
@@ -17,21 +18,24 @@ type Located = ResourceOfferDTO & { longitude: number; latitude: number };
  * corner where the volqueta is parked, so the marker has to look like an
  * approximation or it reads as more precise than it is.
  *
- * Several offers from the same barrio commonly share that exact centroid, and
- * they are drawn stacked on it rather than fanned out around it. The dashed
- * ring is already saying "this is the barrio, not the corner"; nudging the
- * pins apart would draw a precision the data does not have, on the one family
- * where the point was never exact to begin with. The panel is where several
- * offers in one barrio get read apart.
+ * Several offers from the same barrio share that exact centroid, and they used
+ * to be drawn stacked on it: the argument was that nudging them apart would
+ * draw a precision the data does not have. It does not survive contact with
+ * four offers in Chipre, because stacking does not read as "one imprecise
+ * point" — it reads as one offer, and the other three are gone. The dashed
+ * ring is what says the point is a barrio; the fan only says how many things
+ * are on it. See `lib/marker-fan.ts`.
  */
 export function ResourceOfferMarkers({
   resourceOffers,
   selectedId,
   onSelect,
+  offsets,
 }: {
   resourceOffers: ResourceOfferDTO[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  offsets: FanOffsets;
 }) {
   const located = resourceOffers.filter(
     (offer): offer is Located =>
@@ -46,6 +50,7 @@ export function ResourceOfferMarkers({
           offer={offer}
           selected={selectedId === offer.id}
           onSelect={onSelect}
+          offset={offsets.get(offer.id)}
         />
       ))}
     </>
@@ -56,10 +61,12 @@ function SinglePin({
   offer,
   selected,
   onSelect,
+  offset,
 }: {
   offer: Located;
   selected: boolean;
   onSelect: (id: string) => void;
+  offset?: [number, number];
 }) {
   const Icon = RESOURCE_TYPE_ICON[offer.type];
 
@@ -67,6 +74,7 @@ function SinglePin({
     <MapMarker
       longitude={offer.longitude}
       latitude={offer.latitude}
+      offset={offset}
       onClick={() => onSelect(offer.id)}
     >
       <MarkerContent>

@@ -61,7 +61,9 @@ export async function publishSite(id: string) {
   revalidatePath("/admin");
 }
 
-export async function adminUpdateSite(input: {
+/** Corrects a site's fields. No role check here — the rule is in the DAL,
+ *  and it is open to anyone (see `canEditSite`). */
+export async function updateSite(input: {
   id: string;
   type?: string;
   name?: string;
@@ -71,7 +73,25 @@ export async function adminUpdateSite(input: {
   whatsapp?: string;
 }) {
   const dal = await SiteDAL.create();
-  await dal.adminUpdate(input);
+  await dal.update(input);
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
+/**
+ * Corrects a site's coordinate.
+ *
+ * No role check here, on purpose: the rule is about where the pin lands, not
+ * about who the caller is, and it lives in the DAL with everything else that
+ * decides. See `canRelocate`.
+ */
+export async function relocateSite(
+  id: string,
+  longitude: number,
+  latitude: number,
+) {
+  const dal = await SiteDAL.create();
+  await dal.relocate({ id, longitude, latitude });
   revalidatePath("/");
   revalidatePath("/admin");
 }

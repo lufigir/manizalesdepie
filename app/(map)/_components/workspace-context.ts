@@ -81,6 +81,26 @@ export type WorkspaceValue = {
    *  `AdminActions`) checks this instead of fetching its own session — one
    *  server read in the tab layout, not one per card. */
   isAdmin: boolean;
+  /** The signed-in reader's name, or null. Every form in the app that asks
+   *  "¿quién eres?" seeds its field from this: somebody who already told us
+   *  their name once should not be typing it again on a phone, standing in
+   *  the street. It stays an editable field — a neighbour reporting on
+   *  somebody else's behalf has to be able to put the other name in. */
+  userName: string | null;
+  /**
+   * Puts the map into "corrige este pin" mode.
+   *
+   * Lives on the workspace rather than inside each card because the control
+   * that starts it (a button on a card) and the surface that finishes it (the
+   * map, with a crosshair over it) are in different trees. Null `kind` is not
+   * offered: only sitios and necesidades have an exact point to correct.
+   */
+  startRelocate: (target: {
+    id: string;
+    kind: "site" | "workOrder";
+    longitude: number;
+    latitude: number;
+  }) => void;
 };
 
 export const WorkspaceContext = createContext<WorkspaceValue | null>(null);

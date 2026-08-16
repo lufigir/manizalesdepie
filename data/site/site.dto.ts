@@ -128,11 +128,34 @@ export const updateSiteStatusSchema = z.object({
 });
 
 /**
- * A curator correcting any of a site's own fields — the coordinate is not
- * here: moving a pin needs a map picker, which the inline card does not
- * have, so relocating a site stays a delete-and-reproposal for now.
+ * Moving a site's pin. Its own schema, apart from `updateSiteSchema` below,
+ * because it authorizes on a different axis: who may move a pin and how far
+ * is decided by where it LANDS — see `canRelocate` — while the text fields
+ * are open to anyone anywhere.
+ *
+ * The same city bounds as a new report. They are the product's scope, and a
+ * correction that leaves the scope is not a correction.
  */
-export const adminUpdateSiteSchema = z.object({
+export const relocateSiteSchema = z.object({
+  id: z.uuid(),
+  longitude: z.number().min(-76.2, OUT_OF_AREA).max(-74.8, OUT_OF_AREA),
+  latitude: z.number().min(4.6, OUT_OF_AREA).max(5.6, OUT_OF_AREA),
+});
+
+/**
+ * Correcting a site's own fields. Open to anyone — see `canEditSite`.
+ *
+ * `type` is here because it is the field most often wrong and the one the
+ * old curator-only form did not even offer: a place reported as "acopio" on
+ * the first afternoon is running as an albergue by the weekend, and until
+ * somebody can say so the pin carries the wrong icon on the one axis this
+ * map encodes by shape.
+ *
+ * Not here: the coordinate, which has `relocateSiteSchema` above on its own
+ * authorization path; `published`, which is hiding rather than correcting;
+ * and `status`, which has the one-tap confirmation flow instead.
+ */
+export const updateSiteSchema = z.object({
   id: z.uuid(),
   type: siteTypeSchema.optional(),
   name: z.string().trim().min(3).max(120).optional(),
@@ -146,4 +169,4 @@ export const adminUpdateSiteSchema = z.object({
     .optional(),
 });
 
-export type AdminUpdateSiteInput = z.infer<typeof adminUpdateSiteSchema>;
+export type UpdateSiteInput = z.infer<typeof updateSiteSchema>;

@@ -35,15 +35,26 @@ export function canConfirmSite(): boolean {
   return true;
 }
 
-/** Editing the substance of a published site: the curator who owns the queue,
- *  or the person who proposed it while it is still pending. */
-export function canEditSite(
-  user: CurrentUser | null,
-  site: { createdById: string | null; published: boolean },
-): boolean {
-  if (!user) return false;
-  if (user.role === "curator") return true;
-  return !site.published && site.createdById === user.id;
+/**
+ * Correcting a site's own fields — its type, name, address, hours, phone.
+ * Anyone, with no account.
+ *
+ * This used to be a curator's, with an exception for the reporter while the
+ * row was still pending. Both halves of that were wrong for this product.
+ * The pending state does not exist any more (a report is on the map the
+ * moment it lands), and the person who knows the acopio closed at five, or
+ * that it is an albergue rather than a collection point, is whoever is
+ * standing in front of it — which is exactly the person least likely to hold
+ * an account, on a phone that may not be theirs.
+ *
+ * It is the same bar `canUpdateWorkOrder` and `canConfirmSite` already sit
+ * at, and the reasoning is the same one stated there: a wrong edit costs one
+ * correction, and a map nobody can correct costs the city. What stays out of
+ * reach is what an edit cannot undo — `published` (hiding), `remove`
+ * (deleting) and the coordinate, which has its own rule in `canRelocate`.
+ */
+export function canEditSite(): boolean {
+  return true;
 }
 
 /** Hiding or deleting a site outright — curators only. */

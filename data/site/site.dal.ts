@@ -5,15 +5,20 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { log } from "@/lib/log";
 import { getCurrentUser, type CurrentUser } from "@/data/user/require-user";
 
+import { resolveNeighborhoodId } from "@/data/geo/geo.dal";
+import { canRelocate } from "@/data/geo/relocation.policy";
+
 import {
-  adminUpdateSiteSchema,
   createSiteSchema,
+  relocateSiteSchema,
   siteSchema,
+  updateSiteSchema,
   updateSiteStatusSchema,
   type SiteDTO,
 } from "./site.dto";
 import {
   canConfirmSite,
+  canEditSite,
   canManageSite,
   canProposeSite,
   canPublishSite,
@@ -232,12 +237,12 @@ export class SiteDAL {
     });
   }
 
-  /** A curator corrects any of a site's own fields. Never the coordinate —
-   *  see the note on `adminUpdateSiteSchema`. */
-  async adminUpdate(input: unknown): Promise<void> {
-    const data = adminUpdateSiteSchema.parse(input);
+  /** Corrects a site's own fields. Open to anyone — see `canEditSite`.
+   *  Never the coordinate: that is `relocate` above. */
+  async update(input: unknown): Promise<void> {
+    const data = updateSiteSchema.parse(input);
 
-    if (!canManageSite(this.user)) throw new Error("Forbidden");
+    if (!canEditSite()) throw new Error("Forbidden");
 
     const patch: Record<string, unknown> = {};
     if (data.type !== undefined) patch.type = data.type;
@@ -252,11 +257,68 @@ export class SiteDAL {
     const { error } = await supabase.from("site").update(patch).eq("id", data.id);
 
     if (error) {
-      log.error("site.adminUpdate failed", { code: error.code, siteId: data.id });
+      log.error("site.update failed", { code: error.code, siteId: data.id });
       throw new Error("No se pudo actualizar el punto");
     }
 
-    log.info("site admin-updated", { siteId: data.id, fields: Object.keys(patch) });
+    log.info("site updated", {
+      siteId: data.id,
+      fields: Object.keys(patch),
+      byUser: this.user?.id ?? "anon",
+    });
+  }
+
+  /**
+   * Moves a site's pin to a corrected coordinate.
+   *
+   * Anybody may do it inside the pin's own barrio; a curator may do it
+   * anywhere in the covered area. See `canRelocate` for why the rule is that
+   * shape rather than curator-only.
+   *
+   * The barrio is NOT written here. `site_sets_neighborhood` re-derives it
+   * from the new point, the same trigger that stamped it on insert, so the
+   * name in the panel and the pin on the map cannot disagree. That is also
+   * why `neighborhood_id` stays out of the patch: the trigger returns early
+   * when an update changes it by hand, which would pin the old barrio onto
+   * the new coordinate.
+   *
+   * Order, as in every mutation: validate input → authorize → mutate.
+   */
+  async relocate(input: unknown): Promise<void> {
+    const { id, longitude, latitude } = relocateSiteSchema.parse(input);
+
+    const supabase = createAdminSupabase();
+
+    const { data: current, error: readError } = await supabase
+      .from("site")
+      .select("neighborhood_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (readError || !current) {
+      log.error("site.relocate lookup failed", { code: readError?.code, siteId: id });
+      throw new Error("No se pudo encontrar el punto");
+    }
+
+    const target = await resolveNeighborhoodId(longitude, latitude);
+
+    if (!canRelocate(this.user, current.neighborhood_id, target)) {
+      throw new Error(
+        "Solo puedes mover el punto dentro de su propio barrio. Si está en el barrio equivocado, repórtalo.",
+      );
+    }
+
+    const { error } = await supabase
+      .from("site")
+      .update({ location: `SRID=4326;POINT(${longitude} ${latitude})` })
+      .eq("id", id);
+
+    if (error) {
+      log.error("site.relocate failed", { code: error.code, siteId: id });
+      throw new Error("No se pudo mover el punto");
+    }
+
+    log.info("site relocated", { siteId: id, byUser: this.user?.id ?? "anon" });
   }
 
   /** A curator hides or republishes a site — reversible, the same

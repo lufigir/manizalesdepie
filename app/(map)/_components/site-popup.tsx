@@ -1,20 +1,21 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Navigation, Pencil } from "lucide-react";
+import { Move, Navigation, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  adminUpdateSite,
   confirmSiteStatus,
   deleteSite,
   setSitePublished,
+  updateSite,
 } from "@/data/site/site.actions";
-import type { SiteDTO } from "@/data/site/site.dto";
+import type { SiteDTO, SiteType } from "@/data/site/site.dto";
 import {
   ADMIN_LABEL,
+  RELOCATE_LABEL,
   SHEET_LABEL,
   SITE_STATUS_LABEL,
   SITE_STATUS_MARKER,
@@ -24,6 +25,7 @@ import {
   confidence,
   freshness,
 } from "@/lib/labels";
+import { REPORTABLE_SITE_TYPES } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
 import { WhatsappIcon } from "./whatsapp-icon";
@@ -50,11 +52,12 @@ import { useWorkspace } from "./workspace-context";
  * hurry must hit that before they load the car.
  */
 export function SitePopup({ site }: { site: SiteDTO }) {
-  const { isAdmin } = useWorkspace();
+  const { isAdmin, startRelocate } = useWorkspace();
   const [pending, startTransition] = useTransition();
 
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [type, setType] = useState<SiteType>(site.type);
   const [name, setName] = useState(site.name);
   const [description, setDescription] = useState(site.description ?? "");
   const [address, setAddress] = useState(site.address ?? "");
@@ -65,8 +68,9 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     setEditError(null);
     startTransition(async () => {
       try {
-        await adminUpdateSite({
+        await updateSite({
           id: site.id,
+          type,
           name,
           description,
           address,
@@ -256,55 +260,115 @@ export function SitePopup({ site }: { site: SiteDTO }) {
             </Button>
           ))}
         </div>
+
+        {/* Under the status row and quieter than it, because it is the rarer
+            answer to the same visit: "estoy aquí y esto no está donde dice el
+            mapa". No account and no role — see `canRelocate` for why a wrong
+            coordinate is a neighbour's correction to make. */}
+        <button
+          type="button"
+          onClick={() =>
+            startRelocate({
+              id: site.id,
+              kind: "site",
+              longitude: site.longitude,
+              latitude: site.latitude,
+            })
+          }
+          className="text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring mt-1 flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Move className="size-3" aria-hidden />
+          {RELOCATE_LABEL.action}
+        </button>
       </div>
 
+      {/* Correcting the listing. Open to anyone, no account — a site's own
+          fields are the ones that go stale fastest and the person who knows
+          is whoever is standing there. See `canEditSite`. */}
+      {editOpen ? (
+        <div className="flex flex-col gap-1.5 border-t pt-2">
+          {/* The type is first, and it is the field the curator-only form
+              never had: a place reported as "acopio" on the first afternoon
+              is running as an albergue by the weekend, and the icon on the
+              map is wrong until somebody can say so. */}
+          <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+            {SHEET_LABEL.editType}
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {REPORTABLE_SITE_TYPES.map((option) => {
+              const OptionIcon = SITE_TYPE_ICON[option];
+              const active = option === type;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setType(option)}
+                  aria-pressed={active}
+                  className={cn(
+                    "focus-visible:ring-ring flex items-center gap-1 rounded-full border px-2 py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "hover:bg-accent",
+                  )}
+                >
+                  <OptionIcon className="size-3" aria-hidden />
+                  {SITE_TYPE_LABEL[option]}
+                </button>
+              );
+            })}
+          </div>
+
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={ADMIN_LABEL.fieldName} />
+          <Textarea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={ADMIN_LABEL.fieldDescription}
+          />
+          <Input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder={ADMIN_LABEL.fieldAddress}
+          />
+          <Input
+            value={schedule}
+            onChange={(e) => setSchedule(e.target.value)}
+            placeholder={ADMIN_LABEL.fieldSchedule}
+          />
+          <Input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder={ADMIN_LABEL.fieldWhatsapp}
+          />
+          {editError && (
+            <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+              {editError}
+            </p>
+          )}
+          <div className="flex gap-1">
+            <Button size="sm" className="flex-1" loading={pending} onClick={saveEdit}>
+              {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
+              {ADMIN_LABEL.cancel}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditOpen(true)}
+          className="text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Pencil className="size-3" aria-hidden />
+          {ADMIN_LABEL.edit}
+        </button>
+      )}
+
+      {/* Hiding and deleting stay a curator's: they are the two an edit
+          cannot undo. */}
       {isAdmin && (
         <div className="border-t pt-2">
-          {editOpen ? (
-            <div className="flex flex-col gap-1.5">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={ADMIN_LABEL.fieldName} />
-              <Textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={ADMIN_LABEL.fieldDescription}
-              />
-              <Input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={ADMIN_LABEL.fieldAddress}
-              />
-              <Input
-                value={schedule}
-                onChange={(e) => setSchedule(e.target.value)}
-                placeholder={ADMIN_LABEL.fieldSchedule}
-              />
-              <Input
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder={ADMIN_LABEL.fieldWhatsapp}
-              />
-              {editError && (
-                <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
-                  {editError}
-                </p>
-              )}
-              <div className="flex gap-1">
-                <Button size="sm" loading={pending} onClick={saveEdit}>
-                  {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
-                  {ADMIN_LABEL.cancel}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
-              <Pencil className="size-3" aria-hidden />
-              {ADMIN_LABEL.edit}
-            </Button>
-          )}
-
           <AdminActions
             published={site.published}
             onSetPublished={(published) => setSitePublished(site.id, published)}

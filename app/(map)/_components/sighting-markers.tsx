@@ -3,6 +3,7 @@
 import { MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/map";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import { ANIMAL_LABEL } from "@/lib/labels";
+import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
 
 import { SelectedMarkerLabel } from "./marker-label";
@@ -23,10 +24,14 @@ export function SightingMarkers({
   animals,
   selectedId,
   onSelect,
+  offsets,
 }: {
   animals: AnimalDTO[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Fixed nudge for the sightings sharing one exact coordinate with anything
+   *  else on the map — see `lib/marker-fan.ts`. */
+  offsets: FanOffsets;
 }) {
   const located = animals.filter(
     (animal) =>
@@ -42,6 +47,7 @@ export function SightingMarkers({
           key={animal.id}
           longitude={animal.longitude!}
           latitude={animal.latitude!}
+          offset={offsets.get(animal.id)}
           onClick={() => onSelect(animal.id)}
         >
           <MarkerContent>

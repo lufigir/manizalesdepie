@@ -9,6 +9,7 @@ import {
   WORK_ORDER_ROLLUP_MARKER,
   workOrderRollup,
 } from "@/lib/labels";
+import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
 
 import { SelectedMarkerLabel } from "./marker-label";
@@ -31,6 +32,11 @@ import { SelectedMarkerLabel } from "./marker-label";
  * the honest failure mode: zooming in separates them, because they are
  * genuinely separate.
  *
+ * Two cases reported from the same doorway are the exception — they carry one
+ * identical coordinate, so zooming never separates them and one is simply
+ * invisible. `offsets` fans exactly those apart, by a fixed pixel nudge that
+ * does not move with the camera. See `lib/marker-fan.ts`.
+ *
  * The count badge is what the ring was really for — knowing there is more
  * than one thing here — and it says it without moving anything.
  */
@@ -38,10 +44,12 @@ export function WorkOrderMarkers({
   workOrders,
   selectedId,
   onSelect,
+  offsets,
 }: {
   workOrders: WorkOrderDTO[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  offsets: FanOffsets;
 }) {
   return (
     <>
@@ -51,6 +59,7 @@ export function WorkOrderMarkers({
           order={order}
           selected={selectedId === order.id}
           onSelect={onSelect}
+          offset={offsets.get(order.id)}
         />
       ))}
     </>
@@ -61,10 +70,12 @@ function SinglePin({
   order,
   selected,
   onSelect,
+  offset,
 }: {
   order: WorkOrderDTO;
   selected: boolean;
   onSelect: (id: string) => void;
+  offset?: [number, number];
 }) {
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
   const rollup = workOrderRollup(order);
@@ -79,6 +90,7 @@ function SinglePin({
     <MapMarker
       longitude={order.longitude}
       latitude={order.latitude}
+      offset={offset}
       onClick={() => onSelect(order.id)}
     >
       <MarkerContent>

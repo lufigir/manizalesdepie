@@ -14,6 +14,7 @@ import {
   SITE_TYPE_LABEL,
   confidence,
 } from "@/lib/labels";
+import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
 
 import { SelectedMarkerLabel } from "./marker-label";
@@ -28,15 +29,21 @@ import { SelectedMarkerLabel } from "./marker-label";
  * the map moved under the hand that was trying to read it. Overlap is the
  * honest failure mode — zoom in and they separate, because they really are
  * separate.
+ *
+ * Except when they do not: an exact coordinate collision never separates, at
+ * any zoom, and hides one pin under the other outright. `offsets` carries the
+ * fixed nudge for those, and only for those — see `lib/marker-fan.ts`.
  */
 export function SiteMarkers({
   sites,
   selectedId,
   onSelect,
+  offsets,
 }: {
   sites: SiteDTO[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  offsets: FanOffsets;
 }) {
   return (
     <>
@@ -46,6 +53,7 @@ export function SiteMarkers({
           site={site}
           selected={selectedId === site.id}
           onSelect={onSelect}
+          offset={offsets.get(site.id)}
         />
       ))}
     </>
@@ -56,10 +64,12 @@ function SinglePin({
   site,
   selected,
   onSelect,
+  offset,
 }: {
   site: SiteDTO;
   selected: boolean;
   onSelect: (id: string) => void;
+  offset?: [number, number];
 }) {
   const Icon = SITE_TYPE_ICON[site.type];
   const { level, label: confidenceLabel } = confidence(site);
@@ -68,6 +78,7 @@ function SinglePin({
     <MapMarker
       longitude={site.longitude}
       latitude={site.latitude}
+      offset={offset}
       onClick={() => onSelect(site.id)}
     >
       <MarkerContent>

@@ -40,7 +40,10 @@ import { WorkOrderActions } from "./work-order-actions";
 export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
   const rollup = workOrderRollup(order);
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
-  const { label: freshLabel, stale } = freshness(order.confirmedAt);
+  const { label: freshLabel, stale } = freshness(
+    order.confirmedAt,
+    WORK_ORDER_LABEL.fresh,
+  );
 
   /**
    * Who is going and who already went, as one line.
