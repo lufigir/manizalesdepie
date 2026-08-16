@@ -47,7 +47,7 @@ import { WorkspaceContext } from "./workspace-context";
 
 /** Manizales sits on a ridge running east–west. Only the starting frame before
  *  FitToSites takes over; it holds the city and Villamaría across the river. */
-const MANIZALES = { longitude: -75.5074, latitude: 5.0631, zoom: 12.4 };
+const MANIZALES = { longitude: -75.507221, latitude: 5.066409, zoom: 12.4 };
 
 /**
  * Where the emergency is. Nothing this app knows about exists outside it.
