@@ -543,7 +543,7 @@ export const PANEL_LABEL = {
   /** Deliberately quiet, in the panel's bottom edge: someone who needs to
    *  report a mistake in the data has to be able to find a human, and
    *  anyone else should never notice it is there. */
-  contactPrompt: "Contacto:",
+  contactButton: "Reportar error o contactar",
   contactEmail: "hi@felipego.com",
   /** "Todo" shows only the two most urgent of each family; this opens that
    *  family's own chip, where the rest live. The count is what makes it

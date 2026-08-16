@@ -617,7 +617,7 @@ export function MapWorkspace({
                   // every action lives now, and a third of a phone screen was
                   // not enough to read a card and its buttons without
                   // scrolling for each one.
-                  "h-[58dvh] lg:w-[22rem] xl:w-[26rem]",
+                  "h-[58dvh] lg:w-[26rem] xl:w-[30rem]",
           )}
         >
           {/* The header is the collapse control at every width now — see
@@ -638,13 +638,27 @@ export function MapWorkspace({
                   Outside the scrolling region on purpose: a way to reach a
                   human should not be something you have to scroll a list of
                   emergencies to the end to find. */}
-              <div className="text-muted-foreground shrink-0 border-t px-3 py-1.5 text-[0.6rem]">
-                {PANEL_LABEL.contactPrompt}{" "}
+              <div className="shrink-0 border-t px-2 py-1">
                 <a
                   href={`mailto:${PANEL_LABEL.contactEmail}`}
-                  className="hover:text-foreground underline"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
                 >
-                  {PANEL_LABEL.contactEmail}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                    aria-hidden="true"
+                  >
+                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                  </svg>
+                  {PANEL_LABEL.contactButton}
                 </a>
               </div>
             </div>

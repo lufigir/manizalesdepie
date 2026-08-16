@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { LayoutList, Package, PawPrint, Search, Wrench, MapPin } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -81,17 +81,18 @@ export function UnifiedPanel() {
     );
   }, [sites, q]);
 
-  const chips: { id: PanelChip; label: string; count: number }[] = [
+  const chips: { id: PanelChip; label: string; count: number; icon: React.ReactNode }[] = [
     {
       id: "all",
       label: PANEL_LABEL.all,
       count:
         sites.length + workOrders.length + animals.length + resourceOffers.length,
+      icon: <LayoutList className="size-4" />,
     },
-    { id: "workOrders", label: WORK_ORDER_LABEL.heading, count: workOrders.length },
-    { id: "sites", label: PANEL_LABEL.sites, count: sites.length },
-    { id: "pets", label: PANEL_LABEL.pets, count: animals.filter((a) => a.resolvedAt === null).length },
-    { id: "services", label: SERVICES_LABEL.title, count: resourceOffers.length },
+    { id: "workOrders", label: WORK_ORDER_LABEL.heading, count: workOrders.length, icon: <Wrench className="size-4" /> },
+    { id: "sites", label: PANEL_LABEL.sites, count: sites.length, icon: <MapPin className="size-4" /> },
+    { id: "pets", label: PANEL_LABEL.pets, count: animals.filter((a) => a.resolvedAt === null).length, icon: <PawPrint className="size-4" /> },
+    { id: "services", label: SERVICES_LABEL.title, count: resourceOffers.length, icon: <Package className="size-4" /> },
   ];
 
   const emptyMessage = barrio
@@ -209,29 +210,34 @@ export function UnifiedPanel() {
           vanish past the edge. Wrapping guarantees every chip is
           always visible without depending on a gesture some inputs cannot
           make. */}
-      <div className="flex shrink-0 flex-wrap gap-1.5 border-b p-2">
+      <div className="grid shrink-0 grid-cols-5 border-b">
         {chips.map((option) => (
           <button
             key={option.id}
             type="button"
             onClick={() => setActiveChip(option.id)}
             aria-pressed={activeChip === option.id}
+            aria-label={option.label}
+            title={option.label}
             className={cn(
-              "focus-visible:ring-ring flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+              "focus-visible:ring-ring flex flex-col items-center justify-center gap-0.5 border-r py-2 text-[0.6rem] font-semibold transition-colors last:border-r-0 focus-visible:ring-2 focus-visible:outline-none",
               activeChip === option.id
-                ? "bg-primary text-primary-foreground border-primary"
+                ? "border-b-2 border-b-primary text-primary"
                 : option.count === 0
                   ? "text-muted-foreground hover:bg-accent"
                   : "hover:bg-accent",
             )}
           >
-            {option.label}
+            {option.icon}
+            <span className="max-w-full truncate text-[0.65rem] leading-none">
+              {option.label}
+            </span>
             <span
               className={cn(
-                "rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none tabular-nums",
+                "tabular-nums leading-none text-[0.6rem]",
                 activeChip === option.id
-                  ? "bg-primary-foreground/20"
-                  : "bg-muted text-muted-foreground",
+                  ? "text-primary/70"
+                  : "text-muted-foreground",
               )}
             >
               {option.count}
