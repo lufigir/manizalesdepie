@@ -223,3 +223,17 @@ export const updateWorkOrderSchema = z.object({
 });
 
 export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderSchema>;
+
+/**
+ * Moving a case's pin. Separate from `updateWorkOrderSchema` because the
+ * coordinate authorizes differently from the text: who may move it and how
+ * far depends on where it lands, not on a role — see `canRelocate`.
+ *
+ * The bounds are the same as reporting one. They are the product's scope, and
+ * a correction that leaves the scope is not a correction.
+ */
+export const relocateWorkOrderSchema = z.object({
+  id: z.uuid(),
+  longitude: z.number().min(-76.2, OUT_OF_AREA).max(-74.8, OUT_OF_AREA),
+  latitude: z.number().min(4.6, OUT_OF_AREA).max(5.6, OUT_OF_AREA),
+});

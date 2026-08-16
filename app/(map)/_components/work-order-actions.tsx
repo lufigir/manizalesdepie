@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Navigation, Pencil, Phone } from "lucide-react";
+import { Move, Navigation, Pencil, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,10 +23,13 @@ import {
   type WorkOrderUpdateKind,
 } from "@/data/work_order/work_order.dto";
 import {
+  RELOCATE_LABEL,
   SHEET_LABEL,
   WORK_ORDER_CATEGORY_ICON,
   WORK_ORDER_CATEGORY_LABEL,
   WORK_ORDER_LABEL,
+  WORK_ORDER_UPDATE_DEFAULT_NOTE,
+  WORK_ORDER_UPDATE_KIND_ICON,
   WORK_ORDER_UPDATE_KIND_LABEL,
   WORK_ORDER_UPDATE_PLACEHOLDER,
   workOrderRollup,
@@ -37,6 +40,14 @@ import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
 import { WorkOrderThread } from "./work-order-thread";
 import { useWorkspace } from "./workspace-context";
+
+/** The icon for one of the four entry kinds, at the size every button in
+ *  this card uses. One place, so the composer heading and the button that
+ *  opened it cannot drift apart. */
+function UpdateIcon({ kind }: { kind: WorkOrderUpdateKind }) {
+  const Icon = WORK_ORDER_UPDATE_KIND_ICON[kind];
+  return <Icon className="size-3.5" aria-hidden />;
+}
 
 /** A curator's two manual verdicts. Everyone else's contribution goes
  *  through the book — see `WORK_ORDER_UPDATE_KINDS`. */
@@ -70,7 +81,7 @@ const CLOSE_ACTION_LABEL: Record<CloseOutcome, string> = {
  * without being the same shape.
  */
 export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
-  const { isAdmin } = useWorkspace();
+  const { isAdmin, userName, startRelocate } = useWorkspace();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +89,10 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   // composer for all four kinds: they ask for the same three things and
   // differ only in the sentence they are making.
   const [composing, setComposing] = useState<WorkOrderUpdateKind | null>(null);
-  const [name, setName] = useState("");
+  // Seeded from the session so a signed-in reader is not retyping their own
+  // name to say "voy". Still a plain editable field: the entry is signed by
+  // whoever is going, which is not always the person holding the phone.
+  const [name, setName] = useState(userName ?? "");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
   const [posted, setPosted] = useState<WorkOrderUpdateKind | null>(null);
@@ -133,12 +147,27 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     };
   }, [order.id, entryCount]);
 
+  /**
+   * Opens the composer with the note already written.
+   *
+   * The point is that publishing costs one more tap and no thinking: the
+   * default says exactly what the button just said, and somebody with more
+   * to add types over it. See `WORK_ORDER_UPDATE_DEFAULT_NOTE`.
+   */
+  function compose(kind: WorkOrderUpdateKind) {
+    setError(null);
+    setNote(WORK_ORDER_UPDATE_DEFAULT_NOTE[kind]);
+    setComposing(kind);
+  }
+
   function submitUpdate(kind: WorkOrderUpdateKind) {
     setError(null);
 
-    // The note is the one required field. Catch it here so the Zod error
-    // from the server action never leaks as a raw JSON array on screen.
-    const trimmedNote = note.trim();
+    // A note is still required by the schema — a counter that moves with no
+    // words behind it is not evidence of anything. But an emptied box means
+    // "no tengo nada que añadir", so it falls back to the default rather
+    // than becoming an error the reader has to solve to finish a tap.
+    const trimmedNote = note.trim() || WORK_ORDER_UPDATE_DEFAULT_NOTE[kind];
     if (trimmedNote.length < 3) {
       setError(WORK_ORDER_LABEL.attendNoteRequired);
       return;
@@ -217,7 +246,8 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             {error}
           </p>
         )}
-        <p className="text-sm font-semibold">
+        <p className="flex items-center gap-1.5 text-sm font-semibold">
+          <UpdateIcon kind={composing} />
           {WORK_ORDER_UPDATE_KIND_LABEL[composing]}
         </p>
         <Input
@@ -413,13 +443,26 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 {WORK_ORDER_LABEL.attendedThanks}
               </p>
             )}
-            <Button onClick={() => setComposing("on_the_way")}>
+            <Button onClick={() => compose("on_the_way")}>
+              <UpdateIcon kind="on_the_way" />
               {WORK_ORDER_UPDATE_KIND_LABEL.on_the_way}
             </Button>
 
-            {/* The two reports somebody makes after the fact. Under their own
-                question rather than in the same row as "voy": they are past
-                tense, and one of them is the only thing that can close a case. */}
+            {/* Everything somebody reports AFTER standing in front of the
+                case, under one question. Under its own question rather than
+                in the same row as "voy": these are past tense, and one of
+                them is the only thing that can close a case.
+
+                "Esto no es un caso real" joined them here. It used to sit
+                far below under "si algo está mal", away from the other two,
+                on the reasoning that it is an accusation about a household
+                and should be hard to hit by accident. The reasoning survives
+                — it is still the quietest control in this group, ghost
+                weight on its own row — but the separation did not: all three
+                answer the same question a person asks having just been
+                there, and splitting them meant somebody who found an empty
+                lot had to hunt for the way to say so. Distance was doing a
+                job that weight does better. */}
             <p className="text-muted-foreground mt-0.5 text-[0.65rem] font-medium">
               {WORK_ORDER_LABEL.sectionBeenThere}
             </p>
@@ -427,18 +470,29 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setComposing("helped")}
+                onClick={() => compose("helped")}
               >
+                <UpdateIcon kind="helped" />
                 {WORK_ORDER_UPDATE_KIND_LABEL.helped}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setComposing("still_needed")}
+                onClick={() => compose("still_needed")}
               >
+                <UpdateIcon kind="still_needed" />
                 {WORK_ORDER_UPDATE_KIND_LABEL.still_needed}
               </Button>
             </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground"
+              onClick={() => compose("not_real")}
+            >
+              <UpdateIcon kind="not_real" />
+              {WORK_ORDER_UPDATE_KIND_LABEL.not_real}
+            </Button>
             <p className="text-muted-foreground text-[0.65rem] leading-snug">
               {WORK_ORDER_LABEL.updateHint}
             </p>
@@ -462,12 +516,25 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 <Pencil className="size-3" aria-hidden />
                 {WORK_ORDER_LABEL.edit}
               </Button>
+              {/* "El pin está mal puesto" belongs here rather than beside the
+                  directions button: it is the third form of "this listing is
+                  wrong", and the most common one — the coordinates on the
+                  seeded cases are approximate by AGENTS.md's own admission.
+                  No account and no role; see `canRelocate`. */}
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setComposing("not_real")}
+                onClick={() =>
+                  startRelocate({
+                    id: order.id,
+                    kind: "workOrder",
+                    longitude: order.longitude,
+                    latitude: order.latitude,
+                  })
+                }
               >
-                {WORK_ORDER_UPDATE_KIND_LABEL.not_real}
+                <Move className="size-3" aria-hidden />
+                {RELOCATE_LABEL.action}
               </Button>
             </div>
           </Section>

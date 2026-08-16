@@ -83,6 +83,23 @@ export async function updateWorkOrder(input: {
   revalidatePath("/");
 }
 
+/**
+ * Corrects a case's coordinate.
+ *
+ * No role check here, on purpose: the rule is about where the pin lands, not
+ * about who the caller is, and it lives in the DAL. See `canRelocate`.
+ */
+export async function relocateWorkOrder(
+  id: string,
+  longitude: number,
+  latitude: number,
+) {
+  const dal = await WorkOrderDAL.create();
+  await dal.relocate({ id, longitude, latitude });
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
 export async function setWorkOrderPublished(id: string, published: boolean) {
   const dal = await WorkOrderDAL.create();
   await dal.setPublished(id, published);

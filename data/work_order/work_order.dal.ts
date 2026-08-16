@@ -5,9 +5,13 @@ import { log } from "@/lib/log";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
+import { resolveNeighborhoodId } from "@/data/geo/geo.dal";
+import { canRelocate } from "@/data/geo/relocation.policy";
+
 import {
   createWorkOrderSchema,
   postWorkOrderUpdateSchema,
+  relocateWorkOrderSchema,
   updateWorkOrderSchema,
   workOrderSchema,
   workOrderUpdateSchema,
@@ -284,6 +288,60 @@ export class WorkOrderDAL {
     }
 
     log.info("work order updated", { workOrderId: data.id, fields: Object.keys(patch) });
+  }
+
+  /**
+   * Moves a case's pin to a corrected coordinate.
+   *
+   * Anybody may do it inside the case's own barrio; a curator may do it
+   * anywhere in the covered area. See `canRelocate`.
+   *
+   * The barrio is re-derived by `work_order_sets_neighborhood` from the new
+   * point, which is why `neighborhood_id` stays out of the patch: that
+   * trigger returns early when an update changes it by hand, and it would
+   * then keep the old barrio stamped on the new coordinate.
+   */
+  async relocate(input: unknown): Promise<void> {
+    const { id, longitude, latitude } = relocateWorkOrderSchema.parse(input);
+
+    const supabase = createAdminSupabase();
+
+    const { data: current, error: readError } = await supabase
+      .from("work_order")
+      .select("neighborhood_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (readError || !current) {
+      log.error("workOrder.relocate lookup failed", {
+        code: readError?.code,
+        workOrderId: id,
+      });
+      throw new Error("No se pudo encontrar el caso");
+    }
+
+    const target = await resolveNeighborhoodId(longitude, latitude);
+
+    if (!canRelocate(this.user, current.neighborhood_id, target)) {
+      throw new Error(
+        "Solo puedes mover el caso dentro de su propio barrio. Si está en el barrio equivocado, repórtalo.",
+      );
+    }
+
+    const { error } = await supabase
+      .from("work_order")
+      .update({ approx_location: `SRID=4326;POINT(${longitude} ${latitude})` })
+      .eq("id", id);
+
+    if (error) {
+      log.error("workOrder.relocate failed", { code: error.code, workOrderId: id });
+      throw new Error("No se pudo mover el caso");
+    }
+
+    log.info("work order relocated", {
+      workOrderId: id,
+      byUser: this.user?.id ?? "anon",
+    });
   }
 
   /** A curator hides or republishes a case — reversible, the same
