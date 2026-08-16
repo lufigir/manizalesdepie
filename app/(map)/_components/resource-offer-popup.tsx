@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { MapPin, Phone } from "lucide-react";
 
 import {
   deleteResourceOffer,
@@ -39,7 +39,10 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
   const { isAdmin } = useWorkspace();
 
   const Icon = RESOURCE_TYPE_ICON[offer.type];
-  const { label: freshLabel, stale } = freshness(offer.confirmedAt);
+  const { label: freshLabel, stale } = freshness(
+    offer.confirmedAt,
+    SERVICES_LABEL.fresh,
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -83,7 +86,8 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
       </div>
 
       {/* Same shape as every other card: the forward on its own row at full
-          weight, the thing you do with the offer underneath it. */}
+          weight, then the ways to reach the offerer. The offer only carries
+          `whatsapp`, so that number is both the call and the chat. */}
       <ShareButton
         path={`/servicio/${offer.id}`}
         title={RESOURCE_TYPE_LABEL[offer.type]}
@@ -91,22 +95,38 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         className="w-full"
       />
 
-      <div className="flex flex-wrap gap-1.5">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="flex-1"
-          render={
-            <a
-              href={`https://wa.me/${offer.whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          }
-        >
-          <WhatsappIcon />
-          {SERVICES_LABEL.contact}
-        </Button>
+      {/* Boxed like the work order's contact block: the ways to reach the
+          offerer read as one section, not as a loose pair of buttons. */}
+      <div className="bg-muted/40 rounded-md border p-2 text-[0.7rem] leading-snug">
+        <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+          {SERVICES_LABEL.contactTitle}
+        </p>
+        <div className="mt-1.5 flex gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1"
+            render={<a href={`tel:${offer.whatsapp}`} />}
+          >
+            <Phone className="size-3.5" aria-hidden />
+            {offer.whatsapp}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1"
+            render={
+              <a
+                href={`https://wa.me/${offer.whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <WhatsappIcon />
+            {SERVICES_LABEL.contact}
+          </Button>
+        </div>
       </div>
 
       {isAdmin && (

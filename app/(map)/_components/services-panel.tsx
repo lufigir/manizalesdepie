@@ -81,7 +81,10 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
   }
 
   const Icon = RESOURCE_TYPE_ICON[offer.type];
-  const { label: freshLabel, stale } = freshness(offer.confirmedAt);
+  const { label: freshLabel, stale } = freshness(
+    offer.confirmedAt,
+    SERVICES_LABEL.fresh,
+  );
 
   return (
     <li>
@@ -101,29 +104,29 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
           onClick={() => select(offer.id)}
           className="focus-visible:ring-ring hover:bg-accent -m-1 flex flex-1 flex-col gap-1.5 rounded-md p-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
-          <div className="flex items-start gap-2">
-            <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
+          {/* One line: icon, then type and barrio as a single title. The
+              eyebrow-and-title header cost a second line to say the same two
+              words, and this tile is supposed to read in three. */}
+          <div className="flex items-center gap-2">
+            <span className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full">
               <Icon className="size-4" strokeWidth={2.5} aria-hidden />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-                {RESOURCE_TYPE_LABEL[offer.type]}
-              </p>
-              {/* `area` is barrio text set by the reporter and `neighborhood`
-                  is that same barrio, stamped by geometry — the form's point
-                  is the barrio's own centroid, so today they always agree.
-                  Shown once, not twice, in case a future writer (the MCP
-                  bulk load) ever supplies a real point whose barrio differs
-                  from the area text it typed. */}
-              <p className="text-sm leading-tight font-semibold">
-                {offer.neighborhood ?? offer.area}
-              </p>
-            </div>
+            <p className="min-w-0 flex-1 truncate text-sm leading-tight font-semibold">
+              {RESOURCE_TYPE_LABEL[offer.type]}
+              <span className="text-muted-foreground font-normal">
+                {" "}· {offer.neighborhood ?? offer.area}
+              </span>
+            </p>
           </div>
 
-          <p className="text-sm leading-snug">{offer.description}</p>
+          {/* The description clamped, so the tile never grows past three
+              lines. The full text is in the popup. */}
+          <p className="line-clamp-2 text-sm leading-snug">{offer.description}</p>
 
-          <div className="mt-auto flex flex-wrap items-center gap-1 pt-1">
+          {/* How long ago it went up, coloured when stale. On its own row so
+              the stale red is a fact of the offer, not a footnote to the
+              title. */}
+          <div className="mt-auto flex items-center gap-1 pt-1">
             <span
               className={cn(
                 "text-[0.65rem]",

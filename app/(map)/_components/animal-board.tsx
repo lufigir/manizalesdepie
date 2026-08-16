@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
+import { WhatsappIcon } from "./whatsapp-icon";
 import { useWorkspace } from "./workspace-context";
 
 /**
@@ -159,8 +160,9 @@ function AnimalCard({
           href={`https://wa.me/${animal.whatsapp}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-secondary text-secondary-foreground flex-1 rounded-md px-2 py-1.5 text-center text-[0.7rem] font-semibold"
+          className="bg-secondary text-secondary-foreground flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-center text-[0.7rem] font-semibold"
         >
+          <WhatsappIcon />
           {ANIMAL_LABEL.contact}
         </a>
         {!resolved && (

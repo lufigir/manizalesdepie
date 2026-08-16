@@ -144,7 +144,7 @@ export const SHEET_LABEL = {
   address: "Dirección",
   schedule: "Horario",
   directions: "Cómo llegar",
-  whatsapp: "WhatsApp",
+  whatsapp: "Escribirle",
   share: "Compartir",
   copied: "Enlace copiado",
   /** Short on purpose: on a phone the long version ("¿Estás ahí ahora? Dinos
@@ -341,7 +341,7 @@ export const ANIMAL_LABEL = {
   resolved: "Ya está en casa",
   markResolved: "Ya apareció",
   seenAt: "Visto",
-  contact: "WhatsApp",
+  contact: "Escribirle",
   noPhoto: "Sin foto",
   empty: "Todavía no hay reportes de animales.",
 } as const;
@@ -419,7 +419,11 @@ export const SERVICES_LABEL = {
     "Todavía no hay servicios publicados. Si tienes con qué ayudar, sé el primero.",
   countOne: "1 servicio",
   countMany: (n: number) => `${n} servicios`,
-  contact: "WhatsApp",
+  contactTitle: "Contacto",
+  contact: "Escribirle",
+  /** A service is published, not confirmed: its `confirmed_count` is gone, so
+   *  `confirmed_at` is when it went up, not when somebody vouched for it. */
+  fresh: { recent: "Publicado", stale: "Publicado" },
   /** The card on the map says whether the offer is anchored anywhere at all.
    *  Most are not: "tengo una volqueta" is a barrio, not a corner. */
   cityWide: "Toda la ciudad",
@@ -605,8 +609,20 @@ const relative = new Intl.RelativeTimeFormat("es-CO", { numeric: "auto" });
 /**
  * How long ago someone last confirmed this. A datum nobody has vouched for in
  * days is not hidden — it is labelled, and the reader decides.
+ *
+ * The verb is configurable because not every entity has confirmation: a
+ * service offer lost its `confirmed_count` on 15 August, so its
+ * `confirmed_at` is the moment it went up — "Publicado", not "Confirmado",
+ * would claim a voucher nobody left. Default stays "Confirmado", which is
+ * true for sites, work orders and animals.
  */
-export function freshness(confirmedAt: string): {
+export function freshness(
+  confirmedAt: string,
+  verb: { recent: string; stale: string } = {
+    recent: "Confirmado",
+    stale: "Sin confirmar",
+  },
+): {
   label: string;
   stale: boolean;
 } {
@@ -615,14 +631,14 @@ export function freshness(confirmedAt: string): {
 
   if (hours < 1) {
     const minutes = Math.max(1, Math.floor(elapsedMs / 60_000));
-    return { label: `Confirmado ${relative.format(-minutes, "minute")}`, stale: false };
+    return { label: `${verb.recent} ${relative.format(-minutes, "minute")}`, stale: false };
   }
   if (hours < 24) {
-    return { label: `Confirmado ${relative.format(-hours, "hour")}`, stale: hours >= 12 };
+    return { label: `${verb.recent} ${relative.format(-hours, "hour")}`, stale: hours >= 12 };
   }
 
   const days = Math.floor(hours / 24);
-  return { label: `Sin confirmar ${relative.format(-days, "day")}`, stale: true };
+  return { label: `${verb.stale} ${relative.format(-days, "day")}`, stale: true };
 }
 
 /**
@@ -811,7 +827,7 @@ export const WORK_ORDER_LABEL = {
    */
   contactTitle: "Dirección y contacto",
   contactCall: "Llamar",
-  contactWhatsapp: "WhatsApp",
+  contactWhatsapp: "Escribirle",
   noContact:
     "Quien reportó esto no dejó dirección ni contacto. Guíate por el barrio y el punto en el mapa.",
   /** Said where the fields are typed, not here — see WORK_ORDER_FORM. This
