@@ -112,8 +112,8 @@ export function BarrioLayer({
    *  hover, which needs a cursor and therefore does not exist on a phone. */
   onCentreChange?: (name: string | null) => void;
   /** Which barrio the cursor is over, or null. Reported UP rather than drawn
-   *  here: the answer belongs in the chip beside the clock, which already
-   *  exists, already says a barrio name, and does not cover the map. */
+   *  here: the answer belongs in the chip in the map's top-right corner,
+   *  which does not cover the map the way a label pinned to the cursor did. */
   onHoverChange?: (name: string | null) => void;
   /** The barrio being filtered by, drawn solid so the filter is visible on the
    *  map and not only in the list. */

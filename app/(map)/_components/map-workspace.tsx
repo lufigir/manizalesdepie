@@ -179,14 +179,10 @@ export function MapWorkspace({
   // spent by the camera (see `FlyToSelected`): the drawer's height on a
   // phone, the left sheet's width beside the map.
   const [cardInset, setCardInset] = useState<CardInset>({ bottom: 0, left: 0 });
-  /*
-   * `centreBarrio` and `hoverBarrio` used to live here.
-   *
-   * They fed the chip in the top-right corner and nothing else, so they went
-   * with it — along with the `onCentreChange` handler below, which ran a
-   * point-in-polygon test over 114 barrios on every single map move to
-   * produce a label nobody was reading.
-   */
+  // Which barrio the cursor is over, on the inputs that have a cursor —
+  // reported by `BarrioLayer` and shown as a small chip beside the corner's
+  // other content, so hovering the map still names the barrio it is over.
+  const [hoverBarrio, setHoverBarrio] = useState<string | null>(null);
   // The barrio being filtered by, set by tapping one on the map. Null is the
   // whole city, which is where everyone starts.
   const [barrio, setBarrio] = useState<BarrioProps | null>(null);
@@ -548,6 +544,7 @@ export function MapWorkspace({
               showCompass
             />
             <BarrioLayer
+              onHoverChange={setHoverBarrio}
               selected={barrio?.name ?? null}
               onSelect={setBarrio}
               statuses={neighborhoodStatuses}
@@ -676,19 +673,16 @@ export function MapWorkspace({
             </div>
 
             {/*
-              The barrio chip that used to live here is gone, both of its
-              states.
+              The filter half of the old barrio chip stays gone: it was a
+              second copy of a control the panel header already holds, and
+              that header now goes primary with its "Ver toda la ciudad" chip
+              inside it, at every width — more visible than this chip was and
+              attached to the counts the filter changes.
 
-              Naming the barrio under the cursor was a fact the map already
-              draws and nobody was reading, and it only ever existed on a
-              device with a cursor. Carrying the active filter was a second
-              copy of a control the panel header already holds — and that
-              header now goes primary with its "Ver toda la ciudad" chip
-              inside it, at every width, which is both more visible than this
-              chip was and attached to the counts the filter changes.
-
-              What the corner carries instead is the answer to the question
-              the whole product is for. See `AttendanceStats`.
+              The hover half is back: naming the barrio under the cursor is a
+              fact the map already draws, and hiding it just because the
+              filter chip was redundant threw out the one reading that a
+              device without a cursor could never have anyway.
             */}
             {/*
               The clock that used to sit above this is gone too. It said "this
@@ -700,6 +694,11 @@ export function MapWorkspace({
             */}
             <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
               <AttendanceStats />
+              {hoverBarrio && (
+                <span className="bg-background/90 hidden rounded-full border px-2.5 py-1 text-[0.7rem] font-medium shadow-sm backdrop-blur lg:block">
+                  {hoverBarrio}
+                </span>
+              )}
             </div>
           </div>
 
