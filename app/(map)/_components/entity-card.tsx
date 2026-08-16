@@ -9,6 +9,7 @@ import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import {
   ANIMAL_KIND_STYLE,
   ANIMAL_LABEL,
+  ANIMAL_MARKER,
   RESOURCE_TYPE_ICON,
   RESOURCE_TYPE_LABEL,
   SITE_STATUS_LABEL,
@@ -85,8 +86,8 @@ export function EntityCard({
           // How to recognise it — the one thing that makes somebody who
           // just saw a dog on the street match it to this row.
           body={animal.description}
-          icon={<PawPrint className="size-3.5" strokeWidth={2.5} aria-hidden />}
-          iconClass="bg-muted rounded-full"
+          icon={<PawPrint className="-rotate-45 size-3.5" strokeWidth={2.5} aria-hidden />}
+          iconClass={cn("rotate-45 rounded-md", ANIMAL_MARKER)}
           badge={resolved ? ANIMAL_LABEL.resolved : ANIMAL_LABEL[animal.kind]}
           badgeClass={
             resolved

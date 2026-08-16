@@ -64,7 +64,7 @@ export function SightingMarkers({
             <span className="relative block">
               <span
                 className={cn(
-                  "ring-background flex size-7 items-center justify-center rounded-full shadow-md ring-2 transition-transform",
+                  "ring-background flex size-7 rotate-45 items-center justify-center rounded-md shadow-md ring-2 transition-transform",
                   ANIMAL_MARKER,
                   selectedId === animal.id && "scale-125",
                 )}
@@ -72,7 +72,7 @@ export function SightingMarkers({
                   animal.petName ?? ANIMAL_LABEL[animal.species]
                 }. ${ANIMAL_LABEL.seenAt} aquí.`}
               >
-                <PawPrint className="size-4" strokeWidth={2.5} aria-hidden />
+                <PawPrint className="-rotate-45 size-4" strokeWidth={2.5} aria-hidden />
               </span>
               {selectedId === animal.id && (
                 <SelectedMarkerLabel>
