@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { FilterSpecification } from "maplibre-gl";
+import type { FilterSpecification, MapLayerMouseEvent } from "maplibre-gl";
 
 import { MapGeoJSON, useMap } from "@/components/ui/map";
 import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
@@ -221,20 +221,12 @@ export function BarrioLayer({
    * the clock was already saying a barrio name — two answers to "¿dónde
    * estoy?" on screen at once, one of them in the way.
    *
-   * mapcn's `onHover` fires only when the hovered feature CHANGES, which is
-   * exactly the right granularity now that nothing tracks the pointer.
+   * The hover and tap handlers below fire only when the hovered feature
+   * CHANGES, which is exactly the right granularity now that nothing tracks
+   * the pointer.
    */
-  const handleHover = useCallback(
-    (event: { feature: { properties: BarrioProps } } | null) => {
-      onHoverChange?.(event?.feature.properties.name ?? null);
-    },
-    [onHoverChange],
-  );
-
-  const handleClick = useCallback(
-    (event: { feature: { properties: BarrioProps } }) => {
-      const barrio = event.feature.properties;
-
+  const selectBarrio = useCallback(
+    (barrio: BarrioProps) => {
       if (barrio.name === selected) {
         onSelect?.(null);
         return;
@@ -288,6 +280,82 @@ export function BarrioLayer({
     },
     [onSelect, selected, data, map],
   );
+
+  /**
+   * Hover and tap, bound by hand instead of through mapcn's `interactive`.
+   *
+   * mapcn binds mousemove/mouseleave/click to the fill layer and, in its
+   * effect's cleanup, asks the map for the source again (`map.getSource`, at
+   * map.tsx:1474) to clear the hover feature-state. That cleanup runs AFTER
+   * `<Map>` has destroyed the map on any navigation away — React tears a
+   * deleted subtree down parent-first, `remove()` nulls the style, and the
+   * call then reaches into a style that is gone, throwing "Cannot read
+   * properties of undefined (reading 'getSource')". `components/ui/` is
+   * CLI-owned, so the interaction lives here instead, guarded the same way
+   * the label effect above is.
+   *
+   * The highlight needs no mapcn involvement either: `fillHoverPaint` merges
+   * into a `["feature-state", "hover"]` expression and the feature state
+   * below is what drives it.
+   */
+  useEffect(() => {
+    if (!map || !data || !border) return;
+
+    const sourceId = "geojson-source-barrios";
+    const fillLayerId = "geojson-fill-barrios";
+    let hoveredId: string | number | null = null;
+
+    const setHover = (next: string | number | null) => {
+      if (next === hoveredId) return;
+      const sourceExists = !!map.getSource(sourceId);
+      if (hoveredId != null && sourceExists) {
+        map.setFeatureState(
+          { source: sourceId, id: hoveredId },
+          { hover: false },
+        );
+      }
+      hoveredId = next;
+      if (next != null && sourceExists) {
+        map.setFeatureState({ source: sourceId, id: next }, { hover: true });
+      }
+    };
+
+    const handleMouseMove = (e: MapLayerMouseEvent) => {
+      const feature = e.features?.[0];
+      if (!feature) return;
+      map.getCanvas().style.cursor = "pointer";
+
+      const featureId = feature.id;
+      if (featureId === hoveredId) return;
+      setHover(featureId ?? null);
+      onHoverChange?.(feature.properties?.name ?? null);
+    };
+
+    const handleMouseLeave = () => {
+      setHover(null);
+      map.getCanvas().style.cursor = "";
+      onHoverChange?.(null);
+    };
+
+    const handleClick = (e: MapLayerMouseEvent) => {
+      const feature = e.features?.[0];
+      if (!feature) return;
+      selectBarrio(feature.properties as BarrioProps);
+    };
+
+    map.on("mousemove", fillLayerId, handleMouseMove);
+    map.on("mouseleave", fillLayerId, handleMouseLeave);
+    map.on("click", fillLayerId, handleClick);
+
+    return () => {
+      map.off("mousemove", fillLayerId, handleMouseMove);
+      map.off("mouseleave", fillLayerId, handleMouseLeave);
+      map.off("click", fillLayerId, handleClick);
+      if (!map.style) return;
+      setHover(null);
+      map.getCanvas().style.cursor = "";
+    };
+  }, [map, data, border, onHoverChange, selectBarrio]);
 
   /**
    * The names, written on the map itself.
@@ -447,9 +515,8 @@ export function BarrioLayer({
            evacuation, and one with a suspended utility. That is real severity a
            utility or the Alcaldía actually reported, not an inference this app
            is making — so it earns colour where nothing else on this layer does.
-           It is not decoration either. mapcn binds hover to the fill layer and
-           bails out entirely when there is none (`if (!interactive || !showFill)
-           return`), so without a fill there is no highlight at all — a 1.5px
+           It is not decoration either. the interaction effect binds hover to the
+           fill layer, so without a fill there is no highlight at all — a 1.5px
            dashed line is not something anyone can point at. */
         fillPaint={{
           "fill-color": isDesktop
@@ -499,11 +566,10 @@ export function BarrioLayer({
           "line-opacity": isDesktop ? 0.42 : 0.6,
           "line-dasharray": [3, 2],
         }}
-        onClick={handleClick}
-        onHover={handleHover}
-        /* Interactive drives both the highlight and onHover. mapcn binds them
-           to the fill layer and skips them entirely when this is false. */
-        interactive
+        /* Hover and click are bound by hand in the interaction effect above,
+           not through mapcn's `interactive` — its cleanup crashes once the map
+           is destroyed, so the feature-state highlight is driven here. */
+        interactive={false}
       />
     </>
   );
