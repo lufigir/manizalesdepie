@@ -195,7 +195,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           to go. See the note on `ShareButton`'s default variant. */}
       <ShareButton path={`/punto/${site.id}`} title={site.name} className="w-full" />
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex gap-1.5">
         <Button
           size="sm"
           variant="secondary"

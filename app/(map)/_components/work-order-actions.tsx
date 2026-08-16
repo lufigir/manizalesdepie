@@ -365,10 +365,11 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
               )}
               {order.contactName && <p>{order.contactName}</p>}
               {order.phone && (
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <div className="mt-1.5 flex gap-1.5">
                   <Button
                     size="sm"
                     variant="outline"
+                    className="flex-1"
                     render={<a href={`tel:${order.phone}`} />}
                   >
                     <Phone className="size-3.5" aria-hidden />
@@ -377,6 +378,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="flex-1"
                     render={
                       <a
                         href={`https://wa.me/57${order.phone}`}

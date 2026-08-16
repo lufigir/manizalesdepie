@@ -341,7 +341,7 @@ export const ANIMAL_LABEL = {
   resolved: "Ya está en casa",
   markResolved: "Ya apareció",
   seenAt: "Visto",
-  contact: "Escribir por WhatsApp",
+  contact: "WhatsApp",
   noPhoto: "Sin foto",
   empty: "Todavía no hay reportes de animales.",
 } as const;
@@ -419,7 +419,7 @@ export const SERVICES_LABEL = {
     "Todavía no hay servicios publicados. Si tienes con qué ayudar, sé el primero.",
   countOne: "1 servicio",
   countMany: (n: number) => `${n} servicios`,
-  contact: "Escribir por WhatsApp",
+  contact: "WhatsApp",
   /** The card on the map says whether the offer is anchored anywhere at all.
    *  Most are not: "tengo una volqueta" is a barrio, not a corner. */
   cityWide: "Toda la ciudad",
@@ -811,7 +811,7 @@ export const WORK_ORDER_LABEL = {
    */
   contactTitle: "Dirección y contacto",
   contactCall: "Llamar",
-  contactWhatsapp: "Escribir por WhatsApp",
+  contactWhatsapp: "WhatsApp",
   noContact:
     "Quien reportó esto no dejó dirección ni contacto. Guíate por el barrio y el punto en el mapa.",
   /** Said where the fields are typed, not here — see WORK_ORDER_FORM. This
