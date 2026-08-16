@@ -1,9 +1,11 @@
 "use client";
 
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Navigation, Users } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import {
+  SHEET_LABEL,
   WORK_ORDER_CATEGORY_ICON,
   WORK_ORDER_CATEGORY_LABEL,
   WORK_ORDER_LABEL,
@@ -151,11 +153,27 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         className="w-full"
       />
 
-      {/* Directions moved into the action row inside `WorkOrderActions`, so
-          this card ends the way a sitio's and a grupo's do: the primary
-          action on its own line, the secondary ones beside each other under
-          it. It used to sit above them, which made "cómo llegar" read as the
-          main thing to do with a case nobody had claimed. */}
+      {/* Getting there, on its own row like the sitio and grupo cards: the
+          pin is only a block-level `approx_location`, enough to drive to the
+          corner. It used to live inside "Detalle", where it read as the main
+          thing to do with a case nobody had claimed — same argument that
+          keeps `ShareButton` above the tabs. */}
+      <Button
+        size="sm"
+        variant="secondary"
+        className="w-full"
+        render={
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+        }
+      >
+        <Navigation className="size-3.5" aria-hidden />
+        {SHEET_LABEL.directions}
+      </Button>
+
       <WorkOrderActions order={order} />
     </div>
   );

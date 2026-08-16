@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Move, Navigation, Pencil, Phone } from "lucide-react";
+import { Move, Pencil, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ import {
 } from "@/data/work_order/work_order.dto";
 import {
   RELOCATE_LABEL,
-  SHEET_LABEL,
   WORK_ORDER_CATEGORY_ICON,
   WORK_ORDER_CATEGORY_LABEL,
   WORK_ORDER_LABEL,
@@ -367,14 +366,25 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
        * thread instead of the ask.
        */}
       <Tabs key={order.id} defaultValue="detail" className="mt-2">
-        <TabsList className="w-full">
-          <TabsTab value="detail" className="flex-1">
+        <TabsList
+          variant="underline"
+          className="w-[calc(100%+1.5rem)] gap-0 rounded-none bg-accent/40 p-0 text-muted-foreground -mx-3 data-[orientation=horizontal]:py-0"
+        >
+          <TabsTab
+            value="detail"
+            className="h-9 flex-1 rounded-none border-0 px-1 text-sm font-semibold data-active:text-primary"
+          >
             {WORK_ORDER_LABEL.tabDetail}
           </TabsTab>
-          <TabsTab value="thread" className="flex-1">
+          <TabsTab
+            value="thread"
+            className="h-9 flex-1 rounded-none border-0 px-1 text-sm font-semibold data-active:text-primary"
+          >
             {WORK_ORDER_LABEL.threadTitle}
             {entryCount > 0 && (
-              <span className="ml-1 tabular-nums opacity-70">{entryCount}</span>
+              <span className="ml-1 text-xs tabular-nums opacity-70">
+                {entryCount}
+              </span>
             )}
           </TabsTab>
         </TabsList>
@@ -498,12 +508,6 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             </p>
           </Section>
         )}
-
-        {/* Getting there and forwarding it — neither a commitment nor a
-            correction, the things you do with a case without changing it. */}
-        <Section>
-          <OrderDirectionsButton order={order} />
-        </Section>
 
         {/* "This listing is wrong", in its two forms. Last and quietest on
             purpose: they are the controls a mistap hurts, and "no es un caso
@@ -656,28 +660,6 @@ function Section({
       )}
       {children}
     </div>
-  );
-}
-
-/** Only the approximate point: the public row carries a block-level
- *  `approx_location`, which is enough to drive to the corner. */
-function OrderDirectionsButton({ order }: { order: WorkOrderDTO }) {
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      className="w-full"
-      render={
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${order.latitude},${order.longitude}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        />
-      }
-    >
-      <Navigation className="size-3.5" aria-hidden />
-      {SHEET_LABEL.directions}
-    </Button>
   );
 }
 

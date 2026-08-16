@@ -196,14 +196,16 @@ export function SitePopup({ site }: { site: SiteDTO }) {
 
       {/* Same shape as every other card: the forward on its own row at full
           weight, then the things you do with the place once you have decided
-          to go. See the note on `ShareButton`'s default variant. */}
+          to go — each on a row of its own, so navigation reads below the
+          share and neither competes for the width. See the note on
+          `ShareButton`'s default variant. */}
       <ShareButton path={`/punto/${site.id}`} title={site.name} className="w-full" />
 
-      <div className="flex gap-1.5">
+      <div className="flex flex-col gap-1.5">
         <Button
           size="sm"
           variant="secondary"
-          className="flex-1"
+          className="w-full"
           render={
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${site.latitude},${site.longitude}`}
@@ -219,7 +221,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           <Button
             size="sm"
             variant="secondary"
-            className="flex-1"
+            className="w-full"
             render={
               <a
                 href={`https://wa.me/${site.whatsapp}`}
