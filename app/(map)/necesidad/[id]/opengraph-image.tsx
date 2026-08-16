@@ -36,13 +36,17 @@ export const contentType = OG_CONTENT_TYPE;
 // analysis. See the caching note in `og-card.tsx` for the hour.
 export const revalidate = 3600;
 
-/** Same grammar as everywhere else: red needs someone, amber has someone,
- *  green means somebody already helped and it is still open, grey is over. */
+/** Same grammar as the marker (see `WORK_ORDER_ROLLUP_MARKER`): red needs
+ *  someone, amber means people are on it and it is not over, green is only
+ *  ever an actual resolution, grey is off the list without being one. */
 const ROLLUP_ACCENT: Record<WorkOrderRollup, OgAccent> = {
-  unclaimed: "unclaimed",
-  claimed: "claimed",
-  attended: "resolved",
-  closed: "neutral",
+  untouched: "unclaimed",
+  onTheWay: "unclaimed",
+  partial: "claimed",
+  advanced: "claimed",
+  reopened: "unclaimed",
+  done: "resolved",
+  dismissed: "neutral",
 };
 
 export default async function Image({
@@ -64,7 +68,7 @@ export default async function Image({
     );
   }
 
-  const rollup = workOrderRollup(order.status);
+  const rollup = workOrderRollup(order);
   const { label: freshLabel } = freshness(order.confirmedAt);
 
   return new ImageResponse(

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { MessageSquare, Navigation, Pencil, Phone } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { Navigation, Pencil, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   closeWorkOrder,
@@ -27,8 +28,6 @@ import {
   WORK_ORDER_CATEGORY_LABEL,
   WORK_ORDER_LABEL,
   WORK_ORDER_UPDATE_KIND_LABEL,
-  WORK_ORDER_UPDATE_KIND_STYLE,
-  WORK_ORDER_UPDATE_KIND_TAG,
   WORK_ORDER_UPDATE_PLACEHOLDER,
   workOrderRollup,
 } from "@/lib/labels";
@@ -36,6 +35,7 @@ import { cn } from "@/lib/utils";
 
 import { AdminActions } from "./admin-actions";
 import { ShareButton } from "./share-button";
+import { WorkOrderThread } from "./work-order-thread";
 import { useWorkspace } from "./workspace-context";
 
 /** A curator's two manual verdicts. Everyone else's contribution goes
@@ -83,11 +83,20 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   const [note, setNote] = useState("");
   const [posted, setPosted] = useState<WorkOrderUpdateKind | null>(null);
 
-  // Loaded on demand rather than with the card: every case on the map would
-  // otherwise fetch its own thread on first paint, for a panel most readers
-  // never open.
+  /**
+   * The case's thread. Fetched as soon as the card mounts, whenever there is
+   * anything to fetch.
+   *
+   * It used to sit behind a "Ver qué ha pasado (3)" button, so the most
+   * valuable thing on the card — what people found when they got there — was
+   * the one thing a reader had to ask for. The fetch it was avoiding was
+   * never per-case anyway: `WorkOrderActions` only renders inside the card of
+   * the SELECTED pin, so this is one request for one case the reader has
+   * already chosen to open, not one per pin on the map.
+   */
   const [updates, setUpdates] = useState<WorkOrderUpdateDTO[] | null>(null);
-  const [threadOpen, setThreadOpen] = useState(false);
+  /** The entry this reader just wrote, so the thread can point at it. */
+  const [ownEntryId, setOwnEntryId] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
   const [category, setCategory] = useState<WorkOrderCategory>(order.category);
@@ -97,8 +106,32 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     null,
   );
 
-  const rollup = workOrderRollup(order.status);
-  const open = rollup !== "closed";
+  const rollup = workOrderRollup(order);
+  const open = rollup !== "done" && rollup !== "dismissed";
+
+  // Entries the counters already know about, before the thread itself has
+  // arrived. Reading it off the DTO rather than off `updates` is what lets
+  // the heading show a count on first paint instead of appearing late.
+  const entryCount = order.attendeeCount + order.helpedCount;
+
+  useEffect(() => {
+    if (entryCount === 0) return;
+
+    let cancelled = false;
+    listWorkOrderUpdates(order.id)
+      .then((rows) => {
+        if (!cancelled) setUpdates(rows);
+      })
+      .catch(() => {
+        // Silent: the thread is not the reason this card was opened, and a
+        // red error over the contact block would bury the fact that IS.
+        // `updates` stays null, which renders as "Cargando…".
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id, entryCount]);
 
   function submitUpdate(kind: WorkOrderUpdateKind) {
     setError(null);
@@ -126,30 +159,15 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
         // The thread this reader just joined is the one thing worth showing
         // next: it is where their own note lands, and where they can see
         // that the case did not just switch off.
-        setUpdates(await listWorkOrderUpdates(order.id));
-        setThreadOpen(true);
+        const rows = await listWorkOrderUpdates(order.id);
+        setUpdates(rows);
+        setOwnEntryId(rows.at(-1)?.id ?? null);
       } catch (cause) {
         const msg =
           cause instanceof Error ? cause.message : WORK_ORDER_LABEL.failed;
         // Zod v4 serialises issues as a JSON array in .message — a reader
         // should never see that, so fall back to the generic label.
         setError(msg.startsWith("[") ? WORK_ORDER_LABEL.failed : msg);
-      }
-    });
-  }
-
-  function toggleThread() {
-    if (threadOpen) {
-      setThreadOpen(false);
-      return;
-    }
-    setThreadOpen(true);
-    if (updates) return;
-    startTransition(async () => {
-      try {
-        setUpdates(await listWorkOrderUpdates(order.id));
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : WORK_ORDER_LABEL.failed);
       }
     });
   }
@@ -182,8 +200,6 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   const hasContact = Boolean(
     order.exactAddress || order.contactName || order.phone || order.notes,
   );
-
-  const entryCount = order.attendeeCount + order.helpedCount;
 
   /**
    * The composer takes over the whole card while it is open.
@@ -304,261 +320,241 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
         </p>
       )}
 
-      {/* Contact, in the open. It sits above the actions because it is what
-          the reader came for: somebody with a volqueta decides whether to
-          take this case by looking at where it is and calling to ask, and
-          under the old gate they had to commit before they could do either. */}
-      <div className="bg-muted/40 mt-2 rounded-md border p-2 text-[0.7rem] leading-snug">
-        <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-          {WORK_ORDER_LABEL.contactTitle}
-        </p>
-        {hasContact ? (
-          <>
-            {order.exactAddress && (
-              <p className="mt-0.5 font-semibold">{order.exactAddress}</p>
+      {/*
+       * Two tabs, not one long scroll.
+       *
+       * The card used to stack contact, "¿puedes ayudar?", the full thread,
+       * "¿algo está mal?" and the curator zone in that order — up to nine
+       * controls deep, with the thread (the part that answers "¿qué ha
+       * pasado aquí?") buried in the middle of it. Splitting it in two gives
+       * each half the whole card: "Detalle" is everything a reader DOES to a
+       * case, "Hilo" is everything anyone has SAID about it, and neither has
+       * to compete with the other's height on a 20rem popup.
+       *
+       * `key={order.id}` resets which tab is open when the selection moves
+       * to a different pin — otherwise a reader who leaves "Hilo" open on
+       * one case would find every case after it opening straight to the
+       * thread instead of the ask.
+       */}
+      <Tabs key={order.id} defaultValue="detail" className="mt-2">
+        <TabsList className="w-full">
+          <TabsTab value="detail" className="flex-1">
+            {WORK_ORDER_LABEL.tabDetail}
+          </TabsTab>
+          <TabsTab value="thread" className="flex-1">
+            {WORK_ORDER_LABEL.threadTitle}
+            {entryCount > 0 && (
+              <span className="ml-1 tabular-nums opacity-70">{entryCount}</span>
             )}
-            {order.contactName && <p>{order.contactName}</p>}
-            {order.phone && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  render={<a href={`tel:${order.phone}`} />}
-                >
-                  <Phone className="size-3.5" aria-hidden />
-                  {order.phone}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  render={
-                    <a
-                      href={`https://wa.me/57${order.phone}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    />
-                  }
-                >
-                  {WORK_ORDER_LABEL.contactWhatsapp}
-                </Button>
-              </div>
-            )}
-            {order.notes && (
-              <p className="text-muted-foreground mt-1">{order.notes}</p>
-            )}
-          </>
-        ) : (
-          <p className="text-muted-foreground mt-0.5">
-            {WORK_ORDER_LABEL.noContact}
+          </TabsTab>
+        </TabsList>
+
+        <TabsPanel value="detail" className="flex flex-col">
+        {/* Contact, in the open. It sits above the actions because it is what
+            the reader came for: somebody with a volqueta decides whether to
+            take this case by looking at where it is and calling to ask, and
+            under the old gate they had to commit before they could do either. */}
+        <div className="bg-muted/40 mt-2 rounded-md border p-2 text-[0.7rem] leading-snug">
+          <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+            {WORK_ORDER_LABEL.contactTitle}
           </p>
-        )}
-
-        {/* Forwarding the case belongs with its address and its phone: what
-            gets pasted into a WhatsApp group is precisely this block, and
-            whoever is looking at it is the person about to pass it on. It
-            used to sit beside "Cómo llegar", which is a different job —
-            that one is for the person who already decided to go. */}
-        <OrderShareButton order={order} className="mt-1.5 w-full" />
-      </div>
-
-      {/* What the card is asking for. Full weight, its own section, and the
-          only primary button anywhere on it. */}
-      {open && (
-        <Section label={WORK_ORDER_LABEL.sectionHelp}>
-          {posted && (
-            <p className="text-resolved text-[0.7rem] font-semibold">
-              {WORK_ORDER_LABEL.attendedThanks}
+          {hasContact ? (
+            <>
+              {order.exactAddress && (
+                <p className="mt-0.5 font-semibold">{order.exactAddress}</p>
+              )}
+              {order.contactName && <p>{order.contactName}</p>}
+              {order.phone && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    render={<a href={`tel:${order.phone}`} />}
+                  >
+                    <Phone className="size-3.5" aria-hidden />
+                    {order.phone}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    render={
+                      <a
+                        href={`https://wa.me/57${order.phone}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      />
+                    }
+                  >
+                    {WORK_ORDER_LABEL.contactWhatsapp}
+                  </Button>
+                </div>
+              )}
+              {order.notes && (
+                <p className="text-muted-foreground mt-1">{order.notes}</p>
+              )}
+            </>
+          ) : (
+            <p className="text-muted-foreground mt-0.5">
+              {WORK_ORDER_LABEL.noContact}
             </p>
           )}
-          <Button onClick={() => setComposing("on_the_way")}>
-            {WORK_ORDER_UPDATE_KIND_LABEL.on_the_way}
-          </Button>
 
-          {/* The two reports somebody makes after the fact. Under their own
-              question rather than in the same row as "voy": they are past
-              tense, and one of them is the only thing that can close a case. */}
-          <p className="text-muted-foreground mt-0.5 text-[0.65rem] font-medium">
-            {WORK_ORDER_LABEL.sectionBeenThere}
-          </p>
-          <div className="grid grid-cols-2 gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setComposing("helped")}
-            >
-              {WORK_ORDER_UPDATE_KIND_LABEL.helped}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setComposing("still_needed")}
-            >
-              {WORK_ORDER_UPDATE_KIND_LABEL.still_needed}
-            </Button>
-          </div>
-          <p className="text-muted-foreground text-[0.65rem] leading-snug">
-            {WORK_ORDER_LABEL.updateHint}
-          </p>
-        </Section>
-      )}
-
-      {/* Getting there, forwarding it, and reading what happened. Neither a
-          commitment nor a correction — the things you do with a case without
-          changing it. */}
-      <Section>
-        <OrderDirectionsButton order={order} />
-
-        {entryCount > 0 && (
-          <>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={toggleThread}
-              aria-expanded={threadOpen}
-            >
-              <MessageSquare className="size-3.5" aria-hidden />
-              {threadOpen
-                ? WORK_ORDER_LABEL.attendeesHide
-                : WORK_ORDER_LABEL.threadCount(entryCount)}
-            </Button>
-
-            {/* What has actually happened, in order. This is what makes
-                several people add up to a plan instead of three volquetas on
-                the same corner at the same hour — and it is the evidence
-                behind a status nobody can now set by hand. */}
-            {threadOpen && (
-              <ul className="flex flex-col gap-1">
-                {updates === null ? (
-                  <li className="text-muted-foreground text-[0.65rem]">
-                    {WORK_ORDER_LABEL.attendeesLoading}
-                  </li>
-                ) : updates.length === 0 ? (
-                  <li className="text-muted-foreground text-[0.65rem]">
-                    {WORK_ORDER_LABEL.attendeesEmpty}
-                  </li>
-                ) : (
-                  updates.map((update) => (
-                    <li
-                      key={update.id}
-                      className="bg-muted/40 rounded border p-1.5 text-[0.7rem] leading-snug"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-semibold">
-                          {update.name ?? WORK_ORDER_LABEL.anonymous}
-                        </span>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
-                            WORK_ORDER_UPDATE_KIND_STYLE[update.kind],
-                          )}
-                        >
-                          {WORK_ORDER_UPDATE_KIND_TAG[update.kind]}
-                        </span>
-                      </div>
-                      {update.note && (
-                        <p className="text-muted-foreground mt-0.5">
-                          {update.note}
-                        </p>
-                      )}
-                      {update.phone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-1"
-                          render={<a href={`tel:${update.phone}`} />}
-                        >
-                          <Phone className="size-3.5" aria-hidden />
-                          {update.phone}
-                        </Button>
-                      )}
-                    </li>
-                  ))
-                )}
-              </ul>
-            )}
-          </>
-        )}
-      </Section>
-
-      {/* "This listing is wrong", in its two forms. Last and quietest on
-          purpose: they are the controls a mistap hurts, and "no es un caso
-          real" in particular is an accusation about a household. Ghost
-          weight is the design saying so without a warning label. */}
-      {open && (
-        <Section label={WORK_ORDER_LABEL.sectionWrong}>
-          <div className="grid grid-cols-2 gap-1">
-            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
-              <Pencil className="size-3" aria-hidden />
-              {WORK_ORDER_LABEL.edit}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setComposing("not_real")}
-            >
-              {WORK_ORDER_UPDATE_KIND_LABEL.not_real}
-            </Button>
-          </div>
-        </Section>
-      )}
-
-      {/* A different audience entirely, so it is boxed rather than stacked:
-          a curator reading their own controls should never have to work out
-          which of nine buttons are theirs. */}
-      {isAdmin && (
-        <div className="border-primary/30 bg-muted/30 mt-2 rounded-md border border-dashed p-2">
-          <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-            {WORK_ORDER_LABEL.sectionCuration}
-          </p>
-
-          {open &&
-            (confirmingClose ? (
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="text-muted-foreground text-[0.65rem]">
-                  {WORK_ORDER_LABEL.closeConfirm}{" "}
-                  {CLOSE_ACTION_LABEL[confirmingClose]}
-                </span>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  loading={pending}
-                  onClick={() => close(confirmingClose)}
-                >
-                  {WORK_ORDER_LABEL.closeConfirmYes}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => setConfirmingClose(null)}
-                >
-                  {WORK_ORDER_LABEL.closeConfirmCancel}
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-1 grid grid-cols-2 gap-1">
-                {(["closed_completed", "closed_rejected"] as const).map(
-                  (outcome) => (
-                    <Button
-                      key={outcome}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setConfirmingClose(outcome)}
-                    >
-                      {CLOSE_ACTION_LABEL[outcome]}
-                    </Button>
-                  ),
-                )}
-              </div>
-            ))}
-
-          <AdminActions
-            published={order.published}
-            onSetPublished={(published) => setWorkOrderPublished(order.id, published)}
-            onDelete={() => deleteWorkOrder(order.id)}
-          />
+          {/* Forwarding the case belongs with its address and its phone: what
+              gets pasted into a WhatsApp group is precisely this block, and
+              whoever is looking at it is the person about to pass it on. It
+              used to sit beside "Cómo llegar", which is a different job —
+              that one is for the person who already decided to go. */}
+          <OrderShareButton order={order} className="mt-1.5 w-full" />
         </div>
-      )}
+
+        {/* What the card is asking for. Full weight, its own section, and the
+            only primary button anywhere on it. */}
+        {open && (
+          <Section label={WORK_ORDER_LABEL.sectionHelp}>
+            {posted && (
+              <p className="text-resolved text-[0.7rem] font-semibold">
+                {WORK_ORDER_LABEL.attendedThanks}
+              </p>
+            )}
+            <Button onClick={() => setComposing("on_the_way")}>
+              {WORK_ORDER_UPDATE_KIND_LABEL.on_the_way}
+            </Button>
+
+            {/* The two reports somebody makes after the fact. Under their own
+                question rather than in the same row as "voy": they are past
+                tense, and one of them is the only thing that can close a case. */}
+            <p className="text-muted-foreground mt-0.5 text-[0.65rem] font-medium">
+              {WORK_ORDER_LABEL.sectionBeenThere}
+            </p>
+            <div className="grid grid-cols-2 gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setComposing("helped")}
+              >
+                {WORK_ORDER_UPDATE_KIND_LABEL.helped}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setComposing("still_needed")}
+              >
+                {WORK_ORDER_UPDATE_KIND_LABEL.still_needed}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-[0.65rem] leading-snug">
+              {WORK_ORDER_LABEL.updateHint}
+            </p>
+          </Section>
+        )}
+
+        {/* Getting there and forwarding it — neither a commitment nor a
+            correction, the things you do with a case without changing it. */}
+        <Section>
+          <OrderDirectionsButton order={order} />
+        </Section>
+
+        {/* "This listing is wrong", in its two forms. Last and quietest on
+            purpose: they are the controls a mistap hurts, and "no es un caso
+            real" in particular is an accusation about a household. Ghost
+            weight is the design saying so without a warning label. */}
+        {open && (
+          <Section label={WORK_ORDER_LABEL.sectionWrong}>
+            <div className="grid grid-cols-2 gap-1">
+              <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+                <Pencil className="size-3" aria-hidden />
+                {WORK_ORDER_LABEL.edit}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setComposing("not_real")}
+              >
+                {WORK_ORDER_UPDATE_KIND_LABEL.not_real}
+              </Button>
+            </div>
+          </Section>
+        )}
+
+        {/* A different audience entirely, so it is boxed rather than stacked:
+            a curator reading their own controls should never have to work out
+            which of nine buttons are theirs. */}
+        {isAdmin && (
+          <div className="border-primary/30 bg-muted/30 mt-2 rounded-md border border-dashed p-2">
+            <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+              {WORK_ORDER_LABEL.sectionCuration}
+            </p>
+
+            {open &&
+              (confirmingClose ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="text-muted-foreground text-[0.65rem]">
+                    {WORK_ORDER_LABEL.closeConfirm}{" "}
+                    {CLOSE_ACTION_LABEL[confirmingClose]}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    loading={pending}
+                    onClick={() => close(confirmingClose)}
+                  >
+                    {WORK_ORDER_LABEL.closeConfirmYes}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => setConfirmingClose(null)}
+                  >
+                    {WORK_ORDER_LABEL.closeConfirmCancel}
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-1 grid grid-cols-2 gap-1">
+                  {(["closed_completed", "closed_rejected"] as const).map(
+                    (outcome) => (
+                      <Button
+                        key={outcome}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmingClose(outcome)}
+                      >
+                        {CLOSE_ACTION_LABEL[outcome]}
+                      </Button>
+                    ),
+                  )}
+                </div>
+              ))}
+
+            <AdminActions
+              published={order.published}
+              onSetPublished={(published) => setWorkOrderPublished(order.id, published)}
+              onDelete={() => deleteWorkOrder(order.id)}
+            />
+          </div>
+        )}
+        </TabsPanel>
+
+        {/* The thread, at full weight and never behind a tap or a scroll
+            past nine other controls — a tab of its own is what "Hilo" bought
+            over sharing space with everything above.
+
+            Rendered for a closed case too. The thread is the record of how
+            it got closed, and it is the only thing left that can be checked
+            if somebody thinks it was closed wrongly. */}
+        <TabsPanel value="thread" className="mt-2">
+          {/* `entryCount === 0` never fires the fetch above, so `updates`
+              would otherwise sit at its initial `null` forever — which the
+              thread reads as "still loading" rather than "nothing here yet".
+              Derived here instead of through the effect, which would trip
+              the set-state-in-effect rule for a value already knowable from
+              a prop. */}
+          <WorkOrderThread
+            updates={entryCount === 0 ? [] : updates}
+            highlightId={ownEntryId}
+          />
+        </TabsPanel>
+      </Tabs>
     </>
   );
 }
@@ -572,16 +568,26 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
  */
 function Section({
   label,
+  /** Printed beside the label, in the same quiet weight. Only the thread uses
+   *  it: "3 notas" is what tells a reader there is something worth scrolling
+   *  to before they have scrolled to it. */
+  count,
   children,
 }: {
   label?: string;
+  count?: number;
   children: React.ReactNode;
 }) {
   return (
     <div className="mt-2 flex flex-col gap-1.5 border-t pt-2">
       {label && (
-        <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+        <p className="text-muted-foreground flex items-baseline gap-1.5 text-[0.65rem] font-semibold tracking-wide uppercase">
           {label}
+          {count !== undefined && count > 0 && (
+            <span className="font-medium normal-case opacity-70 tabular-nums">
+              {WORK_ORDER_LABEL.threadCount(count)}
+            </span>
+          )}
         </p>
       )}
       {children}

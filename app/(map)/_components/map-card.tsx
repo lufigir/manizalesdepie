@@ -122,7 +122,13 @@ function CardShell({
 
   const docked =
     side === "left"
-      ? "inset-y-0 left-0 w-[min(22rem,80vw)] border-r rounded-r-xl shadow-[4px_0_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-left-4"
+      // Widened from 22rem: a necesidad's card now splits into "Detalle" and
+      // "Hilo" tabs (see `WorkOrderActions`), and the thread — a name, a
+      // kind badge and a note per row — read cramped at the old width. 26rem
+      // is the smallest bump that gives the thread room without eating
+      // enough of the map that `FlyToSelected`'s offset starts feeling tight
+      // on a 13" screen.
+      ? "inset-y-0 left-0 w-[min(26rem,80vw)] border-r rounded-r-xl shadow-[4px_0_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-left-4"
       : "inset-x-0 bottom-0 max-h-[55dvh] rounded-t-xl border-t shadow-[0_-4px_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-bottom-4";
 
   return (

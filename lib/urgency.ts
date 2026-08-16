@@ -1,16 +1,15 @@
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import type { CallDTO } from "@/data/call/call.dto";
 import type { NeighborhoodNeedDTO } from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { SiteDTO } from "@/data/site/site.dto";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 
-import { callState, workOrderRollup } from "./labels";
+import { workOrderRollup } from "./labels";
 
 /**
- * One number, comparable across sites, grupos and work orders, so "Todo" can
- * be a single feed sorted by "¿qué es más urgente en la ciudad ahora?" rather
- * than three lists glued together in a fixed order.
+ * One number, comparable across sites, necesidades, animals and offers, so
+ * "Todo" can be a single feed sorted by "¿qué es más urgente en la ciudad
+ * ahora?" rather than four lists glued together in a fixed order.
  *
  * Bands are spaced apart on purpose (x10 between each) so a factor never
  * bleeds into the one above it — a barrio's declared priority always wins
@@ -28,9 +27,8 @@ const PRIORITY_WEIGHT: Record<NeighborhoodNeedDTO["priority"], number> = {
  *  frente, and how urgent the strongest one on record is.
  *
  *  Falls back from "matching category in this barrio" to "any category in
- *  this barrio" when nothing matches exactly — a work order's category rarely
- *  lines up 1:1 with `call_category` (only `debris_removal` does), and a site
- *  has no category at all, so the barrio-wide signal is what those two get. */
+ *  this barrio" when nothing matches exactly — a site has no category at all,
+ *  so the barrio-wide signal is what it gets. */
 function neighborhoodPriority(
   neighborhood: string | null,
   needs: NeighborhoodNeedDTO[],
@@ -87,46 +85,32 @@ export function siteUrgency(
   );
 }
 
-export function callUrgency(
-  call: CallDTO,
-  needs: NeighborhoodNeedDTO[],
-  now: number = Date.now(),
-): number {
-  const state = callState(call, now);
-  const statusBand = state === "live" ? 3000 : state === "upcoming" ? 2000 : 0;
-
-  // Only meaningful before it starts: a shift that starts in one hour pulls
-  // ahead of one on Saturday, capped so it can never outweigh a live one.
-  const hoursUntilStart = (new Date(call.startsAt).getTime() - now) / 3_600_000;
-  const imminenceBonus =
-    state === "upcoming" ? Math.max(0, 500 - hoursUntilStart * 20) : 0;
-
-  return (
-    priorityBonus(call.neighborhood, needs, call.category) +
-    statusBand +
-    imminenceBonus +
-    freshnessBonus(call.confirmedAt, now)
-  );
-}
-
 export function workOrderUrgency(
   order: WorkOrderDTO,
   needs: NeighborhoodNeedDTO[],
   now: number = Date.now(),
 ): number {
-  const rollup = workOrderRollup(order.status);
-  // "Atendido" sits below "en proceso" and above closed. Somebody has
-  // already been, so it is the least urgent thing still open — but it IS
-  // still open, and it needs a second pair of hands to close, so it must
-  // not sink out of the feed the way a closed case does.
+  const rollup = workOrderRollup(order);
+  // The same order the marker's colour ramp draws, as numbers.
+  //
+  // `reopened` ties with `untouched` at the top rather than sitting below it:
+  // somebody went, it was not enough, and a person stood there and said so —
+  // that is a better-evidenced need than one nobody has visited at all.
+  //
+  // Both helped bands stay well clear of zero. A case people have worked on
+  // is the least urgent thing still OPEN, but it is still open, and sinking it
+  // to the bottom of the feed is how a house that needs four more Saturdays
+  // stops getting them.
   const statusBand =
-    rollup === "unclaimed"
+    rollup === "untouched" || rollup === "reopened"
       ? 3000
-      : rollup === "claimed"
+      : rollup === "onTheWay"
         ? 1500
-        : rollup === "attended"
-          ? 750
-          : 0;
+        : rollup === "partial"
+          ? 900
+          : rollup === "advanced"
+            ? 600
+            : 0;
 
   return (
     priorityBonus(order.neighborhood, needs, order.category) +

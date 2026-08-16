@@ -37,7 +37,7 @@ import { WorkOrderActions } from "./work-order-actions";
  * `WorkOrderActions` — public since 15 August, see AGENTS.md.
  */
 export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
-  const rollup = workOrderRollup(order.status);
+  const rollup = workOrderRollup(order);
   const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
   const { label: freshLabel, stale } = freshness(order.confirmedAt);
 

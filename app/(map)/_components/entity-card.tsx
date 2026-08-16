@@ -3,17 +3,12 @@
 import { PawPrint } from "lucide-react";
 
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import type { CallDTO } from "@/data/call/call.dto";
 import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
 import type { SiteDTO } from "@/data/site/site.dto";
 import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import {
   ANIMAL_KIND_STYLE,
   ANIMAL_LABEL,
-  CALL_CATEGORY_ICON,
-  CALL_STATE_LABEL,
-  CALL_STATE_MARKER,
-  CALL_STATE_STYLE,
   RESOURCE_TYPE_ICON,
   RESOURCE_TYPE_LABEL,
   SITE_STATUS_LABEL,
@@ -25,14 +20,12 @@ import {
   WORK_ORDER_ROLLUP_LABEL,
   WORK_ORDER_ROLLUP_MARKER,
   WORK_ORDER_ROLLUP_STYLE,
-  callState,
   workOrderRollup,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export type PanelEntity =
   | { kind: "site"; site: SiteDTO }
-  | { kind: "call"; call: CallDTO }
   | { kind: "animal"; animal: AnimalDTO }
   | { kind: "resourceOffer"; offer: ResourceOfferDTO }
   | { kind: "workOrder"; order: WorkOrderDTO };
@@ -81,30 +74,6 @@ export function EntityCard({
         />
       );
     }
-    case "call": {
-      const { call } = entity;
-      const Icon = CALL_CATEGORY_ICON[call.category];
-      const state = callState(call);
-      return (
-        <Row
-          id={call.id}
-          title={call.title}
-          // The barrio, like a sitio's row. There is no hour to qualify a
-          // grupo with any more, and "¿dónde queda?" is the question a list
-          // is scanned with either way.
-          detail={call.neighborhood}
-          body={call.description}
-          icon={<Icon className="size-3.5" strokeWidth={2.5} aria-hidden />}
-          // A corner, not a circle: the same distinction the map markers draw
-          // between a place you walk into and a shift you show up to.
-          iconClass={cn("rounded-md", CALL_STATE_MARKER[state])}
-          badge={CALL_STATE_LABEL[state]}
-          badgeClass={CALL_STATE_STYLE[state]}
-          selected={selected}
-          onSelect={onSelect}
-        />
-      );
-    }
     case "animal": {
       const { animal } = entity;
       const resolved = animal.resolvedAt !== null;
@@ -132,7 +101,7 @@ export function EntityCard({
     case "workOrder": {
       const { order } = entity;
       const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
-      const rollup = workOrderRollup(order.status);
+      const rollup = workOrderRollup(order);
       return (
         <Row
           id={order.id}
@@ -179,7 +148,7 @@ export function EntityCard({
 /**
  * The row itself, shared by all four families.
  *
- * They were four near-identical buttons with the same padding, the same
+ * They were near-identical buttons with the same padding, the same
  * anatomy and the same selection styling, which is four places for the next
  * spacing change to be applied in three of.
  *

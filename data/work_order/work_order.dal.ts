@@ -303,7 +303,7 @@ export class WorkOrderDAL {
   }
 
   /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
-   *  to `work_order_attendance`. */
+   *  to `work_order_update`. */
   async remove(id: string): Promise<void> {
     if (!canManageWorkOrder(this.user)) throw new Error("Forbidden");
 
@@ -330,6 +330,7 @@ export class WorkOrderDAL {
       status: row.status,
       attendeeCount: row.attendee_count,
       helpedCount: row.helped_count,
+      reopened: row.reopened,
       exactAddress: row.exact_address,
       contactName: row.contact_name,
       phone: row.phone,

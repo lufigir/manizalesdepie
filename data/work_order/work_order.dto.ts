@@ -79,6 +79,17 @@ export const workOrderSchema = z.object({
    *  both. */
   helpedCount: z.number().int().min(0),
   /**
+   * Somebody said "sigue haciendo falta" AFTER the last "ya ayudé".
+   *
+   * Derived in the database alongside `status` and never written by this
+   * application — see the migration `20260815070000_work_order_reopened`.
+   * It exists because the status of a contested case is still `attended`
+   * (people did turn up, and the thread should keep saying so), which on its
+   * own would paint the pin green. Read it with `workOrderRollup`, which is
+   * where the two are combined into the one thing a marker can show.
+   */
+  reopened: z.boolean(),
+  /**
    * How to reach whoever this case is about — public since the 15th of
    * August, when the reveal-on-attend gate was removed (see the migration
    * `20260815000000_public_work_order_contact`).

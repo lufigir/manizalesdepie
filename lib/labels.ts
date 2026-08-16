@@ -7,26 +7,23 @@ import {
   GlassWater,
   Droplet,
   HardHat,
-  HeartPulse,
   Home,
   Package,
   PawPrint,
   Shovel,
   Tent,
   Truck,
-  Users,
   Warehouse,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
 
-import type { CallCategory, CallDTO } from "@/data/call/call.dto";
 import type { NeedPriority } from "@/data/neighborhood/neighborhood.dto";
 import type { ResourceType } from "@/data/resource_offer/resource_offer.dto";
 import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
 import type {
   WorkOrderCategory,
-  WorkOrderStatus,
+  WorkOrderDTO,
   WorkOrderUpdateKind,
 } from "@/data/work_order/work_order.dto";
 import type { PanelChip } from "@/lib/tabs";
@@ -386,152 +383,6 @@ export const ANIMAL_KIND_STYLE = {
 } as const;
 
 /**
- * Grupos — cuadrillas, brigadas, turnos que alguien arma para ir a ayudar.
- *
- * "Grupo" and not "jornada" or "convocatoria" everywhere the reader can see.
- * The code says `volunteer_call` because that is what the row is (and
- * `conveneCall`, `CallDAL` keep that name too — renaming the schema and every
- * identifier for a copy change would be a much bigger, riskier edit for zero
- * user-facing gain); the city says "armemos un grupo pa' sacar escombros",
- * and matching the word people already use in a WhatsApp thread is what gets
- * someone to actually create one instead of just reading the map.
- */
-export const CALL_CATEGORY_LABEL: Record<CallCategory, string> = {
-  debris_removal: "Escombros",
-  logistics: "Logística",
-  census: "Censo",
-  animals: "Animales",
-  health: "Salud",
-  structural_survey: "Estructuras",
-  other: "Otra",
-};
-
-/** The icon carries the kind of work, exactly as it carries the kind of place
- *  on a site pin. The shovel is the one that has to be unmistakable: removing
- *  debris is most of what gets convened. */
-export const CALL_CATEGORY_ICON: Record<CallCategory, LucideIcon> = {
-  debris_removal: Shovel,
-  logistics: Boxes,
-  census: ClipboardList,
-  animals: PawPrint,
-  health: HeartPulse,
-  structural_survey: HardHat,
-  other: Users,
-};
-
-/**
- * What a call is doing right now, which is the only question a reader has
- * about one.
- *
- * This used to borrow a site's status colours outright, so the map would
- * teach one grammar instead of two. It taught one grammar and lost one
- * distinction: at map scale colour resolves several hundred milliseconds
- * before shape does, so a grupo en curso and an acopio abierto were the same
- * green dot until you looked twice. A grupo now carries its own hue
- * (`--group`) and states its state by weight instead — solid en curso,
- * softened próxima, grey once it is over. The status axis stays untouched
- * for the families that are actually on it.
- */
-export type CallState = "live" | "upcoming" | "ended";
-
-export function callState(
-  call: Pick<CallDTO, "startsAt" | "expiresAt">,
-  now: number = Date.now(),
-): CallState {
-  if (now >= Date.parse(call.expiresAt)) return "ended";
-  return now >= Date.parse(call.startsAt) ? "live" : "upcoming";
-}
-
-export const CALL_STATE_LABEL: Record<CallState, string> = {
-  live: "En curso",
-  upcoming: "Próxima",
-  ended: "Ya terminó",
-};
-
-export const CALL_STATE_MARKER: Record<CallState, string> = {
-  live: "bg-group text-group-foreground",
-  // Softened rather than recoloured: the hue is the identity and must not
-  // move between states, so weight is the only axis left to carry them.
-  upcoming: "bg-group/70 text-group-foreground",
-  ended: "bg-stale text-background",
-};
-
-export const CALL_STATE_STYLE: Record<CallState, string> = {
-  live: "bg-group-surface text-group border-group/30",
-  upcoming: "bg-group-surface/70 text-group border-group/20",
-  ended: "bg-stale-surface text-stale border-stale/30",
-};
-
-
-/** The grupos block at the top of "Ayudar", and the card on the map. */
-export const CALL_LABEL = {
-  heading: "Grupos",
-  headingHint: "Dónde hay gente trabajando ahora mismo",
-  empty:
-    "Todavía no hay grupos reportados. Si viste uno, o estás en uno, publícalo y la ciudad lo ve hoy mismo.",
-  meetingPoint: "Punto de encuentro",
-  organiser: "Escribir a quien reportó",
-  directions: "Cómo llegar",
-  share: "Compartir",
-  ended: "Este grupo ya terminó.",
-  endedHint: "Mira los que están abiertos ahora en el mapa.",
-  backToMap: "Ver el mapa",
-  countOne: "1 grupo",
-  countMany: (n: number) => `${n} grupos`,
-} as const;
-
-/** Moving a pin. See `RelocateCall` and `CallDAL.relocate`. */
-export const RELOCATE_LABEL = {
-  open: "Ajustar el punto",
-  title: "¿Dónde exactamente?",
-  hint: "Solo se puede mover dentro del mismo barrio. Si el punto queda fuera, no se guarda.",
-  save: "Guardar",
-  saving: "Guardando…",
-  cancel: "Cancelar",
-  done: "Punto actualizado",
-  failed: "No se pudo mover el punto. Intenta otra vez.",
-} as const;
-
-/**
- * The form that reports a grupo.
- *
- * It used to be two: a scheduled shift with an hour, a roster and a cap, and
- * a bare pin for "alguien se está juntando ahí". Ten of the first thirteen
- * grupos took the second path and one person in total ever signed up, so the
- * scheduled half is gone and this copy asks only what somebody walking past
- * can actually answer.
- */
-export const CALL_FORM = {
-  title: "Reportar un grupo",
-  subtitle:
-    "Sale al mapa de una vez, sin cuenta. Gente que ya está trabajando, o que se está juntando ahora.",
-  category: "¿Qué están haciendo?",
-  description: "¿Qué está pasando ahí?",
-  descriptionPlaceholder: "Un grupo de vecinos recogiendo escombros en la cuadra.",
-  barrio: "¿En qué barrio?",
-  where: "Ajusta el punto",
-  whereHint:
-    "El mapa ya está en el barrio. Arrastra unos metros hasta la esquina exacta.",
-  whereLocked: "Elige el barrio y el mapa se abre ahí.",
-  barrioRequired:
-    "Elige primero el barrio. Sin eso el punto queda en el centro de la ciudad.",
-  meetingAddress: "¿Dónde exactamente?",
-  meetingAddressPlaceholder: "Frente a la tienda, portería del conjunto…",
-  meetingAddressHint: "Opcional. Si sabes la esquina, ayuda a quien va llegando.",
-  whatsapp: "Tu WhatsApp",
-  whatsappHint:
-    "Opcional, y visible para todos: es para que te pregunten si el grupo sigue ahí.",
-  submit: "Publicar el grupo",
-  submitting: "Publicando…",
-  hint: "Sale del mapa solo, al terminar el día.",
-  nearbyTitle: "Ya hay un grupo parecido",
-  nearbyBody:
-    "Está muy cerca y se reportó hace poco. Si es el mismo, no lo publiques dos veces.",
-  nearbyIgnore: "No es el mismo, publicar igual",
-  failed: "No se pudo publicar. Revisa los datos e intenta otra vez.",
-} as const;
-
-/**
  * The services section, which has no entity behind it yet.
  *
  * It is shown empty rather than hidden because the four sections are the shape
@@ -644,8 +495,8 @@ export const BARRIO_PICKER = {
  */
 /**
  * Panel-wide labels. `UnifiedPanel` reads these plus whatever each family's
- * own module already exports (`CALL_LABEL.heading`, `SERVICES_LABEL.title`,
- * and so on) instead of duplicating a title here.
+ * own module already exports (`WORK_ORDER_LABEL.heading`,
+ * `SERVICES_LABEL.title`, and so on) instead of duplicating a title here.
  */
 /**
  * What a shared link says about itself — the card in a WhatsApp thread, the
@@ -658,21 +509,19 @@ export const OG_LABEL = {
   tagline: "Mapa de ayuda · Manizales y Villamaría",
   /** The eyebrow over each card — the kind of thing behind the link. */
   site: "Punto",
-  call: "Grupo",
   workOrder: "Necesidad",
   animal: "Animal",
   resourceOffer: "Servicio",
   /** The home card: no one entity, so it states what the map is for. */
   homeTitle: "¿Dónde ayudo hoy?",
   homeMeta:
-    "Acopios, albergues, donación de sangre, grupos y necesidades, en un solo mapa.",
+    "Necesidades, acopios, albergues y donación de sangre, en un solo mapa.",
   /** The home card counts what is on the map instead of describing it. A
    *  live map is proved by numbers; "en un solo mapa" is a claim, and after
    *  a disaster there are plenty of abandoned sites making it. */
-  homeCounts: (sites: number, calls: number, orders: number) =>
+  homeCounts: (sites: number, orders: number) =>
     [
       sites === 1 ? "1 punto" : `${sites} puntos`,
-      calls === 1 ? "1 grupo abierto" : `${calls} grupos abiertos`,
       orders === 1 ? "1 necesidad" : `${orders} necesidades`,
     ].join(" · "),
   /** The one line telling somebody who has never opened this that the image
@@ -720,22 +569,6 @@ export const NEED_PRIORITY_STYLE: Record<NeedPriority, string> = {
   high: "bg-claimed-surface text-claimed border-claimed/30",
   normal: "bg-muted text-muted-foreground border-transparent",
 };
-
-/**
- * Frentes: "este barrio necesita X", declared by the curator team so armar un
- * grupo starts from a problem already on record. See `neighborhood_need`.
- */
-export const FRONTS_LABEL = {
-  heading: "Frentes",
-  headingHint: "Lo que cada barrio necesita, con los grupos que ya están en eso",
-  empty: "Todavía no hay frentes declarados.",
-  cases: (n: number) => (n === 1 ? "1 caso" : `${n} casos`),
-  casesNone: "sin casos reportados",
-  groupsCount: (n: number) => (n === 1 ? "1 grupo" : `${n} grupos`),
-  groupsNone: "sin grupos todavía",
-  filterBarrio: "Ver este barrio",
-  armHere: "Armar un grupo aquí",
-} as const;
 
 /**
  * The header the panel grows when a barrio is being filtered by.
@@ -793,8 +626,12 @@ export function freshness(confirmedAt: string): {
 }
 
 /**
- * Órdenes de trabajo. "Grupo" is a cuadrilla with a time and a place; this is
- * closer to "reporté los escombros de la 24" — a single job, not an event.
+ * Órdenes de trabajo — "necesidades" to everyone who reads this app, and the
+ * spine of the whole product since the grupos were removed on 15 August.
+ *
+ * A case is "reporté los escombros de la 24": a single job at a single place,
+ * true until somebody does it. Not an event with an hour, which is what a
+ * grupo was and why it could not be kept honest on a map.
  */
 export const WORK_ORDER_CATEGORY_LABEL: Record<WorkOrderCategory, string> = {
   debris_removal: "Escombros",
@@ -825,46 +662,114 @@ export const WORK_ORDER_CATEGORY_ICON: Record<WorkOrderCategory, LucideIcon> = {
  * asked of a stranger scanning the map.
  */
 export type WorkOrderRollup =
-  | "unclaimed"
-  | "claimed"
-  | "attended"
-  | "closed";
+  /** Nobody has said anything about this case. The loudest thing on the map. */
+  | "untouched"
+  /** Somebody said "voy", and nobody has been yet. A promise, not a result. */
+  | "onTheWay"
+  /** One person helped. The case is NOT better than half-done — see below. */
+  | "partial"
+  /** Two or more people have helped, and it is still open. */
+  | "advanced"
+  /** Somebody stood there after the last help and said it is still not enough. */
+  | "reopened"
+  /** Closed by the book: two distinct, named phones said "ya ayudé". */
+  | "done"
+  /** Closed without being resolved — a curator's rejection, or already done by
+   *  others. Off the map's to-do list, but not a success. */
+  | "dismissed";
 
-export function workOrderRollup(status: WorkOrderStatus): WorkOrderRollup {
-  if (status === "unclaimed") return "unclaimed";
-  if (status === "claimed") return "claimed";
-  if (status === "attended") return "attended";
-  return "closed";
+/**
+ * What the pin says, read off the book of entries rather than off the status
+ * alone.
+ *
+ * Two corrections over the four-state version this replaces, both of them
+ * about the same mistake — treating one act of help as an ending.
+ *
+ * **Helping once does not finish a house.** A damaged home is worked on over
+ * days, by different people, in shifts nobody coordinates centrally: somebody
+ * clears the patio on Tuesday, somebody else the second floor on Saturday.
+ * The old rollup painted a case green the moment one person reported helping,
+ * and green is read across a map as "done, look elsewhere" — which is how a
+ * case that still needs five more people stops receiving any. Help now moves
+ * the pin through amber and only lightens as it accumulates; green is
+ * reserved for a case that actually closed.
+ *
+ * **A contested case was the worst of it.** "Ya ayudé" then "sigue haciendo
+ * falta" leaves `status` at `attended`, because people genuinely did turn up
+ * — so the one case on the map most in need of hands was wearing the colour
+ * that means handled. `reopened` is the second axis the database persists for
+ * exactly this (migration `20260815070000_work_order_reopened`) and it
+ * outranks every open state here.
+ *
+ * The intensity ramp within amber is the honest version of "how far along is
+ * this": it is a count of people, not a percentage of a job nobody has
+ * measured. It never reaches green on its own.
+ */
+export function workOrderRollup(
+  order: Pick<WorkOrderDTO, "status" | "reopened" | "helpedCount">,
+): WorkOrderRollup {
+  if (order.status === "closed_completed") return "done";
+  if (order.status === "closed_rejected" || order.status === "closed_by_others") {
+    return "dismissed";
+  }
+  // Outranks the help that came before it: that is the whole point of the
+  // entry somebody left.
+  if (order.reopened) return "reopened";
+  if (order.helpedCount >= 2) return "advanced";
+  if (order.helpedCount >= 1) return "partial";
+  if (order.status === "claimed") return "onTheWay";
+  return "untouched";
 }
 
 export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
-  unclaimed: "Necesita atención",
-  claimed: "En proceso",
-  // Says both halves on purpose. The word people reach for here is
-  // "atendido", and alone it reads as finished — which is exactly the
-  // mistake the old one-tap close institutionalised.
-  attended: "Atendido, sigue abierto",
-  closed: "Cerrado",
+  untouched: "Nadie ha ido",
+  onTheWay: "Alguien va en camino",
+  // Both halves, always. "Atendido" alone is the exact reading this whole
+  // scale exists to prevent.
+  partial: "Ayudaron una vez, sigue abierto",
+  advanced: "Varias ayudas, sigue abierto",
+  // Somebody's own words, because their entry is the reason this says what it
+  // says.
+  reopened: "Sigue haciendo falta",
+  done: "Resuelto",
+  dismissed: "Cerrado",
 };
 
-/** Same grammar as a site's marker: red asks for eyes on it, amber says
- *  someone is already moving, grey says there is nothing left to do here —
- *  matching `stale`, not `resolved`, because "closed_rejected" is not a
- *  success worth the green. */
+/**
+ * Four hues, and intensity inside the middle one.
+ *
+ * Red asks for eyes on it. Amber says people are on it and it is not over.
+ * Green means resolved, and nothing short of an actual close ever earns it.
+ * Grey means off the list without being a success — which is why a rejection
+ * lands on `stale` and not on `resolved`.
+ *
+ * The two reds and the two ambers are the "intensity" axis: the same hue,
+ * lightened as more people commit to the case, so a block of pins reads as a
+ * gradient of how much attention each one has already had without the reader
+ * decoding a legend. Lighter always means "further along", never "less
+ * urgent" — an untouched case and a reopened one are both full-strength red
+ * because they are asking for the same thing.
+ */
 export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
-  unclaimed: "bg-unclaimed text-unclaimed-foreground",
-  claimed: "bg-claimed text-claimed-foreground",
-  // Green, because somebody did turn up and that is worth seeing from across
-  // the map. Still a live pin, not a grey one: the case is open.
-  attended: "bg-resolved text-resolved-foreground",
-  closed: "bg-stale text-background",
+  untouched: "bg-unclaimed text-unclaimed-foreground",
+  // Softened, not recoloured: somebody saying "voy" is a promise. Nothing has
+  // happened at this house yet, so the pin must not stop being red.
+  onTheWay: "bg-unclaimed/75 text-unclaimed-foreground",
+  partial: "bg-claimed text-claimed-foreground",
+  advanced: "bg-claimed/70 text-claimed-foreground",
+  reopened: "bg-unclaimed text-unclaimed-foreground",
+  done: "bg-resolved text-resolved-foreground",
+  dismissed: "bg-stale text-background",
 };
 
 export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
-  unclaimed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
-  claimed: "bg-claimed-surface text-claimed border-claimed/30",
-  attended: "bg-resolved-surface text-resolved border-resolved/30",
-  closed: "bg-stale-surface text-stale border-stale/30",
+  untouched: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  onTheWay: "bg-unclaimed-surface/70 text-unclaimed border-unclaimed/20",
+  partial: "bg-claimed-surface text-claimed border-claimed/30",
+  advanced: "bg-claimed-surface/70 text-claimed border-claimed/20",
+  reopened: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  done: "bg-resolved-surface text-resolved border-resolved/30",
+  dismissed: "bg-stale-surface text-stale border-stale/30",
 };
 
 export const WORK_ORDER_LABEL = {
@@ -880,8 +785,7 @@ export const WORK_ORDER_LABEL = {
   countOne: "1 caso",
   countMany: (n: number) => `${n} casos`,
   // "Yo puedo atender" replaced "Reclamar" the 15th, along with the account
-  // it used to require: no login, just a name and a WhatsApp, the same
-  // shape `JOIN_LABEL` already uses for a grupo.
+  // it used to require: no login, just a name and a WhatsApp.
   attend: "Yo puedo atender",
   attending: "Enviando…",
   attendName: "Tu nombre (opcional)",
@@ -890,6 +794,12 @@ export const WORK_ORDER_LABEL = {
   attendSubmit: "Confirmar",
   attendCancel: "Ahora no",
   attendedThanks: "Listo, quedaste registrado.",
+  /** The two tabs `WorkOrderActions` splits into. "Detalle" is everything
+   *  that was competing with the thread for space on one long scroll —
+   *  contact, botones, curaduría — and "Hilo" reuses `threadTitle`/
+   *  `threadCount` below, so a case's history gets the panel to itself
+   *  instead of sharing it with nine other controls. */
+  tabDetail: "Detalle",
   /**
    * The contact block, shown to everyone since the 15th of August.
    *
@@ -910,7 +820,6 @@ export const WORK_ORDER_LABEL = {
   attendNote: "¿Qué pasó o qué vas a hacer?",
   attendNoteRequired: "Cuenta qué pasó, en pocas palabras.",
   attendNotePlaceholder: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
-  attendeesHide: "Ocultar",
   attendeesLoading: "Cargando…",
   attendeesEmpty: "Nadie ha escrito nada todavía.",
   attendeeCountOne: "1 persona va a atenderlo",
@@ -946,7 +855,26 @@ export const WORK_ORDER_LABEL = {
   sectionBeenThere: "¿Ya fuiste, o pasaste por ahí?",
   sectionWrong: "¿Algo está mal en este caso?",
   sectionCuration: "Curaduría",
-  threadCount: (n: number) => `Ver qué ha pasado (${n})`,
+  /**
+   * The thread's own heading.
+   *
+   * It used to be the label on a ghost button that kept the thread shut
+   * ("Ver qué ha pasado (3)"). The thread is the product — it is what makes
+   * several people working on one house over several days add up to
+   * something instead of three volquetas on the same corner at the same hour
+   * — and hiding it behind a tap put the most valuable thing on the card
+   * below the two least valuable.
+   */
+  threadTitle: "Qué ha pasado aquí",
+  threadCount: (n: number) => (n === 1 ? "1 nota" : `${n} notas`),
+  /** Said once, under an empty thread. An open case with nothing written on
+   *  it is the normal state of a new report, not a fault. */
+  threadEmptyHint:
+    "Si vas, o si ya fuiste, escribe una nota. Es lo que le dice a la siguiente persona qué falta.",
+  /** Marks the entry this reader just wrote, so their own note is findable in
+   *  a thread that may be long. */
+  threadYours: "Tu nota",
+  threadNoPhone: "Sin contacto",
   edit: "Editar",
   editCategory: "Categoría",
   editDescription: "Descripción",
@@ -980,6 +908,37 @@ export const WORK_ORDER_UPDATE_KIND_LABEL: Record<WorkOrderUpdateKind, string> =
   still_needed: "Sigue haciendo falta",
   not_real: "Esto no es un caso real",
 };
+
+/**
+ * How long ago an entry was written, as the thread prints it.
+ *
+ * Bare and short — "hace 2 h", not "Confirmado hace 2 horas" — because in a
+ * feed the timestamp is a corner label on somebody else's sentence, not a
+ * statement of its own. `freshness` above stays as it is: it is making a
+ * claim about a whole case being stale, which is a different thing to say.
+ *
+ * Anything past a week falls back to a date. "hace 23 días" is a number a
+ * reader has to convert; a date is one they can compare to the day the
+ * earthquake happened.
+ */
+export function timeAgo(iso: string, now: number = Date.now()): string {
+  const elapsedMs = now - new Date(iso).getTime();
+  const minutes = Math.floor(elapsedMs / 60_000);
+
+  if (minutes < 1) return "ahora";
+  if (minutes < 60) return relative.format(-minutes, "minute");
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return relative.format(-hours, "hour");
+
+  const days = Math.floor(hours / 24);
+  if (days <= 7) return relative.format(-days, "day");
+
+  return new Date(iso).toLocaleDateString("es-CO", {
+    day: "numeric",
+    month: "short",
+  });
+}
 
 /** What the thread prints beside each entry — shorter, because the name and
  *  the note are the line's content and this is only its kind. */
@@ -1030,7 +989,7 @@ export const WORK_ORDER_FORM = {
    * their behalf. It says "si no es tu casa, pregunta" for that reason.
    */
   contactHint:
-    "Público: cualquiera que abra el caso lo ve, y es lo que permite que te llamen. Si estás reportando la casa de otra persona, pregúntale antes de poner su dirección o su teléfono.",
+    "",
   exactAddress: "Dirección exacta",
   contactName: "Nombre de contacto",
   phone: "Teléfono",

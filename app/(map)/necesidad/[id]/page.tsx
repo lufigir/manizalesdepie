@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { CallDAL } from "@/data/call/call.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
@@ -43,7 +42,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const title = `${WORK_ORDER_CATEGORY_LABEL[order.category]}${
     order.neighborhood ? ` · ${order.neighborhood}` : ""
   }`;
-  const description = `${WORK_ORDER_ROLLUP_LABEL[workOrderRollup(order.status)]}. ${
+  const description = `${WORK_ORDER_ROLLUP_LABEL[workOrderRollup(order)]}. ${
     order.description
   }`;
 
@@ -63,11 +62,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedWorkOrderPage({ params }: Params) {
   const { id } = await params;
 
-  const [order, sites, calls, workOrders, animals, neighborhoodStatuses, user] =
+  const [order, sites, workOrders, animals, neighborhoodStatuses, user] =
     await Promise.all([
       WorkOrderDAL.public().findById(id),
       SiteDAL.public().listPublished(),
-      CallDAL.public().listPublished(),
       WorkOrderDAL.public().listPublished(),
       AnimalDAL.public().listPublished(),
       NeighborhoodDAL.public().statuses(),
@@ -87,7 +85,6 @@ export default async function SharedWorkOrderPage({ params }: Params) {
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
-        calls={calls}
         workOrders={withShared}
         animals={animals}
         neighborhoodStatuses={neighborhoodStatuses}
