@@ -16,15 +16,16 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { useSpreadPins } from "./use-clusters";
-
 /**
- * Every pin on the map, spread apart when they would otherwise sit on top of
- * each other. Downtown Manizales puts a dozen hospitals inside a few blocks,
- * which at city zoom would collapse to one spot — `useSpreadPins` pushes the
- * group onto a small ring instead of hiding it behind a count, so what is
- * drawn is always the real icon of a real place, never a number standing in
- * for one.
+ * Every pin on the map, each one on its own real coordinate.
+ *
+ * Pins used to be pushed onto a ring whenever several overlapped on screen,
+ * to keep downtown's dozen hospitals from collapsing into one spot at city
+ * zoom. It cost more than it bought: the pin a reader tapped was no longer
+ * where the place is, and the whole arrangement re-shuffled on every zoom, so
+ * the map moved under the hand that was trying to read it. Overlap is the
+ * honest failure mode — zoom in and they separate, because they really are
+ * separate.
  */
 export function SiteMarkers({
   sites,
@@ -35,19 +36,13 @@ export function SiteMarkers({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
-  const pins = useSpreadPins(sites);
-
   return (
     <>
-      {pins.map(({ item, longitude, latitude, offsetX, offsetY }) => (
+      {sites.map((site) => (
         <SinglePin
-          key={item.id}
-          site={item}
-          longitude={longitude}
-          latitude={latitude}
-          offsetX={offsetX}
-          offsetY={offsetY}
-          selected={selectedId === item.id}
+          key={site.id}
+          site={site}
+          selected={selectedId === site.id}
           onSelect={onSelect}
         />
       ))}
@@ -57,56 +52,39 @@ export function SiteMarkers({
 
 function SinglePin({
   site,
-  longitude,
-  latitude,
-  offsetX,
-  offsetY,
   selected,
   onSelect,
 }: {
   site: SiteDTO;
-  longitude: number;
-  latitude: number;
-  offsetX: number;
-  offsetY: number;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
   const Icon = SITE_TYPE_ICON[site.type];
   const { level, label: confidenceLabel } = confidence(site);
-  const spread = offsetX !== 0 || offsetY !== 0;
 
   return (
     <MapMarker
-      longitude={longitude}
-      latitude={latitude}
+      longitude={site.longitude}
+      latitude={site.latitude}
       onClick={() => onSelect(site.id)}
     >
       <MarkerContent>
-        {/* The nudge away from a shared centroid — zero for a pin with the
-            map to itself. A CSS transform, never a fake coordinate: what the
-            map claims about where this is stays exactly what the data says. */}
+        {/* The icon says what it is, the fill says whether it helps right
+            now, and the solidity says how much anyone has vouched for it.
+            Three facts, three channels, no legend needed to read the first
+            one. */}
         <span
-          className="block transition-transform duration-200"
-          style={spread ? { transform: `translate(${offsetX}px, ${offsetY}px)` } : undefined}
+          className={cn(
+            "ring-background flex size-7 items-center justify-center rounded-full shadow-md ring-2 transition-transform",
+            SITE_STATUS_MARKER[site.status],
+            CONFIDENCE_MARKER[level],
+            selected && "scale-125",
+          )}
+          aria-label={`${SITE_TYPE_LABEL[site.type]}: ${site.name}. ${
+            SITE_STATUS_LABEL[site.status]
+          }. ${confidenceLabel}`}
         >
-          {/* The icon says what it is, the fill says whether it helps right
-              now, and the solidity says how much anyone has vouched for it.
-              Three facts, three channels, no legend needed to read the
-              first one. */}
-          <span
-            className={cn(
-              "ring-background flex size-7 items-center justify-center rounded-full shadow-md ring-2 transition-transform",
-              SITE_STATUS_MARKER[site.status],
-              CONFIDENCE_MARKER[level],
-              selected && "scale-125",
-            )}
-            aria-label={`${SITE_TYPE_LABEL[site.type]}: ${site.name}. ${
-              SITE_STATUS_LABEL[site.status]
-            }. ${confidenceLabel}`}
-          >
-            <Icon className="size-4" strokeWidth={2.5} aria-hidden />
-          </span>
+          <Icon className="size-4" strokeWidth={2.5} aria-hidden />
         </span>
       </MarkerContent>
       {/* Names the pin before committing to a tap. Cheap on desktop, ignored

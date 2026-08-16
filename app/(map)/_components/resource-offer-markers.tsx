@@ -5,8 +5,6 @@ import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto"
 import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { useSpreadPins } from "./use-clusters";
-
 type Located = ResourceOfferDTO & { longitude: number; latitude: number };
 
 /**
@@ -17,9 +15,12 @@ type Located = ResourceOfferDTO & { longitude: number; latitude: number };
  * corner where the volqueta is parked, so the marker has to look like an
  * approximation or it reads as more precise than it is.
  *
- * Spread apart like sites — several offers from the same barrio commonly
- * share that exact centroid, which is the single densest point this map
- * draws — so `useSpreadPins` earns its keep here more than anywhere else.
+ * Several offers from the same barrio commonly share that exact centroid, and
+ * they are drawn stacked on it rather than fanned out around it. The dashed
+ * ring is already saying "this is the barrio, not the corner"; nudging the
+ * pins apart would draw a precision the data does not have, on the one family
+ * where the point was never exact to begin with. The panel is where several
+ * offers in one barrio get read apart.
  */
 export function ResourceOfferMarkers({
   resourceOffers,
@@ -34,19 +35,14 @@ export function ResourceOfferMarkers({
     (offer): offer is Located =>
       offer.longitude !== null && offer.latitude !== null,
   );
-  const pins = useSpreadPins(located);
 
   return (
     <>
-      {pins.map(({ item, longitude, latitude, offsetX, offsetY }) => (
+      {located.map((offer) => (
         <SinglePin
-          key={item.id}
-          offer={item}
-          longitude={longitude}
-          latitude={latitude}
-          offsetX={offsetX}
-          offsetY={offsetY}
-          selected={selectedId === item.id}
+          key={offer.id}
+          offer={offer}
+          selected={selectedId === offer.id}
           onSelect={onSelect}
         />
       ))}
@@ -56,44 +52,30 @@ export function ResourceOfferMarkers({
 
 function SinglePin({
   offer,
-  longitude,
-  latitude,
-  offsetX,
-  offsetY,
   selected,
   onSelect,
 }: {
   offer: Located;
-  longitude: number;
-  latitude: number;
-  offsetX: number;
-  offsetY: number;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
   const Icon = RESOURCE_TYPE_ICON[offer.type];
-  const spread = offsetX !== 0 || offsetY !== 0;
 
   return (
     <MapMarker
-      longitude={longitude}
-      latitude={latitude}
+      longitude={offer.longitude}
+      latitude={offer.latitude}
       onClick={() => onSelect(offer.id)}
     >
       <MarkerContent>
         <span
-          className="block transition-transform duration-200"
-          style={spread ? { transform: `translate(${offsetX}px, ${offsetY}px)` } : undefined}
+          className={cn(
+            "border-muted-foreground/60 bg-background text-foreground ring-background flex size-7 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2 transition-transform",
+            selected && "scale-125",
+          )}
+          aria-label={`${RESOURCE_TYPE_LABEL[offer.type]}: ${offer.description}`}
         >
-          <span
-            className={cn(
-              "border-muted-foreground/60 bg-background text-foreground ring-background flex size-7 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2 transition-transform",
-              selected && "scale-125",
-            )}
-            aria-label={`${RESOURCE_TYPE_LABEL[offer.type]}: ${offer.description}`}
-          >
-            <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
-          </span>
+          <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
         </span>
       </MarkerContent>
       {!selected && (
