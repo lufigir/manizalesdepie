@@ -79,7 +79,23 @@ export const REPORTABLE_SITE_TYPES: SiteType[] = [
   "census_point",
 ];
 
-export type ReportEntry = { href: string; label: string; icon: LucideIcon };
+export type ReportEntry = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /**
+   * The family's own hue, as a text token, for the icon on the menu row.
+   *
+   * It rides the entry rather than being switched on the href inside the
+   * component, which is what the menu used to do — a `switch` over four
+   * paths, each arm writing a different border, a different hover and a
+   * different icon colour. That put the palette in a component (the rule
+   * `eslint.config.mjs` enforces is about literal colours, but the spirit is
+   * this) and it put four paths in two places, so adding a fifth form meant
+   * remembering to come back here AND there.
+   */
+  tone: string;
+};
 
 /**
  * `UnifiedPanel`'s own chips — the one filter surface the app has now, always
@@ -138,8 +154,28 @@ export function initialChipForTab(tab: TabId): PanelChip {
  * offering it.
  */
 export const ALL_REPORT_ENTRIES: ReportEntry[] = [
-  { href: "/reportar/servicios", label: "Ofrecer un servicio", icon: Truck },
-  { href: "/reportar/animal", label: "Reportar un animal", icon: PawPrint },
-  { href: "/reportar/sitio", label: "Reportar un sitio", icon: MapPin },
-  { href: "/reportar/necesidad", label: "Reportar una necesidad", icon: LifeBuoy },
+  {
+    href: "/reportar/servicios",
+    label: "Ofrecer un servicio",
+    icon: Truck,
+    tone: "text-muted-foreground",
+  },
+  {
+    href: "/reportar/animal",
+    label: "Reportar un animal",
+    icon: PawPrint,
+    tone: "text-unclaimed",
+  },
+  {
+    href: "/reportar/sitio",
+    label: "Reportar un sitio",
+    icon: MapPin,
+    tone: "text-resolved",
+  },
+  {
+    href: "/reportar/necesidad",
+    label: "Reportar una necesidad",
+    icon: LifeBuoy,
+    tone: "text-unclaimed",
+  },
 ];

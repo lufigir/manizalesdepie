@@ -42,7 +42,7 @@ export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
   const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
 
-  const { label: freshLabel } = freshness(animal.lastSeenAt);
+  const { label: freshLabel } = freshness(animal.lastSeenAt, ANIMAL_LABEL.fresh);
   const resolved = animal.resolvedAt !== null;
 
   return (
@@ -99,7 +99,7 @@ export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
       </header>
 
       <p className="text-muted-foreground text-[0.7rem]">
-        {ANIMAL_LABEL.seenAt} {freshLabel.replace(/^Confirmado /, "")}
+        {freshLabel}
         {animal.zone && ` · ${animal.zone}`}
       </p>
 

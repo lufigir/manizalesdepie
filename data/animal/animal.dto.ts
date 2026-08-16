@@ -76,7 +76,7 @@ export type CreateAnimalInput = z.infer<typeof createAnimalSchema>;
 /** A curator correcting any of a report's own fields. Not the photo or the
  *  coordinate: replacing a photo needs the upload flow, and the point is
  *  read directly off where the animal was actually seen. */
-export const adminUpdateAnimalSchema = z.object({
+export const updateAnimalSchema = z.object({
   id: z.uuid(),
   kind: animalKindSchema.optional(),
   species: animalSpeciesSchema.optional(),
@@ -90,4 +90,4 @@ export const adminUpdateAnimalSchema = z.object({
     .optional(),
 });
 
-export type AdminUpdateAnimalInput = z.infer<typeof adminUpdateAnimalSchema>;
+export type UpdateAnimalInput = z.infer<typeof updateAnimalSchema>;

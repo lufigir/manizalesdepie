@@ -33,14 +33,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   if (!animal) return { title: OG_LABEL.notFound };
 
-  const { label: freshLabel } = freshness(animal.lastSeenAt);
+  const { label: freshLabel } = freshness(animal.lastSeenAt, ANIMAL_LABEL.fresh);
   const title = `${animal.petName ?? ANIMAL_LABEL[animal.species]} · ${
     animal.resolvedAt ? ANIMAL_LABEL.resolved : ANIMAL_LABEL[animal.kind]
   }`;
   const description = [
     animal.description,
     animal.zone,
-    `${ANIMAL_LABEL.seenAt} ${freshLabel.replace(/^Confirmado /, "")}`,
+    freshLabel,
   ]
     .filter(Boolean)
     .join(" · ");

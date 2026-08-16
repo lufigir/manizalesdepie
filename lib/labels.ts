@@ -1,15 +1,19 @@
 import {
   Boxes,
   Car,
+  CircleCheck,
   ClipboardList,
   Construction,
   Cross,
+  Flag,
   GlassWater,
   Droplet,
+  HandHelping,
   HardHat,
   Home,
   Package,
   PawPrint,
+  RotateCcw,
   Shovel,
   Tent,
   Truck,
@@ -166,6 +170,10 @@ export const SHEET_LABEL = {
    *  that already say what they do. */
   confirmPrompt: "¿Estás ahí? Confirma cómo está:",
   description: "Descripción",
+  /** Heads the type chips inside the edit form. The field is new there — the
+   *  old curator-only form corrected every text field and left the one that
+   *  decides which icon the map draws. */
+  editType: "¿Qué es este lugar?",
 } as const;
 
 /**
@@ -355,6 +363,18 @@ export const ANIMAL_LABEL = {
   resolved: "Ya está en casa",
   markResolved: "Ya apareció",
   seenAt: "Visto",
+  /**
+   * A sighting is seen, not confirmed — and `last_seen_at` is literally when
+   * somebody saw the animal, so "Publicado" would be as wrong here as
+   * "Confirmado" was.
+   *
+   * Callers used to pass the default verb and then strip it back off with
+   * `freshLabel.replace(/^Confirmado /, "")`, which only ever matched the
+   * under-24h branch: anything older came out as "Visto Sin confirmar hace 3
+   * días". Naming the verb here is what removes both the stripping and the
+   * sentence it produced.
+   */
+  fresh: { recent: "Visto", stale: "Visto" },
   contact: "Escribirle",
   noPhoto: "Sin foto",
   empty: "Todavía no hay reportes de animales.",
@@ -609,6 +629,99 @@ export const BARRIO_PANEL = {
   clear: "Ver toda la ciudad",
 } as const;
 
+/**
+ * The city's attendance, in three numbers, over the map.
+ *
+ * It took the corner a barrio-name chip used to hold. That chip named the
+ * barrio under the cursor — a fact the map itself already draws, and one
+ * nobody was reading — while the question this product exists to answer went
+ * unanswered anywhere on screen: how much of what has been reported still has
+ * nobody on it.
+ *
+ * The wording is people, never percentages of a job nobody measured, and the
+ * middle column is deliberately not called "atendido": a case somebody helped
+ * once is still open, and collapsing that into "done" is the exact misreading
+ * `WORK_ORDER_ROLLUP_LABEL` was written to prevent. So the third column says
+ * "ya ayudaron" — a true statement about people — rather than "resueltos",
+ * which would be false for most of what it counts.
+ */
+export const ATTENDANCE_LABEL = {
+  /** What the three numbers are counting. Kept for the screen-reader
+   *  sentence and the tooltip; the visible header is now the shut state's
+   *  own reading ("22 sin atender"), which says the subject by saying the
+   *  thing. */
+  heading: "Necesidades",
+  /** Names the header button for a screen reader, which cannot infer from a
+   *  chevron that there are two more rows behind it. */
+  toggle: "Ver el detalle de las necesidades",
+  /**
+   * The three read as one sentence — "22 sin atender · 0 en camino · 0 ya
+   * ayudaron" — so they are written as sentence fragments, not as column
+   * headers.
+   *
+   * They were "sin ir" / "van" / "ya ayudaron" under three stacked columns
+   * for exactly one revision. Stacked under a number, at the size that
+   * corner can afford, each fragment had to be read on its own and the
+   * clipped ones ("van") read as nothing at all.
+   */
+  /** Nobody has been. `untouched` plus `reopened`: somebody went, it was not
+   *  enough, and the case is asking for the same thing again. */
+  waiting: "sin atender",
+  /** Somebody said "voy" and has not reported back. */
+  onTheWay: "en camino",
+  /** At least one person helped — whether or not the case then closed. */
+  helped: "ya ayudaron",
+  /** The screen-reader sentence, and the tooltip. The columns are three
+   *  numbers with two-word labels; this is where the full reading lives. */
+  summary: (waiting: number, onTheWay: number, helped: number) =>
+    `${waiting} necesidades sin que nadie vaya, ${onTheWay} con alguien en camino, ${helped} donde ya ayudaron al menos una vez.`,
+  /** Nothing reported here at all. Shown instead of three zeros, which read
+   *  as "resuelto" rather than "sin datos". */
+  empty: "Sin necesidades reportadas",
+} as const;
+
+/**
+ * The write path's one button, bottom-left of the map.
+ *
+ * Its strings were hardcoded inside `ReportMenu` — the drift this module
+ * exists to prevent, and the only Spanish left in a component.
+ */
+export const REPORT_MENU = {
+  open: "Reportar",
+  close: "Cerrar",
+  openLabel: "Más formas de reportar",
+  closeLabel: "Cerrar opciones de reportar",
+  /** Sits above the four rows once the menu is open. The button says
+   *  "Reportar"; this says what the list under it is answering. */
+  heading: "¿Qué quieres reportar?",
+} as const;
+
+/**
+ * Correcting a pin's position.
+ *
+ * Worded as a correction and never as an edit. Almost every coordinate on
+ * this map is somebody's best guess — a form filled in on a street, or a
+ * press report geocoded by approximation — so moving a pin is the normal
+ * maintenance of the thing, not an administrative action, and the copy should
+ * not make a neighbour feel they are overruling anybody.
+ *
+ * Nothing here mentions the barrio rule. Somebody moving a pin thirty metres
+ * would have to read a restriction that will never apply to them; the one
+ * person it does apply to is told at the moment they hit it, by the DAL, in a
+ * sentence that also says what to do instead.
+ */
+export const RELOCATE_LABEL = {
+  action: "Corregir ubicación",
+  title: "¿Dónde queda exactamente?",
+  hint: "Mueve el mapa hasta que el pin quede en el sitio.",
+  barrioJump: "Ir a un barrio…",
+  barrioChosen: (name: string) => `Mapa en ${name} · cambiar`,
+  save: "Guardar aquí",
+  saving: "Guardando…",
+  cancel: "Cancelar",
+  failed: "No se pudo mover el punto.",
+} as const;
+
 /** The list beside the map. The filter matches what is already loaded, so the
  *  wording promises filtering and not searching the city. */
 export const LIST_LABEL = {
@@ -766,19 +879,27 @@ export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
 };
 
 /**
- * Four hues, and intensity inside the middle one.
+ * A ramp from red to green that a case walks along while staying open.
  *
- * Red asks for eyes on it. Amber says people are on it and it is not over.
- * Green means resolved, and nothing short of an actual close ever earns it.
- * Grey means off the list without being a success — which is why a rejection
+ * Red asks for eyes on it. Amber says somebody has been. Green says this is
+ * no longer where the city most needs a pair of hands — NOT that it is over.
+ * Grey means off the list without being a success, which is why a rejection
  * lands on `stale` and not on `resolved`.
  *
- * The two reds and the two ambers are the "intensity" axis: the same hue,
- * lightened as more people commit to the case, so a block of pins reads as a
- * gradient of how much attention each one has already had without the reader
- * decoding a legend. Lighter always means "further along", never "less
- * urgent" — an untouched case and a reopened one are both full-strength red
- * because they are asking for the same thing.
+ * Green used to mean closed, because a case closed itself on the second "ya
+ * ayudé" and `done` was the only way to earn the hue. That rule is gone (see
+ * the migration of 16 August): help arriving is not the same event as a
+ * household no longer needing help, and reading it as one took pins off the
+ * map over families who were still waiting. What survives is the reading the
+ * ramp was always for — how much attention this has already had — now
+ * carried all the way to the end of the scale.
+ *
+ * Full-strength green is still reserved for `done`, a curator's close, so
+ * there is exactly one green a reader may take as final.
+ *
+ * Lightness is the intensity axis within each hue: lighter always means
+ * "further along", never "less urgent". An untouched case and a reopened one
+ * are both full-strength red, because they are asking for the same thing.
  */
 export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
   untouched: "bg-unclaimed text-unclaimed-foreground",
@@ -786,8 +907,16 @@ export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
   // happened at this house yet, so the pin must not stop being red.
   onTheWay: "bg-unclaimed/75 text-unclaimed-foreground",
   partial: "bg-claimed text-claimed-foreground",
-  advanced: "bg-claimed/70 text-claimed-foreground",
+  // Green, and still open. This is the change of 16 August: a case used to
+  // close itself on the second "ya ayudé", so green could only ever mean
+  // closed. It does not close now (see the migration of the same date), so
+  // green carries what the ramp always meant by it — "this is no longer the
+  // most urgent thing on the map" — for a case that is still listed, still
+  // contactable, and still asking.
+  advanced: "bg-resolved/75 text-resolved-foreground",
   reopened: "bg-unclaimed text-unclaimed-foreground",
+  // Full-strength green is a curator's close, the one green a reader can
+  // take as final.
   done: "bg-resolved text-resolved-foreground",
   dismissed: "bg-stale text-background",
 };
@@ -796,7 +925,7 @@ export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
   untouched: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
   onTheWay: "bg-unclaimed-surface/70 text-unclaimed border-unclaimed/20",
   partial: "bg-claimed-surface text-claimed border-claimed/30",
-  advanced: "bg-claimed-surface/70 text-claimed border-claimed/20",
+  advanced: "bg-resolved-surface/70 text-resolved border-resolved/20",
   reopened: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
   done: "bg-resolved-surface text-resolved border-resolved/30",
   dismissed: "bg-stale-surface text-stale border-stale/30",
@@ -814,6 +943,18 @@ export const WORK_ORDER_LABEL = {
     "Todavía no hay necesidades puntuales reportadas. Si conoces una, repórtala desde Reportar.",
   countOne: "1 caso",
   countMany: (n: number) => `${n} casos`,
+  /**
+   * A case is published, not confirmed.
+   *
+   * "Confirmado hace 3 h" claimed somebody had gone back and vouched for the
+   * case, and nothing in this family can produce that: a necesidad carries no
+   * `confirmed_count`, and what people leave on it are thread entries (voy /
+   * ya ayudé / sigue haciendo falta), which the rollup already reports in its
+   * own words. `confirmed_at` here is the moment the case went up, so that is
+   * what the label says. Sitios keep the confirming verb, because sitios
+   * still have the one-tap confirmation behind it.
+   */
+  fresh: { recent: "Publicado", stale: "Publicado" },
   // "Yo puedo atender" replaced "Reclamar" the 15th, along with the account
   // it used to require: no login, just a name and a WhatsApp.
   attend: "Yo puedo atender",
@@ -868,9 +1009,15 @@ export const WORK_ORDER_LABEL = {
    * Two short sentences, not the four-line paragraph it started as: at
    * 0.65rem in a 20rem popup that was a grey wall nobody reads, which is the
    * same as not saying it.
+   *
+   * It used to say a case closes itself on the second "ya ayudé". It does
+   * not any more (see the migration of 16 August) — a case stays on the map
+   * and only changes colour — and this line is where that promise is made to
+   * the person about to tap. Saying it plainly is what makes "ya ayudé" safe
+   * to press: nothing disappears because of it.
    */
   updateHint:
-    "Un caso se cierra solo cuando dos personas distintas dicen que ya ayudaron. Cualquiera puede reabrirlo.",
+    "El caso no se cierra: se pone verde y deja de verse urgente, pero sigue en el mapa. Si sigue haciendo falta, dilo y vuelve a rojo.",
   /**
    * The section headings.
    *
@@ -988,11 +1135,58 @@ export const WORK_ORDER_UPDATE_KIND_STYLE: Record<WorkOrderUpdateKind, string> =
 
 /** What each entry asks for in its own words, so one composer can serve all
  *  four without the placeholder ever being generic. */
+/**
+ * One icon per entry kind, on the buttons that write them.
+ *
+ * The four buttons are four short sentences stacked in a card that already
+ * holds a description, a contact block and a thread, and at that density the
+ * eye reads shape before it reads words. The icons are chosen so the shape
+ * says the same thing as the sentence: an open hand offering, a tick for
+ * something done, an arrow turning back for a case that has to reopen, a
+ * flag for the one that is a report about the listing rather than about the
+ * job.
+ */
+export const WORK_ORDER_UPDATE_KIND_ICON: Record<WorkOrderUpdateKind, LucideIcon> = {
+  on_the_way: HandHelping,
+  helped: CircleCheck,
+  still_needed: RotateCcw,
+  not_real: Flag,
+};
+
 export const WORK_ORDER_UPDATE_PLACEHOLDER: Record<WorkOrderUpdateKind, string> = {
   on_the_way: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
   helped: "Saqué dos volquetadas. Falta despejar el andén.",
   still_needed: "Pasé hoy y sigue igual, no ha ido nadie.",
   not_real: "Es la misma casa que ya está reportada más arriba.",
+};
+
+/**
+ * What the note box already says when the composer opens.
+ *
+ * The note is required — an entry with no words is a counter moving with
+ * nothing behind it, and the counters are what close a case. But requiring it
+ * put a blank textarea between somebody standing in the street and the tap
+ * they came to make, and "no se me ocurre qué escribir" is a real reason a
+ * case never gets marked.
+ *
+ * So the box opens already saying the least the entry could say, and it is
+ * true by construction: it claims only what the button the reader pressed
+ * already claims, and nothing about times, quantities or other people.
+ * Whoever has more to say edits it — the placeholder underneath still shows
+ * a fuller example — and whoever clears it out gets this back rather than an
+ * error, because a cleared box means "no tengo nada que añadir", not "quiero
+ * empezar de nuevo".
+ *
+ * `not_real` is the one that is deliberately hedged. It is the only entry
+ * that says something about a household rather than about a job, so the
+ * default says "creo que", which is the honest strength of a stranger's
+ * report — and a curator, not this entry, is what actually rejects a case.
+ */
+export const WORK_ORDER_UPDATE_DEFAULT_NOTE: Record<WorkOrderUpdateKind, string> = {
+  on_the_way: "Voy para allá.",
+  helped: "Ya ayudé en este caso.",
+  still_needed: "Pasé y sigue haciendo falta.",
+  not_real: "Creo que este caso no es real.",
 };
 
 export const WORK_ORDER_FORM = {

@@ -6,12 +6,13 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
-  adminUpdateResourceOfferSchema,
   createResourceOfferSchema,
   resourceOfferSchema,
+  updateResourceOfferSchema,
   type ResourceOfferDTO,
 } from "./resource_offer.dto";
 import {
+  canEditResourceOffer,
   canManageResourceOffer,
   canProposeResourceOffer,
 } from "./resource_offer.policy";
@@ -146,12 +147,12 @@ export class ResourceOfferDAL {
     return { id: row.id };
   }
 
-  /** A curator corrects any of an offer's own fields — never the point,
-   *  see `adminUpdateResourceOfferSchema`. */
-  async adminUpdate(input: unknown): Promise<void> {
-    const data = adminUpdateResourceOfferSchema.parse(input);
+  /** Corrects an offer's own fields. Open to anyone — see
+   *  `canEditResourceOffer`. Never the point. */
+  async update(input: unknown): Promise<void> {
+    const data = updateResourceOfferSchema.parse(input);
 
-    if (!canManageResourceOffer(this.user)) throw new Error("Forbidden");
+    if (!canEditResourceOffer()) throw new Error("Forbidden");
 
     const patch: Record<string, unknown> = {};
     if (data.type !== undefined) patch.type = data.type;
@@ -167,16 +168,17 @@ export class ResourceOfferDAL {
       .eq("id", data.id);
 
     if (error) {
-      log.error("resourceOffer.adminUpdate failed", {
+      log.error("resourceOffer.update failed", {
         code: error.code,
         resourceOfferId: data.id,
       });
       throw new Error("No se pudo actualizar el servicio");
     }
 
-    log.info("resource offer admin-updated", {
+    log.info("resource offer updated", {
       resourceOfferId: data.id,
       fields: Object.keys(patch),
+      byUser: this.user?.id ?? "anon",
     });
   }
 

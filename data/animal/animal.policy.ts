@@ -27,7 +27,16 @@ export function canUnpublishAnimal(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
 
-/** Editing any field, hiding or deleting a report outright — curators only. */
+/** Correcting a report's own fields — anyone, no account. The bar is the same
+ *  as reporting one and as `canResolveAnimal`, for the same reason: the
+ *  person who has new information about a lost dog is rarely the one who
+ *  posted it. */
+export function canEditAnimal(): boolean {
+  return true;
+}
+
+/** Hiding or deleting a report outright — curators only. Those are the two an
+ *  edit cannot undo. */
 export function canManageAnimal(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }

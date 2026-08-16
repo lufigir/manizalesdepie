@@ -8,12 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  adminUpdateAnimal,
   deleteAnimal,
   resolveAnimal,
   setAnimalPublished,
+  updateAnimal,
 } from "@/data/animal/animal.actions";
-import type { AnimalDTO } from "@/data/animal/animal.dto";
+import {
+  ANIMAL_KINDS,
+  ANIMAL_SPECIES,
+  type AnimalDTO,
+  type AnimalKind,
+  type AnimalSpecies,
+} from "@/data/animal/animal.dto";
 import {
   ADMIN_LABEL,
   ANIMAL_FORM,
@@ -77,11 +83,13 @@ function AnimalCard({
 }) {
   const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
-  const { label: freshLabel } = freshness(animal.lastSeenAt);
+  const { label: freshLabel } = freshness(animal.lastSeenAt, ANIMAL_LABEL.fresh);
   const resolved = animal.resolvedAt !== null;
 
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [kind, setKind] = useState<AnimalKind>(animal.kind);
+  const [species, setSpecies] = useState<AnimalSpecies>(animal.species);
   const [petName, setPetName] = useState(animal.petName ?? "");
   const [description, setDescription] = useState(animal.description);
   const [zone, setZone] = useState(animal.zone ?? "");
@@ -91,7 +99,15 @@ function AnimalCard({
     setEditError(null);
     startTransition(async () => {
       try {
-        await adminUpdateAnimal({ id: animal.id, petName, description, zone, whatsapp });
+        await updateAnimal({
+          id: animal.id,
+          kind,
+          species,
+          petName,
+          description,
+          zone,
+          whatsapp,
+        });
         setEditOpen(false);
       } catch (cause) {
         setEditError(cause instanceof Error ? cause.message : ADMIN_LABEL.failed);
@@ -149,7 +165,7 @@ function AnimalCard({
             {animal.description}
           </p>
           <p className="text-muted-foreground text-[0.65rem]">
-            {ANIMAL_LABEL.seenAt} {freshLabel.replace(/^Confirmado /, "")}
+            {freshLabel}
             {animal.zone && ` · ${animal.zone}`}
           </p>
         </div>
@@ -183,10 +199,37 @@ function AnimalCard({
         )}
       </div>
 
-      {isAdmin && (
-        <div className="border-t px-2 pt-1.5 pb-2">
+      {/* Correcting the listing. Open to anyone, no account — the same bar as
+          reporting one and as marking it home (`canResolveAnimal`), and for
+          the same reason: whoever has new information about a lost dog is
+          rarely whoever posted it. See `canEditAnimal`. */}
+      <div className="border-t px-2 pt-1.5 pb-2">
           {editOpen ? (
             <div className="flex flex-col gap-1.5">
+              {/* Species and lost/found lead. A dog posted as "perdido" that
+                  turns out to be somebody's found dog is the correction that
+                  changes which half of the board it belongs on, and the old
+                  curator-only form could not make it. */}
+              <div className="flex flex-wrap gap-1">
+                {ANIMAL_KINDS.map((option) => (
+                  <Chip
+                    key={option}
+                    active={option === kind}
+                    onClick={() => setKind(option)}
+                    label={ANIMAL_LABEL[option]}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {ANIMAL_SPECIES.map((option) => (
+                  <Chip
+                    key={option}
+                    active={option === species}
+                    onClick={() => setSpecies(option)}
+                    label={ANIMAL_LABEL[option]}
+                  />
+                ))}
+              </div>
               <Input
                 value={petName}
                 onChange={(e) => setPetName(e.target.value)}
@@ -213,7 +256,7 @@ function AnimalCard({
                 </p>
               )}
               <div className="flex gap-1">
-                <Button size="sm" loading={pending} onClick={saveEdit}>
+                <Button size="sm" className="flex-1" loading={pending} onClick={saveEdit}>
                   {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
@@ -222,19 +265,53 @@ function AnimalCard({
               </div>
             </div>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
               <Pencil className="size-3" aria-hidden />
               {ADMIN_LABEL.edit}
-            </Button>
+            </button>
           )}
 
-          <AdminActions
-            published={animal.published}
-            onSetPublished={(published) => setAnimalPublished(animal.id, published)}
-            onDelete={() => deleteAnimal(animal.id)}
-          />
+          {/* Hiding and deleting stay a curator's: the two an edit cannot
+              undo. */}
+          {isAdmin && (
+            <AdminActions
+              published={animal.published}
+              onSetPublished={(published) => setAnimalPublished(animal.id, published)}
+              onDelete={() => deleteAnimal(animal.id)}
+            />
+          )}
         </div>
-      )}
     </li>
+  );
+}
+
+/** One option in the kind/species rows of the edit form. Same shape as the
+ *  type chips on a site's card and a service's, so the three edit forms are
+ *  one thing to learn. */
+function Chip({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "focus-visible:ring-ring rounded-full border px-2 py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        active ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent",
+      )}
+    >
+      {label}
+    </button>
   );
 }

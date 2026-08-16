@@ -62,14 +62,14 @@ export default async function Image({
     );
   }
 
-  const { label: freshLabel } = freshness(animal.lastSeenAt);
+  const { label: freshLabel } = freshness(animal.lastSeenAt, ANIMAL_LABEL.fresh);
   const state = animal.resolvedAt
     ? ANIMAL_LABEL.resolved
     : ANIMAL_LABEL[animal.kind];
   const name = animal.petName ?? ANIMAL_LABEL[animal.species];
   const where = [
     animal.zone,
-    `${ANIMAL_LABEL.seenAt} ${freshLabel.replace(/^Confirmado /, "")}`,
+    freshLabel,
   ]
     .filter(Boolean)
     .join(" · ");

@@ -15,7 +15,15 @@ export function canProposeResourceOffer(): boolean {
   return true;
 }
 
-/** Editing any field, hiding or deleting an offer outright — curators only. */
+/** Correcting an offer's own fields — anyone, no account. Same bar as
+ *  reporting one, and the same reasoning as `canEditSite`: the volqueta's
+ *  owner should be able to fix their own listing without signing in. */
+export function canEditResourceOffer(): boolean {
+  return true;
+}
+
+/** Hiding or deleting an offer outright — curators only. Those are the two
+ *  an edit cannot undo. */
 export function canManageResourceOffer(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }

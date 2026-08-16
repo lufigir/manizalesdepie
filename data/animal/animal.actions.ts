@@ -51,7 +51,8 @@ export async function resolveAnimal(id: string) {
   revalidatePath("/");
 }
 
-export async function adminUpdateAnimal(input: {
+/** Corrects a report's fields. Open to anyone — see `canEditAnimal`. */
+export async function updateAnimal(input: {
   id: string;
   kind?: string;
   species?: string;
@@ -61,7 +62,7 @@ export async function adminUpdateAnimal(input: {
   whatsapp?: string;
 }) {
   const dal = await AnimalDAL.create();
-  await dal.adminUpdate(input);
+  await dal.update(input);
   revalidatePath("/");
 }
 

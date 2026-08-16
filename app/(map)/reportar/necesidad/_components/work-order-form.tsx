@@ -30,7 +30,15 @@ const START: [number, number] = [-75.5074, 5.0631];
  * whoever reports it, because reporting damage collects nobody's contact
  * details on the reporter's own behalf.
  */
-export function WorkOrderForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
+export function WorkOrderForm({
+  barrios,
+  userName,
+}: {
+  barrios: NeighborhoodDTO[];
+  /** The signed-in reader's name, or null. Seeds the contact field only —
+   *  reporting still requires no account. */
+  userName: string | null;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +52,7 @@ export function WorkOrderForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   const [description, setDescription] = useState("");
   const [point, setPoint] = useState({ lng: START[0], lat: START[1] });
   const [exactAddress, setExactAddress] = useState("");
-  const [contactName, setContactName] = useState("");
+  const [contactName, setContactName] = useState(userName ?? "");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
 

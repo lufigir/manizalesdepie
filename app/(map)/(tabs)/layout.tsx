@@ -30,6 +30,7 @@ export default async function TabsLayout() {
     workOrders,
     neighborhoodStatuses,
     neighborhoodNeeds,
+    barrios,
     user,
   ] = await Promise.all([
     // `.create()`, not `.public()`, on every list read below: a curator's
@@ -44,6 +45,10 @@ export default async function TabsLayout() {
     WorkOrderDAL.create().then((dal) => dal.listPublished()),
     NeighborhoodDAL.public().statuses(),
     NeighborhoodDAL.public().needs(),
+    // The barrio list, for the picker inside the relocation overlay: aiming a
+    // corrected pin by naming the barrio is the same easy version of the
+    // question the report form already leans on (see `BarrioPicker`).
+    NeighborhoodDAL.public().list(),
     getCurrentUser(),
   ]);
 
@@ -56,6 +61,7 @@ export default async function TabsLayout() {
         workOrders={workOrders}
         neighborhoodStatuses={neighborhoodStatuses}
         neighborhoodNeeds={neighborhoodNeeds}
+        barrios={barrios}
         user={user}
       />
     </main>

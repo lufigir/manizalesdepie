@@ -7,11 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  adminUpdateResourceOffer,
   deleteResourceOffer,
   setResourceOfferPublished,
+  updateResourceOffer,
 } from "@/data/resource_offer/resource_offer.actions";
-import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
+import {
+  RESOURCE_TYPES,
+  type ResourceOfferDTO,
+  type ResourceType,
+} from "@/data/resource_offer/resource_offer.dto";
 import {
   ADMIN_LABEL,
   RESOURCE_TYPE_ICON,
@@ -64,6 +68,7 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [type, setType] = useState<ResourceType>(offer.type);
   const [description, setDescription] = useState(offer.description);
   const [area, setArea] = useState(offer.area ?? "");
   const [whatsapp, setWhatsapp] = useState(offer.whatsapp);
@@ -72,7 +77,7 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
     setEditError(null);
     startTransition(async () => {
       try {
-        await adminUpdateResourceOffer({ id: offer.id, description, area, whatsapp });
+        await updateResourceOffer({ id: offer.id, type, description, area, whatsapp });
         setEditOpen(false);
       } catch (cause) {
         setEditError(cause instanceof Error ? cause.message : ADMIN_LABEL.failed);
@@ -138,10 +143,39 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
           </div>
         </button>
 
-        {isAdmin && (
-          <div className="border-t pt-1.5">
+        {/* Correcting the listing. Open to anyone, no account — the same bar
+            as posting one, and the offerer is rarely signed in. See
+            `canEditResourceOffer`. */}
+        <div className="border-t pt-1.5">
             {editOpen ? (
               <div className="flex flex-col gap-1.5">
+                {/* The resource type leads, and it is the field the
+                    curator-only form did not offer: an offer posted as
+                    "otro" because the list was not read is the one that
+                    never gets found by somebody looking for a volqueta. */}
+                <div className="flex flex-wrap gap-1">
+                  {RESOURCE_TYPES.map((option) => {
+                    const OptionIcon = RESOURCE_TYPE_ICON[option];
+                    const active = option === type;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setType(option)}
+                        aria-pressed={active}
+                        className={cn(
+                          "focus-visible:ring-ring flex items-center gap-1 rounded-full border px-2 py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "hover:bg-accent",
+                        )}
+                      >
+                        <OptionIcon className="size-3" aria-hidden />
+                        {RESOURCE_TYPE_LABEL[option]}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Textarea
                   rows={2}
                   value={description}
@@ -164,7 +198,7 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
                   </p>
                 )}
                 <div className="flex gap-1">
-                  <Button size="sm" loading={pending} onClick={saveEdit}>
+                  <Button size="sm" className="flex-1" loading={pending} onClick={saveEdit}>
                     {pending ? ADMIN_LABEL.saving : ADMIN_LABEL.save}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>
@@ -173,19 +207,26 @@ function ServiceCard({ offer }: { offer: ResourceOfferDTO }) {
                 </div>
               </div>
             ) : (
-              <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:ring-ring flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-[0.7rem] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
                 <Pencil className="size-3" aria-hidden />
                 {ADMIN_LABEL.edit}
-              </Button>
+              </button>
             )}
 
-            <AdminActions
-              published={offer.published}
-              onSetPublished={(published) => setResourceOfferPublished(offer.id, published)}
-              onDelete={() => deleteResourceOffer(offer.id)}
-            />
+            {/* Hiding and deleting stay a curator's: the two an edit cannot
+                undo. */}
+            {isAdmin && (
+              <AdminActions
+                published={offer.published}
+                onSetPublished={(published) => setResourceOfferPublished(offer.id, published)}
+                onDelete={() => deleteResourceOffer(offer.id)}
+              />
+            )}
           </div>
-        )}
       </div>
     </li>
   );

@@ -70,9 +70,9 @@ export type CreateResourceOfferInput = z.infer<
   typeof createResourceOfferSchema
 >;
 
-/** A curator correcting any of an offer's own fields — not the point,
- *  same reasoning as `adminUpdateSiteSchema`. */
-export const adminUpdateResourceOfferSchema = z.object({
+/** Correcting an offer's own fields — anyone, see `canEditResourceOffer`.
+ *  Not the point: an offer is pinned at its barrio's centroid by design. */
+export const updateResourceOfferSchema = z.object({
   id: z.uuid(),
   type: resourceTypeSchema.optional(),
   description: z.string().trim().min(5).max(500).optional(),
@@ -84,6 +84,6 @@ export const adminUpdateResourceOfferSchema = z.object({
     .optional(),
 });
 
-export type AdminUpdateResourceOfferInput = z.infer<
-  typeof adminUpdateResourceOfferSchema
+export type UpdateResourceOfferInput = z.infer<
+  typeof updateResourceOfferSchema
 >;

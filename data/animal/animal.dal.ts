@@ -7,12 +7,13 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
-  adminUpdateAnimalSchema,
   animalSchema,
   createAnimalSchema,
+  updateAnimalSchema,
   type AnimalDTO,
 } from "./animal.dto";
 import {
+  canEditAnimal,
   canManageAnimal,
   canReportAnimal,
   canResolveAnimal,
@@ -183,12 +184,12 @@ export class AnimalDAL {
     }
   }
 
-  /** A curator corrects any of a report's own fields — never the photo or
-   *  the coordinate, see `adminUpdateAnimalSchema`. */
-  async adminUpdate(input: unknown): Promise<void> {
-    const data = adminUpdateAnimalSchema.parse(input);
+  /** Corrects a report's own fields. Open to anyone — see `canEditAnimal`.
+   *  Never the photo or the coordinate: see `updateAnimalSchema`. */
+  async update(input: unknown): Promise<void> {
+    const data = updateAnimalSchema.parse(input);
 
-    if (!canManageAnimal(this.user)) throw new Error("Forbidden");
+    if (!canEditAnimal()) throw new Error("Forbidden");
 
     const patch: Record<string, unknown> = {};
     if (data.kind !== undefined) patch.kind = data.kind;
@@ -207,7 +208,11 @@ export class AnimalDAL {
       throw new Error("No se pudo actualizar el reporte");
     }
 
-    log.info("animal admin-updated", { animalId: data.id, fields: Object.keys(patch) });
+    log.info("animal updated", {
+      animalId: data.id,
+      fields: Object.keys(patch),
+      byUser: this.user?.id ?? "anon",
+    });
   }
 
   /** A curator hides or republishes a report — reversible, the same

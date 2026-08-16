@@ -26,7 +26,8 @@ export async function proposeResourceOffer(input: {
   return { id };
 }
 
-export async function adminUpdateResourceOffer(input: {
+/** Corrects an offer's fields. Open to anyone — see `canEditResourceOffer`. */
+export async function updateResourceOffer(input: {
   id: string;
   type?: string;
   description?: string;
@@ -34,7 +35,7 @@ export async function adminUpdateResourceOffer(input: {
   whatsapp?: string;
 }) {
   const dal = await ResourceOfferDAL.create();
-  await dal.adminUpdate(input);
+  await dal.update(input);
   revalidatePath("/");
   revalidatePath("/admin");
 }

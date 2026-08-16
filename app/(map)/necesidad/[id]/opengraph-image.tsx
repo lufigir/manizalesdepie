@@ -4,6 +4,7 @@ import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 import {
   OG_LABEL,
   WORK_ORDER_CATEGORY_LABEL,
+  WORK_ORDER_LABEL,
   WORK_ORDER_ROLLUP_LABEL,
   freshness,
   workOrderRollup,
@@ -69,7 +70,10 @@ export default async function Image({
   }
 
   const rollup = workOrderRollup(order);
-  const { label: freshLabel } = freshness(order.confirmedAt);
+  const { label: freshLabel } = freshness(
+    order.confirmedAt,
+    WORK_ORDER_LABEL.fresh,
+  );
 
   return new ImageResponse(
     (

@@ -1,5 +1,14 @@
 "use client";
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Building2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  MapPin,
+  X,
+} from "lucide-react";
 
 import type {
   NeighborhoodStatusDTO,
@@ -77,14 +86,27 @@ export function BarrioHeader() {
           onClick={() => setPanelCollapsed(false)}
           aria-label={toggleLabel}
           aria-expanded={false}
-          className="hover:bg-accent focus-visible:ring-ring hidden h-full w-full items-start justify-center pt-3 transition-colors focus-visible:ring-2 focus-visible:outline-none lg:flex"
+          className={cn(
+            "focus-visible:ring-ring hidden h-full w-full items-start justify-center pt-3 transition-colors focus-visible:ring-2 focus-visible:outline-none lg:flex",
+            barrio
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-accent",
+          )}
         >
-          <ChevronLeft className="size-4" aria-hidden />
+          <span className="flex flex-col items-center gap-2">
+            <ChevronLeft className="size-4" aria-hidden />
+            {barrio ? (
+              <MapPin className="size-4" strokeWidth={2.5} aria-hidden />
+            ) : (
+              <Building2 className="size-4" strokeWidth={2.5} aria-hidden />
+            )}
+          </span>
         </button>
 
         <CollapsedBar
           label={barrio ? barrio.name : BARRIO_PANEL.wholeCity}
           total={total}
+          filtered={barrio !== null}
           onExpand={() => setPanelCollapsed(false)}
           toggleLabel={toggleLabel}
         />
@@ -94,12 +116,53 @@ export function BarrioHeader() {
 
   return (
     <div className="shrink-0 border-b">
-      <div className="bg-accent/40 flex items-center gap-2 px-3 py-2">
+      {/*
+        Filtered, the whole strip goes primary.
+        A barrio filter is the one piece of state in this app that silently
+        changes the answer to the question the app exists to answer: the panel
+        says "0 puntos" and it reads as "no hay nada", when what it means is
+        "no hay nada AQUÍ". The "Ver toda la ciudad" chip was already present
+        and was already the way out — it was just a bordered pill on a faint
+        grey strip, which is what every other quiet control here looks like.
+        Filling the header is what makes the state visible before the count is
+        read, rather than explaining it afterwards.
+      */}
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 transition-colors",
+          barrio ? "bg-primary text-primary-foreground" : "bg-accent/40",
+        )}
+      >
+        {/* The scope, as a shape.
+            "Toda la ciudad" and "San Joaquín" are two different answers to
+            the same question and they were two runs of text at the same
+            weight — read at a glance, one looked like the other with a
+            different word in it. A pin means one place; the block of
+            buildings means all of them, and the fill behind it already says
+            whether a filter is on. */}
+        <span
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-lg",
+            barrio ? "bg-primary-foreground/15" : "bg-background/60",
+          )}
+        >
+          {barrio ? (
+            <MapPin className="size-4" strokeWidth={2.5} aria-hidden />
+          ) : (
+            <Building2 className="size-4" strokeWidth={2.5} aria-hidden />
+          )}
+        </span>
+
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm leading-tight font-semibold">
             {barrio ? barrio.name : BARRIO_PANEL.wholeCity}
           </p>
-          <p className="text-muted-foreground text-xs tabular-nums">
+          <p
+            className={cn(
+              "text-xs tabular-nums",
+              barrio ? "text-primary-foreground/80" : "text-muted-foreground",
+            )}
+          >
             {barrio?.comuna && `${BARRIO_PANEL.comuna(barrio.comuna)} · `}
             {total === 1 ? PANEL_LABEL.itemsOne : PANEL_LABEL.itemsMany(total)}
           </p>
@@ -109,9 +172,9 @@ export function BarrioHeader() {
           <button
             type="button"
             onClick={clearBarrio}
-            className="hover:bg-accent focus-visible:ring-ring flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[0.7rem] font-medium focus-visible:ring-2 focus-visible:outline-none"
+            className="bg-primary-foreground/15 hover:bg-primary-foreground/25 focus-visible:ring-primary-foreground flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.7rem] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            <X className="size-3" aria-hidden />
+            <X className="size-3" strokeWidth={3} aria-hidden />
             {BARRIO_PANEL.clear}
           </button>
         )}
@@ -123,7 +186,10 @@ export function BarrioHeader() {
           onClick={() => setPanelCollapsed(true)}
           aria-label={toggleLabel}
           aria-expanded
-          className="hover:bg-accent focus-visible:ring-ring flex size-7 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          className={cn(
+            "focus-visible:ring-ring flex size-7 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none",
+            barrio ? "hover:bg-primary-foreground/20" : "hover:bg-accent",
+          )}
         >
           <ChevronDown className="size-4 lg:hidden" aria-hidden />
           <ChevronRight className="hidden size-4 lg:block" aria-hidden />
@@ -156,11 +222,16 @@ export function BarrioHeader() {
 function CollapsedBar({
   label,
   total,
+  filtered,
   onExpand,
   toggleLabel,
 }: {
   label: string;
   total: number;
+  /** Whether a barrio filter is on. Carried through to the shut state on
+   *  purpose: a filter the reader cannot see is a filter they will read the
+   *  count against, and the panel is shut for most of a visit on a phone. */
+  filtered: boolean;
   onExpand: () => void;
   toggleLabel: string;
 }) {
@@ -170,12 +241,29 @@ function CollapsedBar({
       onClick={onExpand}
       aria-label={toggleLabel}
       aria-expanded={false}
-      className="hover:bg-accent focus-visible:ring-ring flex h-full w-full items-center gap-2 px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none lg:hidden"
+      className={cn(
+        "focus-visible:ring-ring flex h-full w-full items-center gap-2 px-3 transition-colors focus-visible:ring-2 focus-visible:outline-none lg:hidden",
+        filtered
+          ? "bg-primary text-primary-foreground"
+          : "hover:bg-accent",
+      )}
     >
+      {/* The same two icons as the open header, so the shut bar is the same
+          sentence shorter rather than a different one. */}
+      {filtered ? (
+        <MapPin className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+      ) : (
+        <Building2 className="size-4 shrink-0" strokeWidth={2.5} aria-hidden />
+      )}
       <span className="min-w-0 flex-1 truncate text-left text-sm font-semibold">
         {label}
       </span>
-      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+      <span
+        className={cn(
+          "shrink-0 text-xs tabular-nums",
+          filtered ? "text-primary-foreground/80" : "text-muted-foreground",
+        )}
+      >
         {total === 1 ? PANEL_LABEL.itemsOne : PANEL_LABEL.itemsMany(total)}
       </span>
       <ChevronUp className="size-4 shrink-0" aria-hidden />

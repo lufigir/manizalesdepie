@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, X } from "lucide-react";
+import { ChevronRight, Plus, X } from "lucide-react";
 
+import { REPORT_MENU } from "@/lib/labels";
 import type { ReportEntry } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,14 @@ import { cn } from "@/lib/utils";
  * only button in that corner and it carries every form in the app, unchanged
  * from chip to chip, so "¿cómo reporto esto?" has exactly one answer wherever
  * the reader happens to be.
+ *
+ * The open menu is one card of rows, matching `AttendanceStats` in the
+ * opposite corner: same radius, same border, same translucent background,
+ * same shadow. It was four free-floating pills before, each with its own
+ * border weight, border style and hover colour — solid red, solid green,
+ * dashed red, dashed grey — which was a legend nobody asked for, on a
+ * control where the colour encodes nothing a reader has to decide. The hue
+ * survives where it costs nothing and still helps: the icon.
  */
 export function ReportMenu({
   entries,
@@ -32,61 +41,43 @@ export function ReportMenu({
   return (
     <div className="flex flex-col items-start gap-2">
       {open && (
-        <div className="flex flex-col items-start gap-1.5">
-          {entries.map(({ href, label, icon: Icon }) => {
-            const path = href.split("?")[0];
-            let borderStyle = "border-border hover:bg-accent text-foreground rounded-full border";
-            let iconStyle = "text-muted-foreground";
-
-            switch (path) {
-              case "/reportar/necesidad":
-                // Necesidades: Solid border-unclaimed (red)
-                borderStyle = "border-unclaimed/70 text-unclaimed bg-background/95 hover:bg-unclaimed-surface/50 rounded-full border-2";
-                iconStyle = "text-unclaimed";
-                break;
-              case "/reportar/sitio":
-                // Sitios: Solid border-resolved (green)
-                borderStyle = "border-resolved/70 text-resolved bg-background/95 hover:bg-resolved-surface/50 rounded-full border-2";
-                iconStyle = "text-resolved";
-                break;
-              case "/reportar/animal":
-                // Mascotas: Dashed red border (sighting trace)
-                borderStyle = "border-dashed border-2 border-unclaimed/60 text-unclaimed bg-background/95 hover:bg-unclaimed-surface/50 rounded-full";
-                iconStyle = "text-unclaimed";
-                break;
-              case "/reportar/servicios":
-                // Servicios: Dashed gray border
-                borderStyle = "border-dashed border-2 border-muted-foreground/60 text-muted-foreground bg-background/95 hover:bg-accent rounded-full";
-                iconStyle = "text-muted-foreground";
-                break;
-            }
-
-            return (
-              <Link
-                key={href}
-                href={barrio ? `${href}?barrio=${encodeURIComponent(barrio)}` : href}
-                className={cn(
-                  "focus-visible:ring-ring flex items-center gap-1.5 py-2 pr-3.5 pl-3 text-xs font-semibold shadow-lg backdrop-blur focus-visible:ring-2 focus-visible:outline-none",
-                  borderStyle
-                )}
-              >
-                <Icon className={cn("size-3.5", iconStyle)} strokeWidth={2.5} aria-hidden />
-                {label}
-              </Link>
-            );
-          })}
+        <div className="bg-background/95 flex w-56 flex-col rounded-xl border p-1.5 shadow-lg backdrop-blur">
+          <p className="text-muted-foreground px-2 pt-1 pb-1.5 text-[0.55rem] leading-none font-semibold tracking-widest uppercase">
+            {REPORT_MENU.heading}
+          </p>
+          {entries.map(({ href, label, icon: Icon, tone }) => (
+            <Link
+              key={href}
+              href={barrio ? `${href}?barrio=${encodeURIComponent(barrio)}` : href}
+              className="hover:bg-accent focus-visible:ring-ring flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Icon
+                className={cn("size-4 shrink-0", tone)}
+                strokeWidth={2.5}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate">{label}</span>
+              <ChevronRight
+                className="text-muted-foreground/60 size-3 shrink-0"
+                aria-hidden
+              />
+            </Link>
+          ))}
         </div>
       )}
 
+      {/* Rounded to match the card above it and the one across the map,
+          rather than the pill it was: three floating controls with three
+          different silhouettes read as three unrelated apps. */}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        aria-label={open ? "Cerrar opciones de reportar" : "Más formas de reportar"}
+        aria-label={open ? REPORT_MENU.closeLabel : REPORT_MENU.openLabel}
         className={cn(
-          "focus-visible:ring-ring flex items-center gap-2 rounded-full py-3 pr-4 pl-3.5 text-sm font-semibold shadow-lg transition-colors focus-visible:ring-2 focus-visible:outline-none",
+          "focus-visible:ring-ring flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold shadow-lg transition-colors focus-visible:ring-2 focus-visible:outline-none",
           open
-            ? "bg-accent text-accent-foreground"
+            ? "bg-background/95 text-foreground border backdrop-blur"
             : "bg-primary text-primary-foreground hover:bg-primary/90",
         )}
       >
@@ -95,9 +86,8 @@ export function ReportMenu({
         ) : (
           <Plus className="size-4" strokeWidth={2.5} aria-hidden />
         )}
-        {open ? "Cerrar" : "Reportar"}
+        {open ? REPORT_MENU.close : REPORT_MENU.open}
       </button>
     </div>
   );
 }
-
