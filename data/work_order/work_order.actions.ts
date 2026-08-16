@@ -90,6 +90,15 @@ export async function setWorkOrderPublished(id: string, published: boolean) {
   revalidatePath("/admin");
 }
 
+/** Curator-only — see `canDeleteWorkOrderUpdate`. Revalidates because the
+ *  entry's removal recomputes the case's own status and counts. */
+export async function deleteWorkOrderUpdate(id: string) {
+  const dal = await WorkOrderDAL.create();
+  await dal.removeUpdate(id);
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
 export async function deleteWorkOrder(id: string) {
   const dal = await WorkOrderDAL.create();
   await dal.remove(id);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 
 import { Map, MapControls } from "@/components/ui/map";
@@ -129,6 +130,7 @@ export function MapWorkspace({
   isAdmin = false,
 }: Props) {
   const sharedLink = initialSelectedId !== undefined;
+  const router = useRouter();
 
   // Everything that behaves differently rather than just looking different
   // hangs off this: where a card opens, whether the panel starts shut, and
@@ -222,6 +224,24 @@ export function MapWorkspace({
     },
     [isDesktop],
   );
+
+  /**
+   * Putting the card away — the close button, Escape, a tap on bare map.
+   *
+   * On the plain `/` this is just a deselection. On one of the four shared
+   * routes it also LEAVES the route, because those pages are about one pin
+   * and dismissing its card left the reader on a URL that still claims to be
+   * about something no longer on screen — an app-looking page quietly still
+   * scoped to a single case, with the "Ver todo el mapa" chip as the only
+   * hint that anything was different.
+   *
+   * `replace`, not `push`: the shared URL and `/` are the same visit, and
+   * pushing would make Back re-open a card the reader just dismissed.
+   */
+  const dismiss = useCallback(() => {
+    setSelectedId(null);
+    if (sharedLink) router.replace("/");
+  }, [sharedLink, router]);
 
   const liveStatus = useLiveSiteStatus();
 
@@ -466,7 +486,7 @@ export function MapWorkspace({
             {/* A tap on bare map puts the card away. Dragging does not — see
                 `ClearSelectionOnTap`, which leans on MapLibre's own
                 tap-versus-pan distinction rather than inventing one. */}
-            <ClearSelectionOnTap onTap={() => setSelectedId(null)} />
+            <ClearSelectionOnTap onTap={dismiss} />
 
             <SiteMarkers sites={mapSites} selectedId={selectedId} onSelect={select} />
 
@@ -495,7 +515,7 @@ export function MapWorkspace({
                 to open it without a click. See `MapCard`. */}
             {selectedEntity && (
               <MapCard
-                onClose={() => setSelectedId(null)}
+                onClose={dismiss}
                 onInsetChange={setCardInset}
               >
                 {selectedEntity.card}

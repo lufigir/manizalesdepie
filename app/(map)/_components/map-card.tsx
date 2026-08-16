@@ -128,7 +128,12 @@ function CardShell({
       // is the smallest bump that gives the thread room without eating
       // enough of the map that `FlyToSelected`'s offset starts feeling tight
       // on a 13" screen.
-      ? "inset-y-0 left-0 w-[min(26rem,80vw)] border-r rounded-r-xl shadow-[4px_0_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-left-4"
+      // Neither border nor rounded corner. The sheet runs the full height of
+      // the map and is flush against the viewport's own left edge, so a
+      // rounded right side left two little wedges of map showing at top and
+      // bottom — a card that looks like it is floating over the map when it
+      // is in fact docked to it. The drop shadow is the only edge it needs.
+      ? "inset-y-0 left-0 w-[min(26rem,80vw)] shadow-[4px_0_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-left-4"
       : "inset-x-0 bottom-0 max-h-[55dvh] rounded-t-xl border-t shadow-[0_-4px_16px_-4px_rgb(0_0_0/0.15)] slide-in-from-bottom-4";
 
   return (

@@ -5,6 +5,8 @@ import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto"
 import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { SelectedMarkerLabel } from "./marker-label";
+
 type Located = ResourceOfferDTO & { longitude: number; latitude: number };
 
 /**
@@ -68,6 +70,7 @@ function SinglePin({
       onClick={() => onSelect(offer.id)}
     >
       <MarkerContent>
+        <span className="relative block">
         <span
           className={cn(
             "border-muted-foreground/60 bg-background text-foreground ring-background flex size-7 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2 transition-transform",
@@ -77,11 +80,13 @@ function SinglePin({
         >
           <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
         </span>
+        {selected && (
+          <SelectedMarkerLabel>{RESOURCE_TYPE_LABEL[offer.type]}</SelectedMarkerLabel>
+        )}
+        </span>
       </MarkerContent>
       {!selected && (
-        <MarkerTooltip offset={18}>
-          {RESOURCE_TYPE_LABEL[offer.type]}
-        </MarkerTooltip>
+        <MarkerTooltip offset={18}>{RESOURCE_TYPE_LABEL[offer.type]}</MarkerTooltip>
       )}
     </MapMarker>
   );

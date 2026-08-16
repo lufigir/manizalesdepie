@@ -58,3 +58,22 @@ export function canUpdateWorkOrder(): boolean {
 export function canManageWorkOrder(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
+
+/**
+ * Removing one entry from a case's book. Curators only.
+ *
+ * The book is append-only by design — it is the evidence behind a status
+ * nobody can set by hand, and letting people delete entries would hand back
+ * exactly the power the append-only rule took away: two "ya ayudé" close a
+ * case, so anyone who could delete one could reopen any case at will, or
+ * erase the "sigue haciendo falta" that was keeping one open.
+ *
+ * What is left for a curator is the thing an append-only log genuinely
+ * cannot handle: an entry containing abuse, a phone number that should never
+ * have been published, or spam. Deleting one re-fires
+ * `sync_work_order_state`, so the case's status stays honest about whatever
+ * entries remain.
+ */
+export function canDeleteWorkOrderUpdate(user: CurrentUser | null): boolean {
+  return user?.role === "curator";
+}

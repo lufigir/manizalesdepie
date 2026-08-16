@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
 
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { SHEET_LABEL } from "@/lib/labels";
-import { cn } from "@/lib/utils";
 
 /**
  * Sharing, once, for every card on the map.
@@ -68,6 +68,20 @@ export function ShareButton({
   path,
   title,
   text,
+  /**
+   * Passed straight through to `Button`. Defaults to `default` — the solid
+   * primary one — on every card.
+   *
+   * That is a deliberate inversion of the usual rule that the primary button
+   * belongs to the card's own main action. Nothing in this app is discovered by
+   * browsing to the domain: every reader arrived because somebody pasted a
+   * link into a WhatsApp group, so the control that produces the NEXT link is
+   * the one that grows the map. Contacting, navigating and confirming help
+   * one person each; a forward reaches a whole group. They sit below in
+   * `secondary`.
+   */
+  variant = "default",
+  size,
   className,
 }: {
   /** Path only, e.g. `/punto/abc`. The origin is read at click time so a
@@ -78,6 +92,8 @@ export function ShareButton({
    *  description, whatever the receiving group needs to understand the
    *  forward without opening it. */
   text?: string;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
   className?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -103,20 +119,9 @@ export function ShareButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={share}
-      className={cn(
-        "bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-ring flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-        className,
-      )}
-    >
-      {copied ? (
-        <Check className="size-3.5 shrink-0" aria-hidden />
-      ) : (
-        <Share2 className="size-3.5 shrink-0" aria-hidden />
-      )}
+    <Button variant={variant} size={size} onClick={share} className={className}>
+      {copied ? <Check aria-hidden /> : <Share2 aria-hidden />}
       {copied ? SHEET_LABEL.copied : SHEET_LABEL.share}
-    </button>
+    </Button>
   );
 }

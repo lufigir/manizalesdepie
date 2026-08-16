@@ -15,6 +15,9 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { Button } from "@/components/ui/button";
+
+import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
@@ -79,21 +82,31 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         </span>
       </div>
 
+      {/* Same shape as every other card: the forward on its own row at full
+          weight, the thing you do with the offer underneath it. */}
+      <ShareButton
+        path={`/servicio/${offer.id}`}
+        title={RESOURCE_TYPE_LABEL[offer.type]}
+        text={offer.description}
+        className="w-full"
+      />
+
       <div className="flex flex-wrap gap-1.5">
-        <a
-          href={`https://wa.me/${offer.whatsapp}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-primary text-primary-foreground flex flex-1 items-center justify-center rounded-md px-2 py-2 text-xs font-semibold"
-        >
-          {SERVICES_LABEL.contact}
-        </a>
-        <ShareButton
-          path={`/servicio/${offer.id}`}
-          title={RESOURCE_TYPE_LABEL[offer.type]}
-          text={offer.description}
+        <Button
+          size="sm"
+          variant="secondary"
           className="flex-1"
-        />
+          render={
+            <a
+              href={`https://wa.me/${offer.whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
+        >
+          <WhatsappIcon />
+          {SERVICES_LABEL.contact}
+        </Button>
       </div>
 
       {isAdmin && (

@@ -33,8 +33,8 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
-import { ShareButton } from "./share-button";
 import { WorkOrderThread } from "./work-order-thread";
 import { useWorkspace } from "./workspace-context";
 
@@ -385,6 +385,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                       />
                     }
                   >
+                    <WhatsappIcon />
                     {WORK_ORDER_LABEL.contactWhatsapp}
                   </Button>
                 </div>
@@ -399,12 +400,6 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             </p>
           )}
 
-          {/* Forwarding the case belongs with its address and its phone: what
-              gets pasted into a WhatsApp group is precisely this block, and
-              whoever is looking at it is the person about to pass it on. It
-              used to sit beside "Cómo llegar", which is a different job —
-              that one is for the person who already decided to go. */}
-          <OrderShareButton order={order} className="mt-1.5 w-full" />
         </div>
 
         {/* What the card is asking for. Full weight, its own section, and the
@@ -617,30 +612,3 @@ function OrderDirectionsButton({ order }: { order: WorkOrderDTO }) {
   );
 }
 
-/**
- * The share control, in both the places a card can put it.
- *
- * A thin wrapper over the shared `ShareButton` rather than its own copy of
- * the flow: this file used to carry a second implementation of
- * navigator.share-then-clipboard, and it was the one that crashed on a phone
- * over plain http, because `navigator.clipboard` does not exist outside a
- * secure context. One implementation cannot drift from itself.
- */
-function OrderShareButton({
-  order,
-  className,
-}: {
-  order: WorkOrderDTO;
-  className?: string;
-}) {
-  return (
-    <ShareButton
-      path={`/necesidad/${order.id}`}
-      title={`${WORK_ORDER_CATEGORY_LABEL[order.category]}${
-        order.neighborhood ? ` · ${order.neighborhood}` : ""
-      }`}
-      text={order.description}
-      className={className}
-    />
-  );
-}

@@ -15,6 +15,7 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { ShareButton } from "./share-button";
 import { WorkOrderActions } from "./work-order-actions";
 
 /**
@@ -128,6 +129,24 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         </span>
         <span className={cn(stale && "text-claimed")}>{freshLabel}</span>
       </div>
+
+      {/*
+       * Above the tabs, not buried at the bottom of the contact block inside
+       * "Detalle" — that spot disappeared entirely on "Hilo" and was the
+       * last thing on the card even when it was visible. This is the control
+       * the whole product runs on: nobody arrives here by browsing, every
+       * reader showed up because somebody forwarded a link, and this is what
+       * produces the next one. It has to survive whichever tab is open, so
+       * it sits above them — full width, filled, its own row.
+       */}
+      <ShareButton
+        path={`/necesidad/${order.id}`}
+        title={`${WORK_ORDER_CATEGORY_LABEL[order.category]}${
+          order.neighborhood ? ` · ${order.neighborhood}` : ""
+        }`}
+        text={order.description}
+        className="w-full"
+      />
 
       {/* Directions moved into the action row inside `WorkOrderActions`, so
           this card ends the way a sitio's and a grupo's do: the primary

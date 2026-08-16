@@ -17,6 +17,9 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { Button } from "@/components/ui/button";
+
+import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
@@ -100,40 +103,55 @@ export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
         {animal.zone && ` · ${animal.zone}`}
       </p>
 
+      {/* Same shape as every other card: the forward first, at full weight
+          and on its own row. It earns the top slot here more than anywhere —
+          a lost animal is found by the photo reaching somebody who has seen
+          it, which is a forward, not a phone call. */}
+      <ShareButton
+        path={`/mascota/${animal.id}`}
+        title={animal.petName ?? ANIMAL_LABEL[animal.species]}
+        text={animal.description}
+        className="w-full"
+      />
+
       {/* No "Cómo llegar", ever — not even when the report carries a point.
           The coordinate is where somebody SAW it, and a navigation button
           would turn that into an address to drive to. */}
       <div className="flex flex-wrap gap-1.5">
-        <a
-          href={`https://wa.me/${animal.whatsapp}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-primary text-primary-foreground flex flex-1 items-center justify-center rounded-md px-2 py-2 text-xs font-semibold"
-        >
-          {ANIMAL_LABEL.contact}
-        </a>
-        <ShareButton
-          path={`/mascota/${animal.id}`}
-          title={animal.petName ?? ANIMAL_LABEL[animal.species]}
-          text={animal.description}
+        <Button
+          size="sm"
+          variant="secondary"
           className="flex-1"
-        />
+          render={
+            <a
+              href={`https://wa.me/${animal.whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
+        >
+          <WhatsappIcon />
+          {ANIMAL_LABEL.contact}
+        </Button>
       </div>
 
       {!resolved && (
-        <button
-          type="button"
+        <Button
+          size="sm"
+          variant="outline"
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
               await resolveAnimal(animal.id);
             })
           }
-          className="bg-resolved-surface text-resolved border-resolved/25 flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-[0.7rem] font-semibold disabled:opacity-50"
+          // Good news, so it keeps the resolved green rather than the
+          // neutral outline every other secondary control wears.
+          className="text-resolved border-resolved/30 hover:bg-resolved-surface"
         >
-          <Check className="size-3.5" aria-hidden />
+          <Check aria-hidden />
           {ANIMAL_LABEL.markResolved}
-        </button>
+        </Button>
       )}
 
       {isAdmin && (

@@ -15,7 +15,6 @@ import {
 import type { SiteDTO } from "@/data/site/site.dto";
 import {
   ADMIN_LABEL,
-  ITEM_MODE_LABEL,
   SHEET_LABEL,
   SITE_STATUS_LABEL,
   SITE_STATUS_MARKER,
@@ -27,6 +26,7 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
@@ -83,12 +83,6 @@ export function SitePopup({ site }: { site: SiteDTO }) {
   const { label: freshLabel, stale } = freshness(site.confirmedAt);
   const { level, label: confidenceLabel } = confidence(site);
   const Icon = SITE_TYPE_ICON[site.type];
-
-  const needed = site.items
-    .filter((item) => item.mode === "needed")
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, 5);
-  const refused = site.items.filter((item) => item.mode === "not_accepted");
 
   /**
    * Freshness, place and confidence: the card's quiet line.
@@ -159,8 +153,14 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           behind "ver más" — a lateral sheet beside the map, an accordion in
           the drawer under it. Both surfaces scroll on their own, so the fold
           was buying a shorter card at the price of a tap on facts (the
-          address, what they need) that someone deciding where to drive
-          actually reads. */}
+          address, the hours) that someone deciding where to drive actually
+          reads.
+
+          The "Necesita" chips and the "NO recibe" box are gone: they were a
+          second, structured way of saying what the description already says
+          in plain words, and keeping the two in sync was a job nobody was
+          doing. `site_item` still exists — this is a display decision, not a
+          schema one. */}
       <div className="flex flex-col gap-2.5 text-[0.8rem]">
           {site.schedule && (
             <div>
@@ -168,23 +168,6 @@ export function SitePopup({ site }: { site: SiteDTO }) {
                 {SHEET_LABEL.schedule}
               </p>
               <p>{site.schedule}</p>
-            </div>
-          )}
-          {needed.length > 0 && (
-            <div>
-              <p className="text-muted-foreground mb-1 text-[0.65rem] font-semibold tracking-wide uppercase">
-                {ITEM_MODE_LABEL.needed}
-              </p>
-              <ul className="flex flex-wrap gap-1">
-                {needed.map((item) => (
-                  <li
-                    key={item.id}
-                    className="bg-resolved-surface text-resolved border-resolved/25 rounded px-1.5 py-0.5 text-xs font-medium"
-                  >
-                    {item.label}
-                  </li>
-                ))}
-              </ul>
             </div>
           )}
           {site.address && (
@@ -207,40 +190,44 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           )}
       </div>
 
-      {refused.length > 0 && (
-        <div className="border-unclaimed/25 bg-unclaimed-surface rounded-md border px-2 py-1.5">
-          <p className="text-unclaimed text-[0.65rem] font-bold tracking-wide uppercase">
-            {ITEM_MODE_LABEL.not_accepted}
-          </p>
-          <p className="text-unclaimed text-[0.7rem] leading-snug font-medium">
-            {refused.map((item) => item.label).join(" · ")}
-          </p>
-        </div>
-      )}
+      {/* Same shape as every other card: the forward on its own row at full
+          weight, then the things you do with the place once you have decided
+          to go. See the note on `ShareButton`'s default variant. */}
+      <ShareButton path={`/punto/${site.id}`} title={site.name} className="w-full" />
 
-      {/* Wraps rather than squeezing: with three labelled controls on a
-          20rem popup, a second row reads better than three truncated ones. */}
       <div className="flex flex-wrap gap-1.5">
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${site.latitude},${site.longitude}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-primary text-primary-foreground flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-2 text-xs font-semibold"
+        <Button
+          size="sm"
+          variant="secondary"
+          className="flex-1"
+          render={
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${site.latitude},${site.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
         >
-          <Navigation className="size-3.5" aria-hidden />
+          <Navigation aria-hidden />
           {SHEET_LABEL.directions}
-        </a>
+        </Button>
         {site.whatsapp && (
-          <a
-            href={`https://wa.me/${site.whatsapp}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-secondary text-secondary-foreground rounded-md px-2 py-2 text-xs font-semibold"
+          <Button
+            size="sm"
+            variant="secondary"
+            className="flex-1"
+            render={
+              <a
+                href={`https://wa.me/${site.whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
           >
+            <WhatsappIcon />
             {SHEET_LABEL.whatsapp}
-          </a>
+          </Button>
         )}
-        <ShareButton path={`/punto/${site.id}`} title={site.name} className="flex-1" />
       </div>
 
       {/* The mechanism that keeps this from becoming a list of places that
@@ -251,22 +238,22 @@ export function SitePopup({ site }: { site: SiteDTO }) {
         </p>
         <div className="grid grid-cols-3 gap-1">
           {(["open", "full", "closed"] as const).map((status) => (
-            <button
+            <Button
               key={status}
-              type="button"
+              size="sm"
+              variant="outline"
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
                   await confirmSiteStatus(site.id, status);
                 })
               }
-              className={cn(
-                "rounded border px-1 py-1.5 text-[0.7rem] font-semibold disabled:opacity-50",
-                SITE_STATUS_STYLE[status],
-              )}
+              // Each one wears the status it would set, which is the whole
+              // point: the colour is the answer, the word only confirms it.
+              className={cn("px-1", SITE_STATUS_STYLE[status])}
             >
               {SITE_STATUS_LABEL[status]}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

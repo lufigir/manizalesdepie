@@ -16,6 +16,8 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { SelectedMarkerLabel } from "./marker-label";
+
 /**
  * Every pin on the map, each one on its own real coordinate.
  *
@@ -73,6 +75,7 @@ function SinglePin({
             now, and the solidity says how much anyone has vouched for it.
             Three facts, three channels, no legend needed to read the first
             one. */}
+        <span className="relative block">
         <span
           className={cn(
             "ring-background flex size-7 items-center justify-center rounded-full shadow-md ring-2 transition-transform",
@@ -86,12 +89,12 @@ function SinglePin({
         >
           <Icon className="size-4" strokeWidth={2.5} aria-hidden />
         </span>
+        {selected && <SelectedMarkerLabel>{site.name}</SelectedMarkerLabel>}
+        </span>
       </MarkerContent>
-      {/* Names the pin before committing to a tap. Cheap on desktop, ignored
-          on touch, and it makes a dense area readable. Suppressed once
-          selected: a click never moves the cursor off the marker, so the
-          tooltip would otherwise sit on top of the popup card it just
-          opened. */}
+      {/* Names the pin before committing to a tap. Hover only, and only
+          while this pin is not the selected one — `SelectedMarkerLabel`
+          above already names that one, permanently. */}
       {!selected && <MarkerTooltip offset={20}>{site.name}</MarkerTooltip>}
     </MapMarker>
   );

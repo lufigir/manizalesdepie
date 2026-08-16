@@ -16,6 +16,7 @@ import {
 } from "./work_order.dto";
 import {
   canCloseWorkOrder,
+  canDeleteWorkOrderUpdate,
   canManageWorkOrder,
   canPostWorkOrderUpdate,
   canReportWorkOrder,
@@ -316,6 +317,31 @@ export class WorkOrderDAL {
     }
 
     log.info("work order deleted", { workOrderId: id, byUser: this.user!.id });
+  }
+
+  /**
+   * Removing one entry from a case's book — curators only, for abuse, a
+   * phone number that should not have been published, or spam.
+   *
+   * Deleting the row re-fires `sync_work_order_state` (the trigger is on
+   * `after insert or delete`), so `status`, `reopened` and both counts
+   * recompute from whatever entries remain. That is the whole reason this
+   * goes through a plain delete rather than a soft-delete flag: a
+   * tombstoned row would still be counted by the trigger, and a case could
+   * stay closed on the strength of an entry nobody can see any more.
+   */
+  async removeUpdate(id: string): Promise<void> {
+    if (!canDeleteWorkOrderUpdate(this.user)) throw new Error("Forbidden");
+
+    const supabase = createAdminSupabase();
+    const { error } = await supabase.from("work_order_update").delete().eq("id", id);
+
+    if (error) {
+      log.error("workOrder.removeUpdate failed", { code: error.code, updateId: id });
+      throw new Error("No se pudo eliminar la nota");
+    }
+
+    log.info("work order update deleted", { updateId: id, byUser: this.user!.id });
   }
 
   /** Map explicitly, never spread. */

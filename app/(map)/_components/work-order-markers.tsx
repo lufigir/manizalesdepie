@@ -11,6 +11,8 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { SelectedMarkerLabel } from "./marker-label";
+
 /**
  * Necesidades on the map — now the only family with a shape of its own worth
  * learning, and the spine of the product.
@@ -107,8 +109,18 @@ function SinglePin({
               {entryCount}
             </span>
           )}
+
+          {selected && (
+            <SelectedMarkerLabel>
+              {WORK_ORDER_CATEGORY_LABEL[order.category]}
+              {order.neighborhood && ` · ${order.neighborhood}`}
+            </SelectedMarkerLabel>
+          )}
         </span>
       </MarkerContent>
+      {/* Hover only, and only while nothing is selected here — the label
+          above already says it, and both at once would stack two identical
+          pills over one pin. */}
       {!selected && (
         <MarkerTooltip offset={20}>
           {WORK_ORDER_CATEGORY_LABEL[order.category]}

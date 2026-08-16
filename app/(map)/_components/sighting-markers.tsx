@@ -5,6 +5,8 @@ import type { AnimalDTO } from "@/data/animal/animal.dto";
 import { ANIMAL_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { SelectedMarkerLabel } from "./marker-label";
+
 /**
  * Where an animal was last SEEN — never where it is.
  *
@@ -43,20 +45,30 @@ export function SightingMarkers({
           onClick={() => onSelect(animal.id)}
         >
           <MarkerContent>
-            <span
-              className={cn(
-                "border-unclaimed bg-unclaimed/15 block size-6 rounded-full border-2 border-dashed transition-transform",
-                selectedId === animal.id && "scale-125",
+            <span className="relative block">
+              <span
+                className={cn(
+                  "border-unclaimed bg-unclaimed/15 block size-6 rounded-full border-2 border-dashed transition-transform",
+                  selectedId === animal.id && "scale-125",
+                )}
+                aria-label={`${ANIMAL_LABEL[animal.kind]}: ${
+                  animal.petName ?? ANIMAL_LABEL[animal.species]
+                }. ${ANIMAL_LABEL.seenAt} aquí.`}
+              />
+              {selectedId === animal.id && (
+                <SelectedMarkerLabel>
+                  {ANIMAL_LABEL.seenAt} aquí ·{" "}
+                  {animal.petName ?? ANIMAL_LABEL[animal.species]}
+                </SelectedMarkerLabel>
               )}
-              aria-label={`${ANIMAL_LABEL[animal.kind]}: ${
-                animal.petName ?? ANIMAL_LABEL[animal.species]
-              }. ${ANIMAL_LABEL.seenAt} aquí.`}
-            />
+            </span>
           </MarkerContent>
-          <MarkerTooltip offset={18}>
-            {ANIMAL_LABEL.seenAt} aquí ·{" "}
-            {animal.petName ?? ANIMAL_LABEL[animal.species]}
-          </MarkerTooltip>
+          {selectedId !== animal.id && (
+            <MarkerTooltip offset={18}>
+              {ANIMAL_LABEL.seenAt} aquí ·{" "}
+              {animal.petName ?? ANIMAL_LABEL[animal.species]}
+            </MarkerTooltip>
+          )}
         </MapMarker>
       ))}
     </>
