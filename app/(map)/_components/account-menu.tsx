@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, LogIn, LogOut } from "lucide-react";
+import { ChevronDown, Loader2, LogIn, LogOut } from "lucide-react";
 
 import { signOut } from "@/app/auth/actions";
 import type { CurrentUser } from "@/data/user/require-user";
@@ -11,6 +11,12 @@ import { cn } from "@/lib/utils";
 
 /**
  * The account bubble, top-left of the map.
+ *
+ * Shares its silhouette with the other two things floating over the map —
+ * `ReportMenu` bottom-left and `AttendanceStats` top-right — deliberately:
+ * same radius, same border, same translucent background, same shadow. Three
+ * controls with three different shapes read as three unrelated apps stacked
+ * on one canvas.
  *
  * Signed out it is one word — "Entrar" — and nothing else, because the map
  * never asks for an account (see `AUTH_LABEL`): the bubble is a door, not a
@@ -29,6 +35,7 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
   const [pending, startTransition] = useTransition();
   const [signingIn, setSigningIn] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   async function signIn() {
     setSigningIn(true);
@@ -49,13 +56,24 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
 
   if (!user) {
     return (
+      // Filled, where the signed-in state is translucent like everything
+      // else floating here. Sitting on a basemap, a bordered pill at 0.7rem
+      // was indistinguishable from the chip opposite it — readers were not
+      // declining the account, they were not finding the door. The shape is
+      // shared; the fill is what marks the one control up here that is
+      // asking to be pressed, and it is the same fill `ReportMenu` uses for
+      // the same reason.
       <button
         type="button"
         onClick={signIn}
         disabled={signingIn}
-        className="bg-background/90 focus-visible:ring-ring flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[0.7rem] font-semibold shadow-sm backdrop-blur focus-visible:ring-2 focus-visible:outline-none"
+        className="bg-primary text-primary-foreground focus-visible:ring-ring flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold shadow-lg transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-70"
       >
-        <LogIn className="size-3.5" strokeWidth={2.5} aria-hidden />
+        {signingIn ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          <LogIn className="size-4" strokeWidth={2.5} aria-hidden />
+        )}
         {AUTH_LABEL.enter}
         {failed && (
           <span className="sr-only" role="alert">
@@ -76,17 +94,20 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={AUTH_LABEL.menuLabel}
-        className="bg-background/90 focus-visible:ring-ring flex items-center gap-1.5 rounded-full border py-1.5 pr-2.5 pl-1.5 text-[0.7rem] font-semibold shadow-sm backdrop-blur focus-visible:ring-2 focus-visible:outline-none"
+        className="bg-background/95 focus-visible:ring-ring flex items-center gap-1.5 rounded-xl border py-1.5 pr-2.5 pl-1.5 text-xs font-semibold shadow-lg backdrop-blur focus-visible:ring-2 focus-visible:outline-none"
       >
-        {user.avatarUrl ? (
+        {user.avatarUrl && !avatarFailed ? (
           // The provider's photo when Google sent one; the initial is only
-          // the fallback for a sign-in that carried no picture.
+          // the fallback for a sign-in that carried no picture — or for a
+          // photo the browser refuses (a CSP that forgot googleusercontent
+          // did exactly that, and a broken <img> is worse than an initial).
           <span className="relative size-6 shrink-0 overflow-hidden rounded-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user.avatarUrl}
               alt=""
               referrerPolicy="no-referrer"
+              onError={() => setAvatarFailed(true)}
               className="size-full object-cover"
             />
           </span>
@@ -118,7 +139,7 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
           />
           <div
             role="menu"
-            className="bg-popover shadow-lg absolute top-full left-0 z-20 mt-1.5 min-w-44 rounded-md border p-1"
+            className="bg-background/95 absolute top-full left-0 z-20 mt-1.5 min-w-44 rounded-xl border p-1.5 shadow-lg backdrop-blur"
           >
             <div className="px-2 py-1.5">
               <p className="text-sm font-semibold">{user.fullName}</p>
@@ -137,7 +158,7 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
               role="menuitem"
               disabled={pending}
               onClick={() => startTransition(() => void signOut())}
-              className="hover:bg-accent focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="hover:bg-accent focus-visible:ring-ring flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <LogOut className="size-3.5" aria-hidden />
               {AUTH_LABEL.signOut}

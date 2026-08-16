@@ -30,15 +30,25 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const userId = claims?.claims.sub;
   if (!userId) return null;
 
-  const meta = claims?.claims.user_metadata;
-  // Google names the photo `avatar_url`; the OIDC field it came from is
-  // `picture`. Read either, so a provider that maps differently still works.
-  const avatarUrl =
-    typeof meta?.avatar_url === "string" && meta.avatar_url
-      ? meta.avatar_url
-      : typeof meta?.picture === "string" && meta.picture
-        ? meta.picture
-        : null;
+  let meta = claims?.claims.user_metadata;
+  let email =
+    typeof claims?.claims.email === "string" ? claims.claims.email : null;
+
+  // `getClaims()` verifies the token locally when the project signs with an
+  // asymmetric key, and falls back to the Auth server otherwise. Only the
+  // first path is guaranteed to carry `user_metadata`, and the fallback is
+  // exactly what left the account bubble with no photo and no name. Ask the
+  // Auth server for the profile when the token did not bring one — one extra
+  // round trip, on the path that was broken, inside a per-render cache.
+  if (!readAvatar(meta)) {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      meta = data.user.user_metadata;
+      email = data.user.email ?? email;
+    }
+  }
+
+  const avatarUrl = readAvatar(meta);
 
   const { data: profile } = await supabase
     .from("profile")
@@ -46,16 +56,45 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     .eq("id", userId)
     .single();
 
-  if (!profile) return null;
-
+  /**
+   * A session with no `profile` row still identifies somebody.
+   *
+   * Returning null here read as "signed out" everywhere — the bubble kept
+   * offering "Entrar" to a reader who had just come back from Google, with no
+   * way to tell the two states apart. The row is normally written by the
+   * `on_auth_user_created` trigger, so this is the account that predates the
+   * trigger, or one whose insert lost a race with the first page render.
+   * Degrade to `visitor`: it grants nothing, and it is honest about the
+   * session existing.
+   */
   return {
     id: userId,
-    email: typeof claims?.claims.email === "string" ? claims.claims.email : null,
-    fullName: profile.full_name,
+    email,
+    fullName: profile?.full_name ?? readName(meta) ?? email ?? "Anónimo",
     avatarUrl,
-    role: profile.role,
+    role: profile?.role ?? "visitor",
   };
 });
+
+type Metadata = Record<string, unknown> | undefined;
+
+/** Google names the photo `avatar_url`; the OIDC field it came from is
+ *  `picture`. Read either, so a provider that maps differently still works. */
+function readAvatar(meta: Metadata): string | null {
+  for (const key of ["avatar_url", "picture"] as const) {
+    const value = meta?.[key];
+    if (typeof value === "string" && value) return value;
+  }
+  return null;
+}
+
+function readName(meta: Metadata): string | null {
+  for (const key of ["full_name", "name"] as const) {
+    const value = meta?.[key];
+    if (typeof value === "string" && value) return value;
+  }
+  return null;
+}
 
 /** Guarantees a session. Everything downstream may assume a user exists. */
 export async function requireUser(): Promise<CurrentUser> {

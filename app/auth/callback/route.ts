@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { log } from "@/lib/log";
@@ -38,6 +39,12 @@ export async function GET(request: NextRequest) {
     log.error("auth.callback exchange failed", { reason: error.message });
     return NextResponse.redirect(`${origin}/auth/error`);
   }
+
+  // The map's shell renders differently once there is a session — the account
+  // bubble above all — so the cached copy has to go with it. `signOut` already
+  // did this on the way out; signing in was the half that was missing, which
+  // is what left "Entrar" on screen after a successful return from Google.
+  revalidatePath("/", "layout");
 
   log.info("auth.callback signed in");
   return NextResponse.redirect(`${origin}${next}`);
