@@ -520,6 +520,21 @@ export const BARRIO_PICKER = {
     manizales: "Manizales",
     villamaria: "Villamaría",
   },
+  /** The secondary line under a sector in the list, and again in the chosen
+   *  state. Names the barrio it falls inside — the fact that makes "Topacio"
+   *  and "Morrogacho" read as two names for overlapping ground instead of
+   *  two unrelated places that happen to open the map on the same spot. */
+  inside: (parent: string) => `dentro de ${parent}`,
+  /**
+   * Shown once a sector is chosen, next to `inside`. The Alcaldía's
+   * nomenclature names sectores but publishes no boundary for them, so there
+   * is no coordinate of the sector's own to open the map on — only its
+   * barrio's centre. Said plainly, and once, at the moment it matters: right
+   * after picking, before the person starts placing the pin. Written for
+   * someone standing on the street, one bar of signal — it does not promise
+   * an accuracy the map does not have.
+   */
+  sectorHint: "No hay mapa propio de este sector: el mapa abre en el centro del barrio. Ajusta el pin al sitio.",
 } as const;
 
 /**

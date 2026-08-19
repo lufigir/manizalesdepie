@@ -28,23 +28,28 @@ export class NeighborhoodDAL {
   }
 
   /**
-   * Every barrio with a coordinate, alphabetically.
+   * Every barrio and sector with a coordinate, alphabetically.
    *
    * Alphabetical because the picker is searched, not browsed: the order only
    * has to be predictable enough that the same query always lands the same
-   * result in the same place.
+   * result in the same place. It also means a sector and its parent barrio
+   * land apart in the list rather than next to each other — "Topacio" is
+   * nowhere near "Morrogacho" alphabetically — so it is the "dentro de X"
+   * line (`parentName`), not the ordering, that has to carry the relationship
+   * between the two.
    *
-   * 118 rows of five short fields — about four kilobytes on the wire. That is
-   * why the form reads this instead of `public/barrios.geojson`, which carries
-   * 114 polygons at 149 KB and would be paid for on a route that draws no
-   * polygons at all.
+   * ~294 rows of six short fields — on the order of ten kilobytes on the
+   * wire. That is still well under the 149 KB of `public/barrios.geojson`'s
+   * 114 polygons, and the comparison is more one-sided than it looks: the
+   * geojson carries polygons for the barrios only and has no sector rows in
+   * it at all, so it could not serve this picker even at its own size.
    */
   async list(): Promise<NeighborhoodDTO[]> {
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
       .from("neighborhood_public")
-      .select("id, name, municipality, longitude, latitude")
+      .select("id, name, municipality, longitude, latitude, parent")
       .order("name");
 
     if (error) {
@@ -59,6 +64,7 @@ export class NeighborhoodDAL {
         municipality: row.municipality,
         longitude: row.longitude,
         latitude: row.latitude,
+        parentName: row.parent,
       }),
     );
   }

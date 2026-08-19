@@ -24,7 +24,14 @@ import { cn } from "@/lib/utils";
  * camera, and the copy says so.
  *
  * A list rendered inline rather than a floating combobox: a popover on a phone
- * covers the field that filters it, and this list has 118 entries.
+ * covers the field that filters it, and this list has around 294 entries —
+ * 114 barrios with an official polygon plus roughly 176 sectores, the names
+ * people in Manizales actually use ("Topacio" rather than "Morrogacho",
+ * "Venecia" rather than "Villapilar"). A sector has no polygon and no
+ * coordinate of its own — the Alcaldía's nomenclature lists the name but
+ * publishes no boundary for it — so it borrows its parent barrio's centroid
+ * and its `parentName` field, so the list and the search can tell the two
+ * apart even though they open the map on the same point.
  */
 export function BarrioPicker({
   barrios,
@@ -43,7 +50,16 @@ export function BarrioPicker({
   const matches = useMemo(() => {
     const needle = fold(query);
     if (!needle) return barrios;
-    return barrios.filter((barrio) => fold(barrio.name).includes(needle));
+    // Matches the sector's own name AND its parent's, because the whole
+    // point is that a person searches for whichever name they actually know.
+    // "morrogacho" has to surface "Topacio" just as much as "topacio" does —
+    // otherwise the picker still requires knowing the official barrio name,
+    // which is the exact problem sectores exist to remove.
+    return barrios.filter(
+      (barrio) =>
+        fold(barrio.name).includes(needle) ||
+        (barrio.parentName && fold(barrio.parentName).includes(needle)),
+    );
   }, [barrios, query]);
 
   /**
@@ -94,6 +110,19 @@ export function BarrioPicker({
           <p className="text-muted-foreground text-xs">
             {BARRIO_PICKER.municipality[value.municipality]}
           </p>
+          {value.parentName && (
+            <>
+              <p className="text-muted-foreground text-xs">
+                {BARRIO_PICKER.inside(value.parentName)}
+              </p>
+              {/* Said here, not earlier: this is the exact moment the person
+               *  is about to start dragging a pin around a centre that is
+               *  their barrio's, not their sector's. */}
+              <p className="text-muted-foreground text-xs text-balance">
+                {BARRIO_PICKER.sectorHint}
+              </p>
+            </>
+          )}
         </div>
         <button
           type="button"
@@ -151,11 +180,23 @@ export function BarrioPicker({
                   "hover:bg-accent focus-visible:ring-ring w-full px-3 py-2 text-left text-sm focus-visible:ring-2 focus-visible:outline-none focus-visible:-outline-offset-2",
                 )}
               >
-                {barrio.name}
-                {barrio.municipality === "villamaria" && (
-                  <span className="text-muted-foreground text-xs">
-                    {" "}
-                    · {BARRIO_PICKER.municipality.villamaria}
+                <span>
+                  {barrio.name}
+                  {barrio.municipality === "villamaria" && (
+                    <span className="text-muted-foreground text-xs">
+                      {" "}
+                      · {BARRIO_PICKER.municipality.villamaria}
+                    </span>
+                  )}
+                </span>
+                {/* Own line, not appended after the name: a sector's context
+                 *  is a separate fact from the Villamaría tag, and the two
+                 *  read as one cluttered line if they share it. A barrio with
+                 *  its own polygon (`parentName === null`) shows nothing
+                 *  extra here — it needs no disambiguation from itself. */}
+                {barrio.parentName && (
+                  <span className="text-muted-foreground block text-xs">
+                    {BARRIO_PICKER.inside(barrio.parentName)}
                   </span>
                 )}
               </button>
@@ -177,8 +218,21 @@ function fold(value: string): string {
     .trim();
 }
 
-/** Nearest centroid. Equirectangular rather than haversine: over a city eight
- *  kilometres across the difference is centimetres, and this only has to rank. */
+/**
+ * Nearest centroid. Equirectangular rather than haversine: over a city eight
+ * kilometres across the difference is centimetres, and this only has to
+ * rank.
+ *
+ * Only barrios with their own polygon (`parentName === null`) enter this
+ * search — never a sector. A sector's centroid is a copy of its parent's, not
+ * a coordinate of its own, so it sits at exact tie distance with the barrio
+ * it belongs to and contributes no positional information a caller does not
+ * already have from the parent. Left in, ties would resolve by array order —
+ * whichever sector or barrio happened to come first alphabetically wins —
+ * which is choosing at random dressed up as geolocation, and could hand
+ * someone "Escuela de Trabajo la Linda" when their phone was standing in
+ * "Bella Montaña".
+ */
 function nearestTo(
   barrios: NeighborhoodDTO[],
   longitude: number,
@@ -189,6 +243,7 @@ function nearestTo(
   const scale = Math.cos((latitude * Math.PI) / 180);
 
   for (const barrio of barrios) {
+    if (barrio.parentName !== null) continue;
     const dx = (barrio.longitude - longitude) * scale;
     const dy = barrio.latitude - latitude;
     const distance = dx * dx + dy * dy;
