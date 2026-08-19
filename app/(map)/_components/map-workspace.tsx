@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { Map, MapControls } from "@/components/ui/map";
 
@@ -146,7 +145,6 @@ export function MapWorkspace({
   user = null,
 }: Props) {
   const sharedLink = initialSelectedId !== undefined;
-  const router = useRouter();
   const isAdmin = user?.role === "curator";
   const userName = user?.fullName ?? null;
 
@@ -238,19 +236,6 @@ export function MapWorkspace({
   );
 
   /**
-   * Putting the card away — the close button, Escape, a tap on bare map.
-   *
-   * On the plain `/` this is just a deselection. On one of the four shared
-   * routes it also LEAVES the route, because those pages are about one pin
-   * and dismissing its card left the reader on a URL that still claims to be
-   * about something no longer on screen — an app-looking page quietly still
-   * scoped to a single case, with the "Ver todo el mapa" chip as the only
-   * hint that anything was different.
-   *
-   * `replace`, not `push`: the shared URL and `/` are the same visit, and
-   * pushing would make Back re-open a card the reader just dismissed.
-   */
-  /**
    * The pin being corrected, or null.
    *
    * While it is set the map is a picker: a crosshair sits over the centre,
@@ -295,14 +280,21 @@ export function MapWorkspace({
     [setRelocatePoint],
   );
 
-  const dismiss = useCallback(() => {
-    setSelectedId(null);
-    if (sharedLink) router.replace("/");
-  }, [sharedLink, router]);
+  /**
+   * Putting the card away — the close button, Escape, a tap on bare map.
+   *
+   * A pure deselection, nothing more: it used to also leave the four shared
+   * routes back to `/`, but navigating out from under the reader is what
+   * broke the link — closing the card should not throw away the URL they
+   * arrived on. `SharedLinkBar`'s "Ver todo el mapa" chip is the one
+   * deliberate way out of a shared route, and it stays on screen for exactly
+   * that reason.
+   */
+  const dismiss = useCallback(() => setSelectedId(null), []);
 
   /** A tap on bare map means nothing while a pin is being aimed: the card is
-   *  already out of the way, and on a shared route `dismiss` would navigate
-   *  out from under the overlay mid-correction.
+   *  already out of the way, and a tap should not interrupt an in-progress
+   *  correction.
    *
    *  Free to change identity on every mode switch — `ClearSelectionOnTap`
    *  binds it through `useEffectEvent`, so the MapLibre listener is not
