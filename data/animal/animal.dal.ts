@@ -49,7 +49,7 @@ export class AnimalDAL {
   async listPublished(): Promise<AnimalDTO[]> {
     const supabase = await createServerSupabase();
 
-    let query = supabase.from("animal_report_public").select("*");
+    let query = supabase.from("animal_reports_public").select("*");
 
     // A curator sees a report they hid too, marked on the card by
     // `AdminActions` — otherwise `setPublished(id, false)` would have no
@@ -86,7 +86,7 @@ export class AnimalDAL {
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
-      .from("animal_report_public")
+      .from("animal_reports_public")
       .select("*")
       .eq("id", id)
       .maybeSingle();
@@ -139,7 +139,7 @@ export class AnimalDAL {
 
     const supabase = createAdminSupabase();
     const { data: row, error } = await supabase
-      .from("animal_report")
+      .from("animal_reports")
       .insert({
         kind: data.kind,
         species: data.species,
@@ -173,7 +173,7 @@ export class AnimalDAL {
 
     const supabase = createAdminSupabase();
     const { error } = await supabase
-      .from("animal_report")
+      .from("animal_reports")
       .update({ resolved_at: new Date().toISOString() })
       .eq("id", id)
       .is("resolved_at", null);
@@ -201,7 +201,7 @@ export class AnimalDAL {
     if (Object.keys(patch).length === 0) return;
 
     const supabase = createAdminSupabase();
-    const { error } = await supabase.from("animal_report").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("animal_reports").update(patch).eq("id", data.id);
 
     if (error) {
       log.error("animal.adminUpdate failed", { code: error.code, animalId: data.id });
@@ -222,7 +222,7 @@ export class AnimalDAL {
 
     const supabase = createAdminSupabase();
     const { error } = await supabase
-      .from("animal_report")
+      .from("animal_reports")
       .update({ published })
       .eq("id", id);
 
@@ -239,7 +239,7 @@ export class AnimalDAL {
     if (!canManageAnimal(this.user)) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
-    const { error } = await supabase.from("animal_report").delete().eq("id", id);
+    const { error } = await supabase.from("animal_reports").delete().eq("id", id);
 
     if (error) {
       log.error("animal.remove failed", { code: error.code, animalId: id });

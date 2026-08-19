@@ -51,7 +51,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const avatarUrl = readAvatar(meta);
 
   const { data: profile } = await supabase
-    .from("profile")
+    .from("profiles")
     .select("role, full_name")
     .eq("id", userId)
     .single();
