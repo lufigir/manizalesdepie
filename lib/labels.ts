@@ -65,8 +65,8 @@ export const SITE_TYPE_ICON: Record<SiteType, LucideIcon> = {
  *  at map scale, before any icon resolves. */
 export const SITE_STATUS_MARKER: Record<SiteStatus, string> = {
   open: "bg-resolved text-resolved-foreground",
-  full: "bg-claimed text-claimed-foreground",
-  closed: "bg-unclaimed text-unclaimed-foreground",
+  full: "bg-underway text-underway-foreground",
+  closed: "bg-pending text-pending-foreground",
   unknown: "bg-stale text-background",
 };
 
@@ -102,8 +102,8 @@ export const SITE_STATUS_LABEL: Record<SiteStatus, string> = {
 
 export const SITE_STATUS_STYLE: Record<SiteStatus, string> = {
   open: "bg-resolved-surface text-resolved border-resolved/30",
-  full: "bg-claimed-surface text-claimed border-claimed/30",
-  closed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  full: "bg-underway-surface text-underway border-underway/30",
+  closed: "bg-pending-surface text-pending border-pending/30",
   unknown: "bg-stale-surface text-stale border-stale/30",
 };
 
@@ -397,9 +397,9 @@ export const ANIMAL_MARKER = "bg-layer-shelter text-background";
 /** Badge styling per kind. Found and sighted are good news and read as such;
  *  lost is the one that needs eyes on it. */
 export const ANIMAL_KIND_STYLE = {
-  lost: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  lost: "bg-pending-surface text-pending border-pending/30",
   found: "bg-resolved-surface text-resolved border-resolved/30",
-  sighted: "bg-claimed-surface text-claimed border-claimed/30",
+  sighted: "bg-underway-surface text-underway border-underway/30",
 } as const;
 
 /**
@@ -885,11 +885,11 @@ export const NEED_ROLLUP_LABEL: Record<NeedRollup, string> = {
  * are both full-strength red, because they are asking for the same thing.
  */
 export const NEED_ROLLUP_MARKER: Record<NeedRollup, string> = {
-  untouched: "bg-unclaimed text-unclaimed-foreground",
+  untouched: "bg-pending text-pending-foreground",
   // Softened, not recoloured: somebody saying "voy" is a promise. Nothing has
   // happened at this house yet, so the pin must not stop being red.
-  onTheWay: "bg-unclaimed/75 text-unclaimed-foreground",
-  partial: "bg-claimed text-claimed-foreground",
+  onTheWay: "bg-pending/75 text-pending-foreground",
+  partial: "bg-underway text-underway-foreground",
   // Green, and still open. This is the change of 16 August: a case used to
   // close itself on the second "ya ayudé", so green could only ever mean
   // closed. It does not close now (see the migration of the same date), so
@@ -897,7 +897,7 @@ export const NEED_ROLLUP_MARKER: Record<NeedRollup, string> = {
   // most urgent thing on the map" — for a case that is still listed, still
   // contactable, and still asking.
   advanced: "bg-resolved/75 text-resolved-foreground",
-  reopened: "bg-unclaimed text-unclaimed-foreground",
+  reopened: "bg-pending text-pending-foreground",
   // Full-strength green is a curator's close, the one green a reader can
   // take as final.
   done: "bg-resolved text-resolved-foreground",
@@ -905,11 +905,11 @@ export const NEED_ROLLUP_MARKER: Record<NeedRollup, string> = {
 };
 
 export const NEED_ROLLUP_STYLE: Record<NeedRollup, string> = {
-  untouched: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
-  onTheWay: "bg-unclaimed-surface/70 text-unclaimed border-unclaimed/20",
-  partial: "bg-claimed-surface text-claimed border-claimed/30",
+  untouched: "bg-pending-surface text-pending border-pending/30",
+  onTheWay: "bg-pending-surface/70 text-pending border-pending/20",
+  partial: "bg-underway-surface text-underway border-underway/30",
   advanced: "bg-resolved-surface/70 text-resolved border-resolved/20",
-  reopened: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  reopened: "bg-pending-surface text-pending border-pending/30",
   done: "bg-resolved-surface text-resolved border-resolved/30",
   dismissed: "bg-stale-surface text-stale border-stale/30",
 };
@@ -1110,9 +1110,9 @@ export const NEED_UPDATE_KIND_TAG: Record<NeedUpdateKind, string> = {
 };
 
 export const NEED_UPDATE_KIND_STYLE: Record<NeedUpdateKind, string> = {
-  on_the_way: "bg-claimed-surface text-claimed border-claimed/30",
+  on_the_way: "bg-underway-surface text-underway border-underway/30",
   helped: "bg-resolved-surface text-resolved border-resolved/30",
-  still_needed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
+  still_needed: "bg-pending-surface text-pending border-pending/30",
   not_real: "bg-stale-surface text-stale border-stale/30",
 };
 

@@ -152,7 +152,7 @@ export const ALL_REPORT_ENTRIES: ReportEntry[] = [
     href: "/reportar/animal",
     label: "Reportar un animal",
     icon: PawPrint,
-    tone: "text-unclaimed",
+    tone: "text-pending",
   },
   {
     href: "/reportar/sitio",
@@ -164,6 +164,6 @@ export const ALL_REPORT_ENTRIES: ReportEntry[] = [
     href: "/reportar/necesidad",
     label: "Reportar una necesidad",
     icon: LifeBuoy,
-    tone: "text-unclaimed",
+    tone: "text-pending",
   },
 ];
