@@ -3,13 +3,13 @@
 import { MapPin, Phone } from "lucide-react";
 
 import {
-  deleteResourceOffer,
-  setResourceOfferPublished,
-} from "@/data/resource_offer/resource_offer.actions";
-import { type ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
+  deleteService,
+  setServicePublished,
+} from "@/data/service/service.actions";
+import { type ServiceDTO } from "@/data/service/service.dto";
 import {
-  RESOURCE_TYPE_ICON,
-  RESOURCE_TYPE_LABEL,
+  SERVICE_TYPE_ICON,
+  SERVICE_TYPE_LABEL,
   SERVICES_LABEL,
   freshness,
 } from "@/lib/labels";
@@ -30,12 +30,12 @@ import { useWorkspace } from "./workspace-context";
  * ways to correct the listing. There is no "Cómo llegar" — an offer's point
  * is the barrio centroid, not a doorway.
  */
-export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
+export function ServicePopup({ service }: { service: ServiceDTO }) {
   const { isAdmin } = useWorkspace();
 
-  const Icon = RESOURCE_TYPE_ICON[offer.type];
+  const Icon = SERVICE_TYPE_ICON[service.type];
   const { label: freshLabel, stale } = freshness(
-    offer.confirmedAt,
+    service.confirmedAt,
     SERVICES_LABEL.fresh,
   );
 
@@ -48,11 +48,11 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
-              {RESOURCE_TYPE_LABEL[offer.type]}
+              {SERVICE_TYPE_LABEL[service.type]}
             </p>
           </div>
           <h2 className="text-sm leading-tight font-bold text-balance">
-            {offer.description}
+            {service.description}
           </h2>
         </div>
       </header>
@@ -60,12 +60,12 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="flex items-center gap-1.5 text-xs font-semibold">
           <MapPin className="size-3.5 shrink-0" aria-hidden />
-          {offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide}
+          {service.neighborhood ?? service.area ?? SERVICES_LABEL.cityWide}
         </span>
         <span
           className={cn(
             "text-[0.7rem]",
-            stale ? "text-claimed" : "text-muted-foreground",
+            stale ? "text-underway" : "text-muted-foreground",
           )}
         >
           {freshLabel}
@@ -73,9 +73,9 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
       </div>
 
       <ShareButton
-        path={`/servicio/${offer.id}`}
-        title={RESOURCE_TYPE_LABEL[offer.type]}
-        text={offer.description}
+        path={`/servicio/${service.id}`}
+        title={SERVICE_TYPE_LABEL[service.type]}
+        text={service.description}
         className="w-full"
       />
 
@@ -88,10 +88,10 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
             size="sm"
             variant="outline"
             className="flex-1"
-            render={<a href={`tel:${offer.whatsapp}`} />}
+            render={<a href={`tel:${service.whatsapp}`} />}
           >
             <Phone className="size-3.5" aria-hidden />
-            {offer.whatsapp}
+            {service.whatsapp}
           </Button>
           <Button
             size="sm"
@@ -99,7 +99,7 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
             className="flex-1"
             render={
               <a
-                href={`https://wa.me/${offer.whatsapp}`}
+                href={`https://wa.me/${service.whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
               />
@@ -114,11 +114,11 @@ export function ResourceOfferPopup({ offer }: { offer: ResourceOfferDTO }) {
       {isAdmin && (
         <div className="border-t pt-2">
           <AdminActions
-            published={offer.published}
+            published={service.published}
             onSetPublished={(published) =>
-              setResourceOfferPublished(offer.id, published)
+              setServicePublished(service.id, published)
             }
-            onDelete={() => deleteResourceOffer(offer.id)}
+            onDelete={() => deleteService(service.id)}
           />
         </div>
       )}

@@ -291,9 +291,9 @@ const sql = [
     const name = sector.name.replaceAll("'", "''");
     const parentName = sector.parentName.replaceAll("'", "''");
     return (
-      `insert into neighborhood (name, municipality, parent_id, centroid)\n` +
+      `insert into neighborhoods (name, municipality, parent_id, centroid)\n` +
       `select '${name}', 'manizales', p.id, p.centroid\n` +
-      `from neighborhood p\n` +
+      `from neighborhoods p\n` +
       `where p.name = '${parentName}' and p.municipality = 'manizales'\n` +
       `on conflict (name, municipality) do update set\n` +
       `  parent_id = excluded.parent_id,\n` +

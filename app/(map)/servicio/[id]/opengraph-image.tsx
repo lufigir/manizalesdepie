@@ -1,9 +1,9 @@
 import { ImageResponse } from "next/og";
 
-import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
+import { ServiceDAL } from "@/data/service/service.dal";
 import {
   OG_LABEL,
-  RESOURCE_TYPE_LABEL,
+  SERVICE_TYPE_LABEL,
   SERVICES_LABEL,
 } from "@/lib/labels";
 
@@ -42,16 +42,16 @@ export default async function Image({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [offer, fonts, logo] = await Promise.all([
-    ResourceOfferDAL.public().findById(id),
+  const [service, fonts, logo] = await Promise.all([
+    ServiceDAL.public().findById(id),
     ogFonts(),
     ogLogo(),
   ]);
 
-  if (!offer) {
+  if (!service) {
     return new ImageResponse(
       <OgCard
-        eyebrow={OG_LABEL.resourceOffer}
+        eyebrow={OG_LABEL.service}
         title={OG_LABEL.notFound}
         logo={logo}
       />,
@@ -62,9 +62,9 @@ export default async function Image({
   return new ImageResponse(
     (
       <OgCard
-        eyebrow={RESOURCE_TYPE_LABEL[offer.type]}
-        title={ogTitle(offer.description)}
-        meta={offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide}
+        eyebrow={SERVICE_TYPE_LABEL[service.type]}
+        title={ogTitle(service.description)}
+        meta={service.neighborhood ?? service.area ?? SERVICES_LABEL.cityWide}
         icon={OgTruckIcon}
         logo={logo}
         accent="resolved"

@@ -6,7 +6,6 @@ import {
   Construction,
   Cross,
   Flag,
-  GlassWater,
   Droplet,
   HandHelping,
   HardHat,
@@ -22,14 +21,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { NeedPriority } from "@/data/neighborhood/neighborhood.dto";
-import type { ResourceType } from "@/data/resource_offer/resource_offer.dto";
-import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
 import type {
-  WorkOrderCategory,
-  WorkOrderDTO,
-  WorkOrderUpdateKind,
-} from "@/data/work_order/work_order.dto";
+  NeedCategory,
+  NeedDTO,
+  NeedUpdateKind,
+} from "@/data/need/need.dto";
+import type { ServiceType } from "@/data/service/service.dto";
+import type { ItemMode, SiteStatus, SiteType } from "@/data/site/site.dto";
 import type { PanelChip } from "@/lib/tabs";
 
 /**
@@ -42,8 +40,6 @@ export const SITE_TYPE_LABEL: Record<SiteType, string> = {
   collection_point: "Acopio",
   shelter: "Albergue",
   blood_donation: "Sangre",
-  vet_clinic: "Veterinaria",
-  water_point: "Agua",
   medical_post: "Salud",
   census_point: "Censo",
 };
@@ -61,8 +57,6 @@ export const SITE_TYPE_ICON: Record<SiteType, LucideIcon> = {
   collection_point: Package,
   shelter: Tent,
   blood_donation: Droplet,
-  vet_clinic: PawPrint,
-  water_point: GlassWater,
   medical_post: Cross,
   census_point: ClipboardList,
 };
@@ -84,8 +78,6 @@ export const SITE_TYPE_COLOR: Record<SiteType, string> = {
   collection_point: "bg-layer-collection",
   shelter: "bg-layer-shelter",
   blood_donation: "bg-layer-blood",
-  vet_clinic: "bg-layer-animals",
-  water_point: "bg-layer-water",
   medical_post: "bg-layer-medical",
   census_point: "bg-layer-census",
 };
@@ -120,6 +112,21 @@ export const ITEM_MODE_LABEL: Record<ItemMode, string> = {
   not_accepted: "NO recibe",
   sufficient: "Ya tiene suficiente",
 };
+
+/**
+ * `site_items`: the curated list behind a site's own "qué reciben y qué no"
+ * — press-sourced, 38 rows across the seed, nine of them `not_accepted`.
+ *
+ * Two groups, not one flat list with a badge per row: "No reciben" is the
+ * one that saves somebody a trip, and it has to read as a warning rather
+ * than as a second, quieter version of the same list — the Cruz Roja has
+ * asked publicly that people stop bringing used clothing, and a card that
+ * buries that under "Reciben" fails the one reader it exists to warn.
+ */
+export const SITE_ITEMS_LABEL = {
+  received: "Reciben",
+  notAccepted: "No reciben",
+} as const;
 
 /**
  * Sign-in. Deliberately framed around what an account is FOR — claiming a work
@@ -325,27 +332,6 @@ export const REPORT_LABEL = {
 } as const;
 
 /**
- * Per-barrio status: evacuation and utilities.
- *
- * Badges only render for `normal` and `suspended` — `unknown` never earns a
- * chip, because "sin dato" repeated across every utility is noise, not a
- * finding. The banner leads with evacuation because a family decides on that
- * before anything else.
- */
-export const NEIGHBORHOOD_STATUS_LABEL = {
-  title: "Barrios con novedades",
-  empty: "Sin barrios con novedades registradas por ahora.",
-  evacuated: "Evacuado",
-  gas: "Gas",
-  power: "Energía",
-  water: "Agua",
-  normal: "Normal",
-  suspended: "Suspendido",
-  bannerEvacuated: "Este barrio tiene evacuación oficial.",
-  bannerUtility: "Servicios afectados en este barrio.",
-} as const;
-
-/**
  * The animal board.
  *
  * "Visto en" rather than "está en", everywhere. The distinction is the whole
@@ -424,7 +410,7 @@ export const ANIMAL_KIND_STYLE = {
  * nobody anything. The copy says what will be here and what to do meanwhile —
  * it does not offer a form that would drop what someone typed.
  */
-export const RESOURCE_TYPE_LABEL: Record<ResourceType, string> = {
+export const SERVICE_TYPE_LABEL: Record<ServiceType, string> = {
   dump_truck: "Volqueta",
   pickup: "Carro",
   tools: "Herramienta",
@@ -435,7 +421,7 @@ export const RESOURCE_TYPE_LABEL: Record<ResourceType, string> = {
   other: "Otro",
 };
 
-export const RESOURCE_TYPE_ICON: Record<ResourceType, LucideIcon> = {
+export const SERVICE_TYPE_ICON: Record<ServiceType, LucideIcon> = {
   dump_truck: Truck,
   pickup: Car,
   tools: Wrench,
@@ -548,7 +534,7 @@ export const BARRIO_PICKER = {
  */
 /**
  * Panel-wide labels. `UnifiedPanel` reads these plus whatever each family's
- * own module already exports (`WORK_ORDER_LABEL.heading`,
+ * own module already exports (`NEED_LABEL.heading`,
  * `SERVICES_LABEL.title`, and so on) instead of duplicating a title here.
  */
 /**
@@ -562,9 +548,9 @@ export const OG_LABEL = {
   tagline: "Mapa de ayuda · Manizales y Villamaría",
   /** The eyebrow over each card — the kind of thing behind the link. */
   site: "Punto",
-  workOrder: "Necesidad",
+  need: "Necesidad",
   animal: "Animal",
-  resourceOffer: "Servicio",
+  service: "Servicio",
   /** The home card: no one entity, so it states what the map is for. */
   homeTitle: "¿Dónde ayudo hoy?",
   homeMeta:
@@ -606,25 +592,6 @@ export const PANEL_LABEL = {
 } as const;
 
 /**
- * A barrio's declared priority. `NEED_PRIORITY_STYLE` deliberately reuses the
- * same colours as a work order's status badge — `critical` reads as
- * `unclaimed` red, `high` as `claimed` amber — so a reader who already learned
- * that grammar from a case card does not have to learn a second one for a
- * frente.
- */
-export const NEED_PRIORITY_LABEL: Record<NeedPriority, string> = {
-  critical: "Crítico",
-  high: "Prioritario",
-  normal: "Normal",
-};
-
-export const NEED_PRIORITY_STYLE: Record<NeedPriority, string> = {
-  critical: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
-  high: "bg-claimed-surface text-claimed border-claimed/30",
-  normal: "bg-muted text-muted-foreground border-transparent",
-};
-
-/**
  * The header the panel grows when a barrio is being filtered by.
  *
  * "En este barrio" and not "resultados": the reader tapped a place on a map,
@@ -657,7 +624,7 @@ export const BARRIO_PANEL = {
  * The wording is people, never percentages of a job nobody measured, and the
  * middle column is deliberately not called "atendido": a case somebody helped
  * once is still open, and collapsing that into "done" is the exact misreading
- * `WORK_ORDER_ROLLUP_LABEL` was written to prevent. So the third column says
+ * `NEED_ROLLUP_LABEL` was written to prevent. So the third column says
  * "ya ayudaron" — a true statement about people — rather than "resueltos",
  * which would be false for most of what it counts.
  */
@@ -792,19 +759,19 @@ export function freshness(
  * true until somebody does it. Not an event with an hour, which is what a
  * grupo was and why it could not be kept honest on a map.
  */
-export const WORK_ORDER_CATEGORY_LABEL: Record<WorkOrderCategory, string> = {
+export const NEED_CATEGORY_LABEL: Record<NeedCategory, string> = {
   debris_removal: "Escombros",
   animal_rescue: "Rescate de animales",
   structural_risk: "Riesgo estructural",
   // Covers food, drinking water, hygiene items — anything a family is
   // asking for rather than a job site is asking to be fixed. "Agua" used to
   // be its own category here and never once meant just water in practice;
-  // see the note on `WORK_ORDER_CATEGORIES`.
+  // see the note on `NEED_CATEGORIES`.
   supplies: "Insumos",
   other: "Otro",
 };
 
-export const WORK_ORDER_CATEGORY_ICON: Record<WorkOrderCategory, LucideIcon> = {
+export const NEED_CATEGORY_ICON: Record<NeedCategory, LucideIcon> = {
   debris_removal: Shovel,
   animal_rescue: PawPrint,
   structural_risk: HardHat,
@@ -814,13 +781,13 @@ export const WORK_ORDER_CATEGORY_ICON: Record<WorkOrderCategory, LucideIcon> = {
 
 /**
  * Five states in the database, three on screen. The public reader's only
- * question is "¿alguien ya está en esto?" — closed_completed,
- * closed_by_others and closed_rejected all answer "no, and it does not need
- * you either", so they read the same. The detail behind each one is still
- * in the database for whoever claimed it; it was never hidden, just not
- * asked of a stranger scanning the map.
+ * question is "¿alguien ya está en esto?" — closed_completed and
+ * closed_rejected both answer "no, and it does not need you either", so
+ * they read the same. The detail behind each one is still in the database
+ * for whoever claimed it; it was never hidden, just not asked of a stranger
+ * scanning the map.
  */
-export type WorkOrderRollup =
+export type NeedRollup =
   /** Nobody has said anything about this case. The loudest thing on the map. */
   | "untouched"
   /** Somebody said "voy", and nobody has been yet. A promise, not a result. */
@@ -857,18 +824,18 @@ export type WorkOrderRollup =
  * falta" leaves `status` at `attended`, because people genuinely did turn up
  * — so the one case on the map most in need of hands was wearing the colour
  * that means handled. `reopened` is the second axis the database persists for
- * exactly this (migration `20260815070000_work_order_reopened`) and it
- * outranks every open state here.
+ * exactly this — see `sync_need_state` — and it outranks every open state
+ * here.
  *
  * The intensity ramp within amber is the honest version of "how far along is
  * this": it is a count of people, not a percentage of a job nobody has
  * measured. It never reaches green on its own.
  */
-export function workOrderRollup(
-  order: Pick<WorkOrderDTO, "status" | "reopened" | "helpedCount">,
-): WorkOrderRollup {
+export function needRollup(
+  order: Pick<NeedDTO, "status" | "reopened" | "helpedCount">,
+): NeedRollup {
   if (order.status === "closed_completed") return "done";
-  if (order.status === "closed_rejected" || order.status === "closed_by_others") {
+  if (order.status === "closed_rejected") {
     return "dismissed";
   }
   // Outranks the help that came before it: that is the whole point of the
@@ -876,11 +843,11 @@ export function workOrderRollup(
   if (order.reopened) return "reopened";
   if (order.helpedCount >= 2) return "advanced";
   if (order.helpedCount >= 1) return "partial";
-  if (order.status === "claimed") return "onTheWay";
+  if (order.status === "on_the_way") return "onTheWay";
   return "untouched";
 }
 
-export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
+export const NEED_ROLLUP_LABEL: Record<NeedRollup, string> = {
   untouched: "Nadie ha ido",
   onTheWay: "Alguien va en camino",
   // Both halves, always. "Atendido" alone is the exact reading this whole
@@ -917,7 +884,7 @@ export const WORK_ORDER_ROLLUP_LABEL: Record<WorkOrderRollup, string> = {
  * "further along", never "less urgent". An untouched case and a reopened one
  * are both full-strength red, because they are asking for the same thing.
  */
-export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
+export const NEED_ROLLUP_MARKER: Record<NeedRollup, string> = {
   untouched: "bg-unclaimed text-unclaimed-foreground",
   // Softened, not recoloured: somebody saying "voy" is a promise. Nothing has
   // happened at this house yet, so the pin must not stop being red.
@@ -937,7 +904,7 @@ export const WORK_ORDER_ROLLUP_MARKER: Record<WorkOrderRollup, string> = {
   dismissed: "bg-stale text-background",
 };
 
-export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
+export const NEED_ROLLUP_STYLE: Record<NeedRollup, string> = {
   untouched: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
   onTheWay: "bg-unclaimed-surface/70 text-unclaimed border-unclaimed/20",
   partial: "bg-claimed-surface text-claimed border-claimed/30",
@@ -947,11 +914,11 @@ export const WORK_ORDER_ROLLUP_STYLE: Record<WorkOrderRollup, string> = {
   dismissed: "bg-stale-surface text-stale border-stale/30",
 };
 
-export const WORK_ORDER_LABEL = {
-  // "Necesidades", not "Escombros": the category set behind a work order
-  // grew past debris the day this started importing individual household
+export const NEED_LABEL = {
+  // "Necesidades", not "Escombros": the category set behind a need grew
+  // past debris the day this started importing individual household
   // requests (water, animals, reconstruction materials, transport) — see
-  // `work_order_category`. Short because this is a filter chip sharing a
+  // `need_category`. Short because this is a filter chip sharing a
   // row with several others, not a section header with the panel to itself.
   heading: "Necesidades",
   headingHint: "Casos puntuales que alguien con volqueta o manos puede atender",
@@ -981,7 +948,7 @@ export const WORK_ORDER_LABEL = {
   attendSubmit: "Confirmar",
   attendCancel: "Ahora no",
   attendedThanks: "Listo, quedaste registrado.",
-  /** The two tabs `WorkOrderActions` splits into. "Detalle" is everything
+  /** The two tabs `NeedActions` splits into. "Detalle" is everything
    *  that was competing with the thread for space on one long scroll —
    *  contact, botones, curaduría — and "Hilo" reuses `threadTitle`/
    *  `threadCount` below, so a case's history gets the panel to itself
@@ -1001,7 +968,7 @@ export const WORK_ORDER_LABEL = {
   contactWhatsapp: "Escribirle",
   noContact:
     "Quien reportó esto no dejó dirección ni contacto. Guíate por el barrio y el punto en el mapa.",
-  /** Said where the fields are typed, not here — see WORK_ORDER_FORM. This
+  /** Said where the fields are typed, not here — see NEED_FORM. This
    *  is the reader's side of the same fact. */
   contactPublicNote: "Estos datos los dejó quien reportó el caso.",
   attendNote: "¿Qué pasó o qué vas a hacer?",
@@ -1009,9 +976,9 @@ export const WORK_ORDER_LABEL = {
   attendNotePlaceholder: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
   attendeesLoading: "Cargando…",
   attendeesEmpty: "Nadie ha escrito nada todavía.",
-  attendeeCountOne: "1 persona va a atenderlo",
-  attendeeCountMany: (n: number) => `${n} personas van a atenderlo`,
-  attendeeCountNone: "Nadie ha dicho que puede atenderlo todavía",
+  onTheWayCountOne: "1 persona va a atenderlo",
+  onTheWayCountMany: (n: number) => `${n} personas van a atenderlo`,
+  onTheWayCountNone: "Nadie ha dicho que puede atenderlo todavía",
   helpedCountOne: "1 persona ya ayudó",
   helpedCountMany: (n: number) => `${n} personas ya ayudaron`,
   /**
@@ -1074,7 +1041,7 @@ export const WORK_ORDER_LABEL = {
   editSave: "Guardar",
   editSaving: "Guardando…",
   editCancel: "Cancelar",
-  // Cerrar a mano es de curadores — ver `canCloseWorkOrder`. El camino
+  // Cerrar a mano es de curadores — ver `canCloseNeed`. El camino
   // normal es el umbral que calcula la base.
   closeCompleted: "Cerrar como resuelto",
   closeRejected: "Marcar como no real",
@@ -1095,7 +1062,7 @@ export const WORK_ORDER_LABEL = {
  * — the old label — asked them to rule on the case on everyone's behalf.
  * That difference in grammar is the whole redesign in two words.
  */
-export const WORK_ORDER_UPDATE_KIND_LABEL: Record<WorkOrderUpdateKind, string> = {
+export const NEED_UPDATE_KIND_LABEL: Record<NeedUpdateKind, string> = {
   on_the_way: "Yo puedo atender",
   helped: "Ya ayudé",
   still_needed: "Sigue haciendo falta",
@@ -1135,14 +1102,14 @@ export function timeAgo(iso: string, now: number = Date.now()): string {
 
 /** What the thread prints beside each entry — shorter, because the name and
  *  the note are the line's content and this is only its kind. */
-export const WORK_ORDER_UPDATE_KIND_TAG: Record<WorkOrderUpdateKind, string> = {
+export const NEED_UPDATE_KIND_TAG: Record<NeedUpdateKind, string> = {
   on_the_way: "Va a atenderlo",
   helped: "Ya ayudó",
   still_needed: "Sigue haciendo falta",
   not_real: "Dice que no es real",
 };
 
-export const WORK_ORDER_UPDATE_KIND_STYLE: Record<WorkOrderUpdateKind, string> = {
+export const NEED_UPDATE_KIND_STYLE: Record<NeedUpdateKind, string> = {
   on_the_way: "bg-claimed-surface text-claimed border-claimed/30",
   helped: "bg-resolved-surface text-resolved border-resolved/30",
   still_needed: "bg-unclaimed-surface text-unclaimed border-unclaimed/30",
@@ -1162,14 +1129,14 @@ export const WORK_ORDER_UPDATE_KIND_STYLE: Record<WorkOrderUpdateKind, string> =
  * flag for the one that is a report about the listing rather than about the
  * job.
  */
-export const WORK_ORDER_UPDATE_KIND_ICON: Record<WorkOrderUpdateKind, LucideIcon> = {
+export const NEED_UPDATE_KIND_ICON: Record<NeedUpdateKind, LucideIcon> = {
   on_the_way: HandHelping,
   helped: CircleCheck,
   still_needed: RotateCcw,
   not_real: Flag,
 };
 
-export const WORK_ORDER_UPDATE_PLACEHOLDER: Record<WorkOrderUpdateKind, string> = {
+export const NEED_UPDATE_PLACEHOLDER: Record<NeedUpdateKind, string> = {
   on_the_way: "Voy mañana a las 8 con volqueta. Falta quien ayude a cargar.",
   helped: "Saqué dos volquetadas. Falta despejar el andén.",
   still_needed: "Pasé hoy y sigue igual, no ha ido nadie.",
@@ -1198,14 +1165,14 @@ export const WORK_ORDER_UPDATE_PLACEHOLDER: Record<WorkOrderUpdateKind, string> 
  * default says "creo que", which is the honest strength of a stranger's
  * report — and a curator, not this entry, is what actually rejects a case.
  */
-export const WORK_ORDER_UPDATE_DEFAULT_NOTE: Record<WorkOrderUpdateKind, string> = {
+export const NEED_UPDATE_DEFAULT_NOTE: Record<NeedUpdateKind, string> = {
   on_the_way: "Voy a intentar ayudar pronto.",
   helped: "Ya aporté con algo en este caso.",
   still_needed: "Contacté y sigue haciendo falta ayuda.",
   not_real: "Creo que este caso no es real.",
 };
 
-export const WORK_ORDER_FORM = {
+export const NEED_FORM = {
   // The menu entry, the route segment and this title used to be three
   // different names for one action ("Pedir ayuda" → /reportar/escombros →
   // "Reportar escombros o un daño"). They are one word now, and it is the

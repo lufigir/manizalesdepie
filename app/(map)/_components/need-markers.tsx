@@ -1,13 +1,13 @@
 "use client";
 
 import { MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/map";
-import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
+import type { NeedDTO } from "@/data/need/need.dto";
 import {
-  WORK_ORDER_CATEGORY_ICON,
-  WORK_ORDER_CATEGORY_LABEL,
-  WORK_ORDER_ROLLUP_LABEL,
-  WORK_ORDER_ROLLUP_MARKER,
-  workOrderRollup,
+  NEED_CATEGORY_ICON,
+  NEED_CATEGORY_LABEL,
+  NEED_ROLLUP_LABEL,
+  NEED_ROLLUP_MARKER,
+  needRollup,
 } from "@/lib/labels";
 import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
@@ -22,14 +22,13 @@ import { SelectedMarkerLabel } from "./marker-label";
  * so a case — which is a job, not a destination — gets its own outline. Read
  * at a glance before the icon or the colour has been decoded.
  *
- * Every pin sits on its own real coordinate. Cases used to be pushed onto a
- * ring around a shared centroid whenever several overlapped on screen
- * (`useSpreadPins`), which meant the pin a reader tapped was not where the
- * case is — it moved as they zoomed, and two cases a block apart could be
- * drawn further from each other than from where they actually are. On a map
- * whose whole premise is "¿por dónde queda exactamente?", a coordinate that
- * shifts with the viewport is the one thing that must not happen. Overlap is
- * the honest failure mode: zooming in separates them, because they are
+ * Every pin sits on its own real coordinate, never pushed onto a ring around
+ * a shared centroid when several overlap on screen: on a map whose whole
+ * premise is "¿por dónde queda exactamente?", a coordinate that shifts with
+ * the viewport is the one thing that must not happen — the pin a reader
+ * tapped has to be where the case is, and two cases a block apart must never
+ * be drawn further from each other than they actually are. Overlap is the
+ * honest failure mode: zooming in separates them, because they are
  * genuinely separate.
  *
  * Two cases reported from the same doorway are the exception — they carry one
@@ -40,20 +39,20 @@ import { SelectedMarkerLabel } from "./marker-label";
  * The count badge is what the ring was really for — knowing there is more
  * than one thing here — and it says it without moving anything.
  */
-export function WorkOrderMarkers({
-  workOrders,
+export function NeedMarkers({
+  needs,
   selectedId,
   onSelect,
   offsets,
 }: {
-  workOrders: WorkOrderDTO[];
+  needs: NeedDTO[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   offsets: FanOffsets;
 }) {
   return (
     <>
-      {workOrders.map((order) => (
+      {needs.map((order) => (
         <SinglePin
           key={order.id}
           order={order}
@@ -72,19 +71,19 @@ function SinglePin({
   onSelect,
   offset,
 }: {
-  order: WorkOrderDTO;
+  order: NeedDTO;
   selected: boolean;
   onSelect: (id: string) => void;
   offset?: [number, number];
 }) {
-  const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
-  const rollup = workOrderRollup(order);
+  const Icon = NEED_CATEGORY_ICON[order.category];
+  const rollup = needRollup(order);
 
   // Everybody who has stood in front of this case and said something. The
-  // colour already carries WHAT was said (see `workOrderRollup`); this
+  // colour already carries WHAT was said (see `needRollup`); this
   // carries how much of it there is, which is the difference between a case
   // one neighbour mentioned and one the whole block is working on.
-  const entryCount = order.attendeeCount + order.helpedCount;
+  const entryCount = order.onTheWayCount + order.helpedCount;
 
   return (
     <MapMarker
@@ -98,12 +97,12 @@ function SinglePin({
           <span
             className={cn(
               "ring-background flex size-7 rotate-45 items-center justify-center rounded-md shadow-md ring-2 transition-transform",
-              WORK_ORDER_ROLLUP_MARKER[rollup],
+              NEED_ROLLUP_MARKER[rollup],
               selected && "scale-125",
             )}
-            aria-label={`Necesidad de ${WORK_ORDER_CATEGORY_LABEL[order.category]}: ${
+            aria-label={`Necesidad de ${NEED_CATEGORY_LABEL[order.category]}: ${
               order.description
-            }. ${WORK_ORDER_ROLLUP_LABEL[rollup]}.`}
+            }. ${NEED_ROLLUP_LABEL[rollup]}.`}
           >
             <Icon className="-rotate-45 size-4" strokeWidth={2.5} aria-hidden />
           </span>
@@ -124,7 +123,7 @@ function SinglePin({
 
           {selected && (
             <SelectedMarkerLabel>
-              {WORK_ORDER_CATEGORY_LABEL[order.category]}
+              {NEED_CATEGORY_LABEL[order.category]}
               {order.neighborhood && ` · ${order.neighborhood}`}
             </SelectedMarkerLabel>
           )}
@@ -135,7 +134,7 @@ function SinglePin({
           pills over one pin. */}
       {!selected && (
         <MarkerTooltip offset={20}>
-          {WORK_ORDER_CATEGORY_LABEL[order.category]}
+          {NEED_CATEGORY_LABEL[order.category]}
           {order.neighborhood && ` · ${order.neighborhood}`}
         </MarkerTooltip>
       )}

@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FilterSpecification, MapLayerMouseEvent } from "maplibre-gl";
 
 import { MapGeoJSON, useMap } from "@/components/ui/map";
-import type { NeighborhoodStatusDTO } from "@/data/neighborhood/neighborhood.dto";
 import { contains } from "@/lib/geo";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 
@@ -106,7 +105,6 @@ export function BarrioLayer({
   onHoverChange,
   selected,
   onSelect,
-  statuses = [],
 }: {
   /** Which barrio the map is centred on. Reported continuously, unlike the
    *  hover, which needs a cursor and therefore does not exist on a phone. */
@@ -120,11 +118,6 @@ export function BarrioLayer({
   selected?: string | null;
   /** Tapping a barrio filters by it; tapping it again clears the filter. */
   onSelect?: (barrio: BarrioProps | null) => void;
-  /** Barrios with an evacuation/utility status on record. The only shading
-   *  this layer carries besides the uniform wash and the selection: a real
-   *  severity signal, unlike a choropleth of unmet need, which needs work
-   *  orders that do not exist yet. */
-  statuses?: NeighborhoodStatusDTO[];
 }) {
   const { map } = useMap();
   /**
@@ -151,31 +144,7 @@ export function BarrioLayer({
   // The label's halo: the page background, so the name stays readable over the
   // basemap in either theme without inventing a colour.
   const halo = useToken("--background");
-  // Same vocabulary as a site card: unclaimed = needs eyes on it, claimed = in
-  // progress / partially affected.
-  const evacuatedColor = useToken("--unclaimed");
-  const utilityColor = useToken("--claimed");
   const [data, setData] = useState<Barrios | null>(null);
-
-  const evacuatedNames = useMemo(
-    () => statuses.filter((s) => s.evacuated).map((s) => s.name),
-    [statuses],
-  );
-  // Evacuation already says "look here"; a barrio does not need the utility
-  // shade on top of it, so this excludes anything already in `evacuatedNames`.
-  const utilityNames = useMemo(
-    () =>
-      statuses
-        .filter(
-          (s) =>
-            !s.evacuated &&
-            (s.gasStatus === "suspended" ||
-              s.powerStatus === "suspended" ||
-              s.waterStatus === "suspended"),
-        )
-        .map((s) => s.name),
-    [statuses],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -500,7 +469,7 @@ export function BarrioLayer({
 
   // Skip the first paint rather than flash a wrong colour: the token is only
   // readable once the stylesheet has applied.
-  if (!border || !data || !evacuatedColor || !utilityColor) return null;
+  if (!border || !data) return null;
 
   return (
     <>
@@ -511,28 +480,13 @@ export function BarrioLayer({
         /* Barely-there by default — deliberately uniform, so an ordinary barrio
            cannot be mistaken for a choropleth of unmet need, which needs work
            orders that do not exist yet.
-           Two named exceptions ride the same fill: a barrio with an official
-           evacuation, and one with a suspended utility. That is real severity a
-           utility or the Alcaldía actually reported, not an inference this app
-           is making — so it earns colour where nothing else on this layer does.
            It is not decoration either. the interaction effect binds hover to the
            fill layer, so without a fill there is no highlight at all — a 1.5px
            dashed line is not something anyone can point at. */
         fillPaint={{
-          "fill-color": isDesktop
-            ? [
-                "case",
-                ["in", ["get", "name"], ["literal", evacuatedNames]],
-                evacuatedColor,
-                ["in", ["get", "name"], ["literal", utilityNames]],
-                utilityColor,
-                border,
-              ]
-            : border,
+          "fill-color": border,
           // The one being filtered by is drawn solid, so the filter is visible
-          // on the map and not only as a chip in the corner. A status barrio
-          // gets a floor above the uniform wash even unselected, so the signal
-          // survives closing the filter.
+          // on the map and not only as a chip in the corner.
           // Zero, not `visibility: none`, on the unselected ones below `lg`:
           // a hidden layer stops hit-testing and takes tap-to-filter with it.
           // A transparent fill still answers a tap.
@@ -541,10 +495,6 @@ export function BarrioLayer({
                 "case",
                 ["==", ["get", "name"], selected ?? ""],
                 0.22,
-                ["in", ["get", "name"], ["literal", evacuatedNames]],
-                0.16,
-                ["in", ["get", "name"], ["literal", utilityNames]],
-                0.1,
                 selected ? 0.02 : 0.03,
               ]
             : ["case", ["==", ["get", "name"], selected ?? ""], 0.22, 0],

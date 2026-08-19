@@ -3,33 +3,33 @@
 import { PawPrint } from "lucide-react";
 
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
+import type { NeedDTO } from "@/data/need/need.dto";
+import type { ServiceDTO } from "@/data/service/service.dto";
 import type { SiteDTO } from "@/data/site/site.dto";
-import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import {
   ANIMAL_KIND_STYLE,
   ANIMAL_LABEL,
   ANIMAL_MARKER,
-  RESOURCE_TYPE_ICON,
-  RESOURCE_TYPE_LABEL,
+  NEED_CATEGORY_ICON,
+  NEED_CATEGORY_LABEL,
+  NEED_ROLLUP_LABEL,
+  NEED_ROLLUP_MARKER,
+  NEED_ROLLUP_STYLE,
+  SERVICE_TYPE_ICON,
+  SERVICE_TYPE_LABEL,
   SITE_STATUS_LABEL,
   SITE_STATUS_MARKER,
   SITE_STATUS_STYLE,
   SITE_TYPE_ICON,
-  WORK_ORDER_CATEGORY_ICON,
-  WORK_ORDER_CATEGORY_LABEL,
-  WORK_ORDER_ROLLUP_LABEL,
-  WORK_ORDER_ROLLUP_MARKER,
-  WORK_ORDER_ROLLUP_STYLE,
-  workOrderRollup,
+  needRollup,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export type PanelEntity =
   | { kind: "site"; site: SiteDTO }
   | { kind: "animal"; animal: AnimalDTO }
-  | { kind: "resourceOffer"; offer: ResourceOfferDTO }
-  | { kind: "workOrder"; order: WorkOrderDTO };
+  | { kind: "service"; service: ServiceDTO }
+  | { kind: "need"; order: NeedDTO };
 
 /**
  * One line per thing. The panel is an index, not a set of cards.
@@ -99,16 +99,16 @@ export function EntityCard({
         />
       );
     }
-    case "workOrder": {
+    case "need": {
       const { order } = entity;
-      const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
-      const rollup = workOrderRollup(order);
+      const Icon = NEED_CATEGORY_ICON[order.category];
+      const rollup = needRollup(order);
       return (
         <Row
           id={order.id}
           // A case has no name of its own, so the category is the title and
           // the barrio is what tells two "Escombros" apart.
-          title={WORK_ORDER_CATEGORY_LABEL[order.category]}
+          title={NEED_CATEGORY_LABEL[order.category]}
           detail={order.neighborhood}
           // The only family that gets a body: "Escombros · Chipre" says
           // almost nothing on its own, and what makes somebody with a
@@ -117,25 +117,25 @@ export function EntityCard({
           // to 142 characters on average, which is five.
           body={order.description}
           icon={<Icon className="size-3.5" strokeWidth={2.5} aria-hidden />}
-          iconClass={cn("rounded-md", WORK_ORDER_ROLLUP_MARKER[rollup])}
-          badge={WORK_ORDER_ROLLUP_LABEL[rollup]}
-          badgeClass={WORK_ORDER_ROLLUP_STYLE[rollup]}
+          iconClass={cn("rounded-md", NEED_ROLLUP_MARKER[rollup])}
+          badge={NEED_ROLLUP_LABEL[rollup]}
+          badgeClass={NEED_ROLLUP_STYLE[rollup]}
           selected={selected}
           onSelect={onSelect}
         />
       );
     }
-    case "resourceOffer": {
-      const { offer } = entity;
-      const Icon = RESOURCE_TYPE_ICON[offer.type];
+    case "service": {
+      const { service } = entity;
+      const Icon = SERVICE_TYPE_ICON[service.type];
       return (
         <Row
-          id={offer.id}
-          title={RESOURCE_TYPE_LABEL[offer.type]}
-          detail={offer.neighborhood}
+          id={service.id}
+          title={SERVICE_TYPE_LABEL[service.type]}
+          detail={service.neighborhood}
           // Like a necesidad, the title here is only a category: the
           // description is what tells two volquetas apart.
-          body={offer.description}
+          body={service.description}
           icon={<Icon className="size-3.5" strokeWidth={2.5} aria-hidden />}
           iconClass="bg-muted rounded-full"
           selected={selected}

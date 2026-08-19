@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { getCurrentUser } from "@/data/user/require-user";
-import { WORK_ORDER_FORM } from "@/lib/labels";
+import { NEED_FORM } from "@/lib/labels";
 
 import { ReportLayout } from "../_components/report-layout";
-import { WorkOrderForm } from "./_components/work-order-form";
+import { NeedForm } from "./_components/need-form";
 
-export const metadata: Metadata = { title: WORK_ORDER_FORM.title };
+export const metadata: Metadata = { title: NEED_FORM.title };
 
-export default async function ReportWorkOrderPage() {
+export default async function ReportNeedPage() {
   // The form stays anonymous — no account is required to report a need. The
   // session is read only to pre-fill the contact name for somebody who
   // already gave it to us, and the field stays editable because a report is
@@ -21,12 +21,12 @@ export default async function ReportWorkOrderPage() {
 
   return (
     <ReportLayout
-      title={WORK_ORDER_FORM.title}
-      subtitle={WORK_ORDER_FORM.subtitle}
+      title={NEED_FORM.title}
+      subtitle={NEED_FORM.subtitle}
       backHref="/"
     >
       {(header) => (
-        <WorkOrderForm
+        <NeedForm
           barrios={barrios}
           userName={user?.fullName ?? null}
           header={header}

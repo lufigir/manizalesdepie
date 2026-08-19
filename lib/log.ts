@@ -5,8 +5,8 @@ type Level = "debug" | "info" | "warn" | "error";
 type Fields = Record<string, unknown>;
 
 /** Keys whose values never reach a log line. The address and phone of an
- *  affected person are the whole reason work_order_contact exists; they must
- *  not leak out the side door into stdout. */
+ *  affected person are why a `need` row carries the fields it does; they
+ *  must not leak out the side door into stdout. */
 const REDACTED = new Set([
   "phone",
   "whatsapp",

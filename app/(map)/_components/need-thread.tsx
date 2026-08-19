@@ -4,15 +4,15 @@ import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { deleteWorkOrderUpdate } from "@/data/work_order/work_order.actions";
+import { deleteNeedUpdate } from "@/data/need/need.actions";
 import type {
-  WorkOrderUpdateDTO,
-  WorkOrderUpdateKind,
-} from "@/data/work_order/work_order.dto";
+  NeedUpdateDTO,
+  NeedUpdateKind,
+} from "@/data/need/need.dto";
 import {
   ADMIN_LABEL,
-  WORK_ORDER_LABEL,
-  WORK_ORDER_UPDATE_KIND_TAG,
+  NEED_LABEL,
+  NEED_UPDATE_KIND_TAG,
   timeAgo,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -42,19 +42,19 @@ import { WhatsappIcon } from "./whatsapp-icon";
  * rides the gutter as a coloured dot, the author and the time share one line,
  * and the note starts immediately underneath at reading weight.
  */
-export function WorkOrderThread({
+export function NeedThread({
   updates,
   /** The entry this reader just posted, marked so their own note is findable
    *  in a thread that may be long. Cleared by the parent on close. */
   highlightId,
 }: {
-  updates: WorkOrderUpdateDTO[] | null;
+  updates: NeedUpdateDTO[] | null;
   highlightId?: string | null;
 }) {
   if (updates === null) {
     return (
       <p className="text-muted-foreground py-2 text-[0.7rem]">
-        {WORK_ORDER_LABEL.attendeesLoading}
+        {NEED_LABEL.attendeesLoading}
       </p>
     );
   }
@@ -63,10 +63,10 @@ export function WorkOrderThread({
     return (
       <div className="py-1">
         <p className="text-muted-foreground text-[0.7rem]">
-          {WORK_ORDER_LABEL.attendeesEmpty}
+          {NEED_LABEL.attendeesEmpty}
         </p>
         <p className="text-muted-foreground mt-0.5 text-[0.65rem] leading-snug">
-          {WORK_ORDER_LABEL.threadEmptyHint}
+          {NEED_LABEL.threadEmptyHint}
         </p>
       </div>
     );
@@ -93,7 +93,7 @@ function Entry({
   last,
   mine,
 }: {
-  update: WorkOrderUpdateDTO;
+  update: NeedUpdateDTO;
   first: boolean;
   last: boolean;
   mine: boolean;
@@ -101,7 +101,7 @@ function Entry({
   const { isAdmin } = useWorkspace();
   const [pending, startTransition] = useTransition();
 
-  const name = update.name ?? WORK_ORDER_LABEL.anonymous;
+  const name = update.name ?? NEED_LABEL.anonymous;
 
   return (
     <li className="group relative flex gap-2 pb-3 last:pb-0">
@@ -133,7 +133,7 @@ function Entry({
           "ring-background",
           KIND_DOT[update.kind],
         )}
-        title={WORK_ORDER_UPDATE_KIND_TAG[update.kind]}
+        title={NEED_UPDATE_KIND_TAG[update.kind]}
         aria-hidden
       />
 
@@ -152,11 +152,11 @@ function Entry({
               KIND_TEXT[update.kind],
             )}
           >
-            {WORK_ORDER_UPDATE_KIND_TAG[update.kind]}
+            {NEED_UPDATE_KIND_TAG[update.kind]}
           </span>
           {mine && (
             <span className="text-primary shrink-0 text-[0.6rem] font-semibold">
-              {WORK_ORDER_LABEL.threadYours}
+              {NEED_LABEL.threadYours}
             </span>
           )}
           {/* Never truncated and never wrapped: it is four characters and it
@@ -201,7 +201,7 @@ function Entry({
               </Button>
             )}
 
-            {/* Curator only — see `canDeleteWorkOrderUpdate`. The book is
+            {/* Curator only — see `canDeleteNeedUpdate`. The book is
                 append-only for everyone else on purpose: two "ya ayudé" close
                 a case, so a delete is a state change in disguise. This exists
                 for the one thing an append-only log cannot handle — abuse, or
@@ -219,7 +219,7 @@ function Entry({
                 className="text-muted-foreground hover:text-destructive-foreground ml-auto"
                 onClick={() =>
                   startTransition(async () => {
-                    await deleteWorkOrderUpdate(update.id);
+                    await deleteNeedUpdate(update.id);
                   })
                 }
               >
@@ -235,17 +235,17 @@ function Entry({
 
 /** The gutter dot, one per kind. Solid fills rather than the badge's tinted
  *  surfaces: at 10px a surface colour is indistinguishable from the page. */
-const KIND_DOT: Record<WorkOrderUpdateKind, string> = {
-  on_the_way: "bg-claimed",
+const KIND_DOT: Record<NeedUpdateKind, string> = {
+  on_the_way: "bg-underway",
   helped: "bg-resolved",
-  still_needed: "bg-unclaimed",
+  still_needed: "bg-pending",
   not_real: "bg-stale",
 };
 
 /** The same four states as words, for the line beside the name. */
-const KIND_TEXT: Record<WorkOrderUpdateKind, string> = {
-  on_the_way: "text-claimed",
+const KIND_TEXT: Record<NeedUpdateKind, string> = {
+  on_the_way: "text-underway",
   helped: "text-resolved",
-  still_needed: "text-unclaimed",
+  still_needed: "text-pending",
   not_real: "text-stale",
 };

@@ -39,15 +39,12 @@ export function canConfirmSite(): boolean {
  * Correcting a site's own fields — its type, name, address, hours, phone.
  * Anyone, with no account.
  *
- * This used to be a curator's, with an exception for the reporter while the
- * row was still pending. Both halves of that were wrong for this product.
- * The pending state does not exist any more (a report is on the map the
- * moment it lands), and the person who knows the acopio closed at five, or
- * that it is an albergue rather than a collection point, is whoever is
- * standing in front of it — which is exactly the person least likely to hold
- * an account, on a phone that may not be theirs.
+ * A report is on the map the moment it lands, and the person who knows the
+ * acopio closed at five, or that it is an albergue rather than a collection
+ * point, is whoever is standing in front of it — which is exactly the person
+ * least likely to hold an account, on a phone that may not be theirs.
  *
- * It is the same bar `canUpdateWorkOrder` and `canConfirmSite` already sit
+ * It is the same bar `canUpdateNeed` and `canConfirmSite` already sit
  * at, and the reasoning is the same one stated there: a wrong edit costs one
  * correction, and a map nobody can correct costs the city. What stays out of
  * reach is what an edit cannot undo — `published` (hiding), `remove`

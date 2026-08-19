@@ -9,7 +9,7 @@ import type { CurrentUser } from "@/data/user/require-user";
  *  third party's address into the form, that is the AGENTS.md guardrail's
  *  problem to solve with access control on the read side, not with a gate
  *  on the write side. */
-export function canReportWorkOrder(): boolean {
+export function canReportNeed(): boolean {
   return true;
 }
 
@@ -21,11 +21,11 @@ export function canReportWorkOrder(): boolean {
  * or the counterweight does not work.
  *
  * Open does not mean consequence-free. No single entry decides anything —
- * `sync_work_order_state` needs two "ya ayudé" from two different numbers
+ * `sync_need_state` needs two "ya ayudé" from two different numbers
  * before a case closes — so the thing this predicate lets anyone do is
  * contribute to a count, not set a state.
  */
-export function canPostWorkOrderUpdate(): boolean {
+export function canPostNeedUpdate(): boolean {
   return true;
 }
 
@@ -43,19 +43,19 @@ export function canPostWorkOrderUpdate(): boolean {
  * count genuinely cannot decide: a real case that only one person ever
  * helped with, and a case that actually is fake.
  */
-export function canCloseWorkOrder(user: CurrentUser | null): boolean {
+export function canCloseNeed(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
 
 /** Open to anyone: correcting a case's own category or description fixes a
  *  detail, it does not touch anything sensitive and it takes nothing off
  *  the map — the contact fields are not editable here. */
-export function canUpdateWorkOrder(): boolean {
+export function canUpdateNeed(): boolean {
   return true;
 }
 
 /** Hiding or deleting a case outright. Curators, like closing one. */
-export function canManageWorkOrder(user: CurrentUser | null): boolean {
+export function canManageNeed(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }
 
@@ -71,9 +71,9 @@ export function canManageWorkOrder(user: CurrentUser | null): boolean {
  * What is left for a curator is the thing an append-only log genuinely
  * cannot handle: an entry containing abuse, a phone number that should never
  * have been published, or spam. Deleting one re-fires
- * `sync_work_order_state`, so the case's status stays honest about whatever
+ * `sync_need_state`, so the case's status stays honest about whatever
  * entries remain.
  */
-export function canDeleteWorkOrderUpdate(user: CurrentUser | null): boolean {
+export function canDeleteNeedUpdate(user: CurrentUser | null): boolean {
   return user?.role === "curator";
 }

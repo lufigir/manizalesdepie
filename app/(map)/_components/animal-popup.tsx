@@ -5,7 +5,7 @@ import { PawPrint } from "lucide-react";
 
 import { deleteAnimal, setAnimalPublished } from "@/data/animal/animal.actions";
 import { type AnimalDTO } from "@/data/animal/animal.dto";
-import { ADMIN_LABEL, ANIMAL_KIND_STYLE, ANIMAL_LABEL, freshness } from "@/lib/labels";
+import { ANIMAL_KIND_STYLE, ANIMAL_LABEL, freshness } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";

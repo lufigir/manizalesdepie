@@ -1,9 +1,9 @@
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
-import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
+import { NeedDAL } from "@/data/need/need.dal";
+import { ServiceDAL } from "@/data/service/service.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
-import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 
 import { MapWorkspace } from "../_components/map-workspace";
 
@@ -12,39 +12,26 @@ import { MapWorkspace } from "../_components/map-workspace";
  * `MapWorkspace` (which renders the filter row and the panel beside it — see
  * `UnifiedPanel`).
  *
- * `(tabs)/page.tsx` — the bare `/` — is the only route left under this
- * layout. `/necesito`, `/mascotas` and `/servicios` used to sit beside it,
- * each rendering nothing of its own and existing only to seed one
- * `UnifiedPanel` chip; they were removed once every chip became reachable in
- * one tap from `/` anyway, the same reasoning `/ayudar` was dropped under.
+ * `(tabs)/page.tsx` — the bare `/` — is the only route under this layout:
+ * every `UnifiedPanel` chip is reachable in one tap from `/`, so no family
+ * needs a route of its own.
  *
  * A Server Component: it reads through the DALs and hands plain data down.
  * Loaded once here rather than per family, because every filter now shows
  * counts for every other one.
  */
 export default async function TabsLayout() {
-  const [
-    sites,
-    animals,
-    resourceOffers,
-    workOrders,
-    neighborhoodStatuses,
-    neighborhoodNeeds,
-    barrios,
-    user,
-  ] = await Promise.all([
+  const [sites, animals, services, needs, barrios, user] = await Promise.all([
     // `.create()`, not `.public()`, on every list read below: a curator's
     // session has to reach each DAL for `listPublished` to include what
-    // they hid (see the note on `WorkOrderDAL.listPublished`) — otherwise
+    // they hid (see the note on `NeedDAL.listPublished`) — otherwise
     // `setPublished(id, false)` would have no way back except a direct
     // database query. `getCurrentUser` is request-cached, so this costs
     // nothing extra over the `isAdmin` read below.
     SiteDAL.create().then((dal) => dal.listPublished()),
     AnimalDAL.create().then((dal) => dal.listPublished()),
-    ResourceOfferDAL.create().then((dal) => dal.listPublished()),
-    WorkOrderDAL.create().then((dal) => dal.listPublished()),
-    NeighborhoodDAL.public().statuses(),
-    NeighborhoodDAL.public().needs(),
+    ServiceDAL.create().then((dal) => dal.listPublished()),
+    NeedDAL.create().then((dal) => dal.listPublished()),
     // The barrio list, for the picker inside the relocation overlay: aiming a
     // corrected pin by naming the barrio is the same easy version of the
     // question the report form already leans on (see `BarrioPicker`).
@@ -57,10 +44,8 @@ export default async function TabsLayout() {
       <MapWorkspace
         sites={sites}
         animals={animals}
-        resourceOffers={resourceOffers}
-        workOrders={workOrders}
-        neighborhoodStatuses={neighborhoodStatuses}
-        neighborhoodNeeds={neighborhoodNeeds}
+        services={services}
+        needs={needs}
         barrios={barrios}
         user={user}
       />

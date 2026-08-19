@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-import { ATTENDANCE_LABEL, workOrderRollup } from "@/lib/labels";
+import { ATTENDANCE_LABEL, needRollup } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { useWorkspace } from "./workspace-context";
@@ -36,7 +36,7 @@ import { useWorkspace } from "./workspace-context";
  * not progress and should not lengthen the green.
  */
 export function AttendanceStats() {
-  const { workOrders } = useWorkspace();
+  const { needs } = useWorkspace();
   const [expanded, setExpanded] = useState(false);
 
   const counts = useMemo(() => {
@@ -44,8 +44,8 @@ export function AttendanceStats() {
     let onTheWay = 0;
     let helped = 0;
 
-    for (const order of workOrders) {
-      switch (workOrderRollup(order)) {
+    for (const order of needs) {
+      switch (needRollup(order)) {
         // Both full-strength red for the same reason the marker draws them
         // that way: an untouched case and a reopened one are asking for
         // exactly the same thing.
@@ -66,7 +66,7 @@ export function AttendanceStats() {
     }
 
     return { waiting, onTheWay, helped, total: waiting + onTheWay + helped };
-  }, [workOrders]);
+  }, [needs]);
 
   if (counts.total === 0) {
     return (
@@ -86,8 +86,8 @@ export function AttendanceStats() {
       className="bg-muted flex h-1.5 w-full gap-px overflow-hidden rounded-full"
       aria-hidden
     >
-      <Segment count={counts.waiting} total={counts.total} className="bg-unclaimed" />
-      <Segment count={counts.onTheWay} total={counts.total} className="bg-claimed" />
+      <Segment count={counts.waiting} total={counts.total} className="bg-pending" />
+      <Segment count={counts.onTheWay} total={counts.total} className="bg-underway" />
       <Segment count={counts.helped} total={counts.total} className="bg-resolved" />
     </div>
   );
@@ -112,7 +112,7 @@ export function AttendanceStats() {
         aria-label={ATTENDANCE_LABEL.toggle}
         className="focus-visible:ring-ring flex items-center gap-1.5 rounded focus-visible:ring-2 focus-visible:outline-none"
       >
-        <span className="text-unclaimed text-sm leading-none font-bold tabular-nums">
+        <span className="text-pending text-sm leading-none font-bold tabular-nums">
           {counts.waiting}
         </span>
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-left text-[0.65rem] font-medium">
@@ -139,14 +139,14 @@ export function AttendanceStats() {
           <Row
             value={counts.waiting}
             label={ATTENDANCE_LABEL.waiting}
-            dot="bg-unclaimed"
-            tone="text-unclaimed"
+            dot="bg-pending"
+            tone="text-pending"
           />
           <Row
             value={counts.onTheWay}
             label={ATTENDANCE_LABEL.onTheWay}
-            dot="bg-claimed"
-            tone="text-claimed"
+            dot="bg-underway"
+            tone="text-underway"
           />
           <Row
             value={counts.helped}

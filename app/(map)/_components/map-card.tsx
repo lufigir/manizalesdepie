@@ -22,17 +22,15 @@ const NO_INSET: CardInset = { bottom: 0, left: 0 };
  * the camera reframes the pin into whatever space the card leaves (see
  * `FlyToSelected`).
  *
- * The desktop half used to be MapLibre's own anchored popup, pointing at the
- * pin. The argument for it was that the answer and its place stayed on screen
- * together, and that argument was right — but a popup is sized by whatever it
- * is anchored to, and the cards outgrew it: a necesidad now carries its
- * contact block, its attendee list and its actions, and a sitio shows its
- * schedule, its items, its address and its source with nothing folded away.
- * All of that inside 20rem hanging off a pin meant a card that covered its
- * own marker, flipped sides near an edge, and scrolled internally at 58dvh.
- * A left sheet holds the same content at a stable size and place; the camera
- * offset keeps the pin visible beside it, which is what the anchoring was
- * for.
+ * The desktop half is a left sheet, not a popup anchored to the pin: a popup
+ * is sized by whatever it is anchored to, and these cards do not fit inside
+ * one. A necesidad carries its contact block, its attendee list and its
+ * actions; a sitio shows its schedule, its items, its address and its
+ * source, with nothing folded away — inside 20rem hanging off a pin, that
+ * means a card covering its own marker, flipping sides near an edge, and
+ * scrolling internally. A left sheet holds the same content at a stable
+ * size and place; the camera offset keeps the pin visible beside it, which
+ * is what anchoring to the pin would otherwise be for.
  *
  * The left edge specifically: the panel owns the right (see `MapWorkspace`'s
  * aside), so the detail opens opposite it and the map keeps the middle.
@@ -122,12 +120,11 @@ function CardShell({
 
   const docked =
     side === "left"
-      // Widened from 22rem: a necesidad's card now splits into "Detalle" and
-      // "Hilo" tabs (see `WorkOrderActions`), and the thread — a name, a
-      // kind badge and a note per row — read cramped at the old width. 26rem
-      // is the smallest bump that gives the thread room without eating
-      // enough of the map that `FlyToSelected`'s offset starts feeling tight
-      // on a 13" screen.
+      // 26rem: a necesidad's card splits into "Detalle" and "Hilo" tabs (see
+      // `NeedActions`), and the thread — a name, a kind badge and a note per
+      // row — needs room. This is the smallest width that gives the thread
+      // room without eating enough of the map that `FlyToSelected`'s offset
+      // starts feeling tight on a 13" screen.
       // Neither border nor rounded corner. The sheet runs the full height of
       // the map and is flush against the viewport's own left edge, so a
       // rounded right side left two little wedges of map showing at top and

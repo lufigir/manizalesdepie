@@ -1,14 +1,14 @@
 import { ImageResponse } from "next/og";
 
-import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
+import { NeedDAL } from "@/data/need/need.dal";
 import {
   OG_LABEL,
-  WORK_ORDER_CATEGORY_LABEL,
-  WORK_ORDER_LABEL,
-  WORK_ORDER_ROLLUP_LABEL,
+  NEED_CATEGORY_LABEL,
+  NEED_LABEL,
+  NEED_ROLLUP_LABEL,
   freshness,
-  workOrderRollup,
-  type WorkOrderRollup,
+  needRollup,
+  type NeedRollup,
 } from "@/lib/labels";
 
 import {
@@ -37,15 +37,15 @@ export const contentType = OG_CONTENT_TYPE;
 // analysis. See the caching note in `og-card.tsx` for the hour.
 export const revalidate = 3600;
 
-/** Same grammar as the marker (see `WORK_ORDER_ROLLUP_MARKER`): red needs
+/** Same grammar as the marker (see `NEED_ROLLUP_MARKER`): red needs
  *  someone, amber means people are on it and it is not over, green is only
  *  ever an actual resolution, grey is off the list without being one. */
-const ROLLUP_ACCENT: Record<WorkOrderRollup, OgAccent> = {
-  untouched: "unclaimed",
-  onTheWay: "unclaimed",
-  partial: "claimed",
-  advanced: "claimed",
-  reopened: "unclaimed",
+const ROLLUP_ACCENT: Record<NeedRollup, OgAccent> = {
+  untouched: "pending",
+  onTheWay: "pending",
+  partial: "underway",
+  advanced: "underway",
+  reopened: "pending",
   done: "resolved",
   dismissed: "neutral",
 };
@@ -57,30 +57,30 @@ export default async function Image({
 }) {
   const { id } = await params;
   const [order, fonts, logo] = await Promise.all([
-    WorkOrderDAL.public().findById(id),
+    NeedDAL.public().findById(id),
     ogFonts(),
     ogLogo(),
   ]);
 
   if (!order) {
     return new ImageResponse(
-      <OgCard eyebrow={OG_LABEL.workOrder} title={OG_LABEL.notFound} logo={logo} />,
+      <OgCard eyebrow={OG_LABEL.need} title={OG_LABEL.notFound} logo={logo} />,
       { ...size, fonts },
     );
   }
 
-  const rollup = workOrderRollup(order);
+  const rollup = needRollup(order);
   const { label: freshLabel } = freshness(
     order.confirmedAt,
-    WORK_ORDER_LABEL.fresh,
+    NEED_LABEL.fresh,
   );
 
   return new ImageResponse(
     (
       <OgCard
-        eyebrow={`${OG_LABEL.workOrder} · ${WORK_ORDER_CATEGORY_LABEL[order.category]}`}
+        eyebrow={`${OG_LABEL.need} · ${NEED_CATEGORY_LABEL[order.category]}`}
         title={ogTitle(order.description)}
-        badge={WORK_ORDER_ROLLUP_LABEL[rollup]}
+        badge={NEED_ROLLUP_LABEL[rollup]}
         meta={[order.neighborhood, freshLabel].filter(Boolean).join(" · ")}
         icon={OgHardHatIcon}
         logo={logo}

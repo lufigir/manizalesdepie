@@ -51,19 +51,13 @@ const hospitals = new Set(
 );
 
 const { data: sites, error } = await supabase
-  .from("site")
+  .from("sites")
   .select("id, name, type, source_url, status")
   .like("source_url", "https://www.openstreetmap.org/%");
 
-if (error) throw new Error(`No se pudo leer site: ${error.message}`);
+if (error) throw new Error(`No se pudo leer sites: ${error.message}`);
 
 const drop = sites.filter((s) => {
-  // Vets stay: the UPA is sheltering animals and food distribution is running,
-  // so where a vet is remains a live question.
-  if (s.type === "vet_clinic") return false;
-  // The lone drinking-water tap OSM knows about is not a relief water point;
-  // it is a park fountain, and it implies a service nobody is providing.
-  if (s.type === "water_point") return true;
   if (s.type !== "medical_post") return false;
   // Press-confirmed as operating: that report is worth more than the OSM tag.
   if (s.status === "open") return false;
@@ -76,7 +70,7 @@ if (drop.length === 0) {
 }
 
 const { error: deleteError } = await supabase
-  .from("site")
+  .from("sites")
   .delete()
   .in(
     "id",
@@ -88,7 +82,7 @@ console.log(`${hospitals.size} hospitales en OSM · ${drop.length} pines retirad
 for (const s of drop) console.log(`  − ${s.name}`);
 
 const { count } = await supabase
-  .from("site")
+  .from("sites")
   .select("*", { count: "exact", head: true })
   .eq("published", true);
 console.log(`\nQuedan ${count} puntos publicados.`);

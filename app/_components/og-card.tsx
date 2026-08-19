@@ -49,17 +49,17 @@ const COLOR = {
   text: "#f4f7f8",
   muted: "#93a4ad",
   border: "#24343d",
-  /** Matches `--unclaimed` / `--claimed` / `--resolved`: the same three-way
+  /** Matches `--pending` / `--underway` / `--resolved`: the same three-way
    *  status grammar the map draws, so a card and a pin agree. */
-  unclaimed: "#c0433c",
-  claimed: "#c58a2b",
+  pending: "#c0433c",
+  underway: "#c58a2b",
   resolved: "#2f8f6d",
   neutral: "#5d7684",
 } as const;
 
 export type OgAccent = keyof Pick<
   typeof COLOR,
-  "unclaimed" | "claimed" | "resolved" | "neutral"
+  "pending" | "underway" | "resolved" | "neutral"
 >;
 
 /** Satori parses `rgba()` reliably and 8-digit hex less so, so opacity on a

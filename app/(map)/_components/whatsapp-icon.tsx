@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 /**
  * WhatsApp's own mark, in its own green.
  *
- * Every "escribir por WhatsApp" control in this app used to be a bare word,
- * or a generic message bubble from Lucide. The real logo is worth the bytes
- * here specifically: WhatsApp is not one channel among several in this city,
+ * The real logo, not a bare word or a generic message bubble from Lucide, is
+ * worth the bytes here specifically: WhatsApp is not one channel among
+ * several in this city,
  * it is where the relief coordination actually happens, and a reader scanning
  * a card for the way to reach somebody finds a shape they already know
  * before they find any label.

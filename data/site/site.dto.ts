@@ -13,8 +13,6 @@ export const SITE_TYPES = [
   "collection_point",
   "shelter",
   "blood_donation",
-  "vet_clinic",
-  "water_point",
   "medical_post",
   /** Where an affected person registers to reach the census and the rent
    *  subsidy. It serves the affected rather than the helper, which is the one

@@ -51,7 +51,7 @@ npx supabase link --project-ref <your-ref>
 npx supabase db push          # applies supabase/migrations/
 ```
 
-The migration enables PostGIS, creates eleven tables, the `security_invoker`
+The migration enables PostGIS, creates nine tables, the `security_invoker`
 views, the proximity RPCs and every row-level security policy.
 
 ### 3. Seed — read this before publishing anything
@@ -87,43 +87,37 @@ npm run dev
 
 | | |
 |---|---|
-| ✅ | Database schema: 11 tables, PostGIS, RLS, proximity RPCs, stale-claim release |
+| ✅ | Database schema: 9 tables, PostGIS, RLS, proximity RPCs, status derived by trigger |
 | ✅ | Seed data from the research (unpublished, coordinates unverified) |
-| ✅ | Design system: shadcn + mapcn, semantic tokens, triage palette, dark mode |
-| ✅ | Data layer reference implementation: `data/site/` — DTO, policy, DAL, actions |
-| ✅ | Map page: category chips, markers by type, live "HOY" bar, detail sheet, one-tap confirmation |
+| ✅ | Design system: shadcn + mapcn, semantic tokens, triage palette (`pending`/`underway`/`resolved`), dark mode |
+| ✅ | Data layer, one module per entity: `data/site/`, `data/need/`, `data/service/`, `data/animal/`, `data/neighborhood/`, `data/geo/` — DTO, policy, DAL, actions |
+| ✅ | Auth — Google sign-in, `/auth/login`, `/auth/callback` |
+| ✅ | Map page: category chips, markers by type, live "HOY" bar, detail sheets, one-tap confirmation, realtime on `sites` |
+| ✅ | `/reportar` — public forms for a site, a need, a service and an animal report, with the 50 m duplicate check on sites (`SiteDAL.findNearby`) |
+| ✅ | Neighbour pin relocation, scoped to the barrio (`canRelocate`) |
+| ✅ | Curator publish/hide toggles inline on each card (`AdminActions`) — no dedicated `/admin` queue yet |
 | ✅ | Security baseline: CSP, `server-only` markers, env split, `ignore-scripts` |
 | ✅ | Structured logging with redaction of phones and addresses |
-| ✅ | Layer boundaries enforced by lint |
+| ✅ | Layer boundaries enforced by ESLint and Oxlint (deny-by-default import rules; see `AGENTS.md`) |
 
-**Verified:** `npm run build` and `npm run lint` both pass clean. The layout,
-the 404 and the error boundary render. The map itself has **not** been seen
-rendering with real data — that needs a Supabase project.
+**Verified:** `npx tsc --noEmit`, `npm run lint`, `npm run lint:oxlint` and
+`npm run build` all pass clean as of 18 August 2026. The map itself has
+**not** been seen rendering with real data — that needs a Supabase project.
 
-## What is next, in order
+## What is next
 
-Each of these copies the shape of `data/site/`. Do them in this order; each one
-stands on a product that already works.
-
-1. **Auth** — `/auth/login` (Google), `/auth/callback` route handler. Nothing
-   below can be tested without it.
-2. **`/admin` curation queue** — the highest-leverage screen in the project.
-   Approve, reject, edit, verify, merge duplicates. Mobile-first: a curator
-   works from a phone. Without this, nothing ever gets published.
-3. **`data/work-order/`** — the claim flow. Colour-coded triage, 48-hour
-   automatic release, `work_order_contact` revealed only to the claimant and
-   written to `work_order_access`. This is the delicate one; re-read the
-   guardrails in `AGENTS.md` first.
-4. **`data/volunteer-call/`** — ephemeral calls with slots. This is the "¿dónde
-   ayudo hoy?" payload; the HOY bar becomes real here.
-5. **`/bienvenida`** — the three mode cards, saved to `localStorage`, skippable.
-   Worth doing only once there are three genuinely different things to filter.
-6. **`/reportar`** — public form with Turnstile, Nominatim geocoding, and the
-   50 m duplicate check calling `SiteDAL.findNearby`.
-7. **`data/resource-offer/`** — trucks, tools, free transport. No housing.
-8. **Road-closure layer** — hand-curated; the INVIAS API does not carry
-   closures, only the road network.
-9. **`pg_cron`** for `release_stale_claims()` and for expiring stale rows.
+- **A dedicated `/admin` curation queue.** Publishing and hiding exist as
+  per-card actions; there is no single mobile-first screen to triage
+  everything unpublished at once, or to merge duplicates.
+- **`/reportar` geocoding.** Reports place a pin by dragging the map; there is
+  no Nominatim address lookup or Turnstile bot check on the public forms yet.
+- **`/bienvenida`** — three mode cards, saved to `localStorage`, skippable.
+  Not started.
+- **Volunteer calls were built and then removed** (14 August —
+  `20260815060000_drop_calls.sql`): recruiting for a shift is a problem
+  WhatsApp already solves inside groups people already belong to, and an
+  ephemeral call went stale faster than anyone could confirm it. Do not
+  re-add this without reopening that decision.
 
 ## Known risks, accepted on purpose
 

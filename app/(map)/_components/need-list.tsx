@@ -1,7 +1,7 @@
 "use client";
 
-import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
-import { WORK_ORDER_LABEL } from "@/lib/labels";
+import type { NeedDTO } from "@/data/need/need.dto";
+import { NEED_LABEL } from "@/lib/labels";
 
 import { EntityCard } from "./entity-card";
 
@@ -12,26 +12,26 @@ import { EntityCard } from "./entity-card";
  * live in the chip itself, not here.
  *
  * The row is `EntityCard`'s, like every other family's. It used to have one
- * of its own — `WorkOrderItem`, which carried the full description, the
- * freshness line, the attendee count AND the whole of `WorkOrderActions`:
+ * of its own, which carried the full description, the freshness line, the
+ * attendee count AND the whole of `NeedActions`:
  * the contact block, the attend form, the attendee list, close, edit. That
- * is a card, and the card is what a tap opens (`WorkOrderPopup`). Two of
+ * is a card, and the card is what a tap opens (`NeedPopup`). Two of
  * them, one stacked inside a list of thirty, was the panel's tallest row by
  * a wide margin and the same content twice.
  */
-export function WorkOrderList({
-  workOrders,
+export function NeedList({
+  needs,
   selectedId,
   onSelect,
 }: {
-  workOrders: WorkOrderDTO[];
+  needs: NeedDTO[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
 }) {
-  if (workOrders.length === 0) {
+  if (needs.length === 0) {
     return (
       <p className="text-muted-foreground p-6 text-center text-sm text-balance">
-        {WORK_ORDER_LABEL.empty}
+        {NEED_LABEL.empty}
       </p>
     );
   }
@@ -39,10 +39,10 @@ export function WorkOrderList({
   return (
     <div className="p-1.5">
       <ul className="flex flex-col gap-1.5">
-        {workOrders.map((order) => (
+        {needs.map((order) => (
           <li key={order.id}>
             <EntityCard
-              entity={{ kind: "workOrder", order }}
+              entity={{ kind: "need", order }}
               selected={order.id === selectedId}
               onSelect={(id) => onSelect?.(id)}
             />

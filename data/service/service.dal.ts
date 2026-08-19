@@ -6,54 +6,54 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 import {
-  createResourceOfferSchema,
-  resourceOfferSchema,
-  updateResourceOfferSchema,
-  type ResourceOfferDTO,
-} from "./resource_offer.dto";
+  createServiceSchema,
+  serviceSchema,
+  updateServiceSchema,
+  type ServiceDTO,
+} from "./service.dto";
 import {
-  canEditResourceOffer,
-  canManageResourceOffer,
-  canProposeResourceOffer,
-} from "./resource_offer.policy";
+  canEditService,
+  canManageService,
+  canProposeService,
+} from "./service.policy";
 
-/** An offer with no stated end is worth showing for a while, not forever —
+/** A service with no stated end is worth showing for a while, not forever —
  *  long enough that "tengo una volqueta" is not gone by lunch, short enough
  *  that it eventually asks to be confirmed like everything else here. */
 const DEFAULT_AVAILABILITY_DAYS = 7;
 
 /**
- * The only path from this application to `resource_offer`.
+ * The only path from this application to `services`.
  *
  * Private constructor and static factories, like every other DAL here. This
  * one never actually needs an authenticated context — `propose` follows
- * `SiteDAL.propose`'s rule, not `CallDAL.convene`'s — but it resolves the
- * user anyway so a signed-in offerer's `created_by` still gets recorded.
+ * `SiteDAL.propose`'s rule — but it resolves the user anyway so a signed-in
+ * offerer's `created_by` still gets recorded.
  */
-export class ResourceOfferDAL {
+export class ServiceDAL {
   private constructor(private readonly user: CurrentUser | null) {}
 
-  static async create(): Promise<ResourceOfferDAL> {
-    return new ResourceOfferDAL(await getCurrentUser());
+  static async create(): Promise<ServiceDAL> {
+    return new ServiceDAL(await getCurrentUser());
   }
 
   /** Read-only context for genuinely public data: the map anyone can open. */
-  static public(): ResourceOfferDAL {
-    return new ResourceOfferDAL(null);
+  static public(): ServiceDAL {
+    return new ServiceDAL(null);
   }
 
-  /** Every offer still worth showing, most recently confirmed first — same
+  /** Every service still worth showing, most recently confirmed first — same
    *  ordering as a site, for the same reason: nothing here has an hour of
    *  its own to sort by. */
-  async listPublished(): Promise<ResourceOfferDTO[]> {
+  async listPublished(): Promise<ServiceDTO[]> {
     const supabase = await createServerSupabase();
 
     let query = supabase
-      .from("resource_offer_public")
+      .from("services_public")
       .select("*")
       .gt("expires_at", new Date().toISOString());
 
-    // A curator sees an offer they hid too, marked on the card by
+    // A curator sees a service they hid too, marked on the card by
     // `AdminActions` — otherwise `setPublished(id, false)` would have no
     // way back short of a direct database query.
     if (this.user?.role !== "curator") {
@@ -63,7 +63,7 @@ export class ResourceOfferDAL {
     const { data, error } = await query.order("confirmed_at", { ascending: false });
 
     if (error) {
-      log.error("resourceOffer.listPublished failed", { code: error.code });
+      log.error("service.listPublished failed", { code: error.code });
       throw new Error("No se pudieron cargar los servicios");
     }
 
@@ -71,28 +71,28 @@ export class ResourceOfferDAL {
   }
 
   /**
-   * One offer, or null.
+   * One service, or null.
    *
    * What a shared link resolves to — `/servicio/[id]`. Session-bound like
-   * every other `findById` here, so a hidden offer is a 404 for a stranger
-   * and still reachable by the curator who hid it.
+   * every other `findById` here, so a hidden service is a 404 for a
+   * stranger and still reachable by the curator who hid it.
    *
    * Deliberately not filtered by `expires_at`, unlike `listPublished`. A link
-   * outlives the week the offer was published for, and "esta volqueta ya no
-   * está disponible" is a better landing than an empty map — the card says
-   * how stale it is (see `freshness`) and the reader decides.
+   * outlives the week the service was published for, and "esta volqueta ya
+   * no está disponible" is a better landing than an empty map — the card
+   * says how stale it is (see `freshness`) and the reader decides.
    */
-  async findById(id: string): Promise<ResourceOfferDTO | null> {
+  async findById(id: string): Promise<ServiceDTO | null> {
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
-      .from("resource_offer_public")
+      .from("services_public")
       .select("*")
       .eq("id", id)
       .maybeSingle();
 
     if (error) {
-      log.error("resourceOffer.findById failed", { code: error.code, offerId: id });
+      log.error("service.findById failed", { code: error.code, serviceId: id });
       throw new Error("No se pudo cargar el servicio");
     }
 
@@ -100,21 +100,21 @@ export class ResourceOfferDAL {
   }
 
   /**
-   * Offers a resource. On the map immediately, like a site report.
+   * Offers a service. On the map immediately, like a site report.
    *
    * Order, in every mutation, without exception:
    *   1. validate input   2. authorize   3. mutate   4. validate output
    */
   async propose(input: unknown): Promise<{ id: string }> {
-    const data = createResourceOfferSchema.parse(input);
+    const data = createServiceSchema.parse(input);
 
-    if (!canProposeResourceOffer()) throw new Error("Forbidden");
+    if (!canProposeService()) throw new Error("Forbidden");
 
     const hasPoint = data.longitude !== undefined && data.latitude !== undefined;
 
     const supabase = createAdminSupabase();
     const { data: row, error } = await supabase
-      .from("resource_offer")
+      .from("services")
       .insert({
         type: data.type,
         description: data.description,
@@ -136,23 +136,23 @@ export class ResourceOfferDAL {
       .single();
 
     if (error || !row) {
-      log.error("resourceOffer.propose failed", { code: error?.code });
+      log.error("service.propose failed", { code: error?.code });
       throw new Error("No se pudo publicar el servicio");
     }
 
-    log.info("resource offer proposed", {
-      resourceOfferId: row.id,
+    log.info("service proposed", {
+      serviceId: row.id,
       byUser: this.user?.id ?? "anon",
     });
     return { id: row.id };
   }
 
-  /** Corrects an offer's own fields. Open to anyone — see
-   *  `canEditResourceOffer`. Never the point. */
+  /** Corrects a service's own fields. Open to anyone — see
+   *  `canEditService`. Never the point. */
   async update(input: unknown): Promise<void> {
-    const data = updateResourceOfferSchema.parse(input);
+    const data = updateServiceSchema.parse(input);
 
-    if (!canEditResourceOffer()) throw new Error("Forbidden");
+    if (!canEditService()) throw new Error("Forbidden");
 
     const patch: Record<string, unknown> = {};
     if (data.type !== undefined) patch.type = data.type;
@@ -163,40 +163,40 @@ export class ResourceOfferDAL {
 
     const supabase = createAdminSupabase();
     const { error } = await supabase
-      .from("resource_offer")
+      .from("services")
       .update(patch)
       .eq("id", data.id);
 
     if (error) {
-      log.error("resourceOffer.update failed", {
+      log.error("service.update failed", {
         code: error.code,
-        resourceOfferId: data.id,
+        serviceId: data.id,
       });
       throw new Error("No se pudo actualizar el servicio");
     }
 
-    log.info("resource offer updated", {
-      resourceOfferId: data.id,
+    log.info("service updated", {
+      serviceId: data.id,
       fields: Object.keys(patch),
       byUser: this.user?.id ?? "anon",
     });
   }
 
-  /** A curator hides or republishes an offer — reversible, the same
+  /** A curator hides or republishes a service — reversible, the same
    *  `published` column every list already filters by. */
   async setPublished(id: string, published: boolean): Promise<void> {
-    if (!canManageResourceOffer(this.user)) throw new Error("Forbidden");
+    if (!canManageService(this.user)) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
     const { error } = await supabase
-      .from("resource_offer")
+      .from("services")
       .update({ published })
       .eq("id", id);
 
     if (error) {
-      log.error("resourceOffer.setPublished failed", {
+      log.error("service.setPublished failed", {
         code: error.code,
-        resourceOfferId: id,
+        serviceId: id,
       });
       throw new Error("No se pudo cambiar la visibilidad del servicio");
     }
@@ -204,22 +204,22 @@ export class ResourceOfferDAL {
 
   /** A real `DELETE FROM`, for spam and test rows — curators only. */
   async remove(id: string): Promise<void> {
-    if (!canManageResourceOffer(this.user)) throw new Error("Forbidden");
+    if (!canManageService(this.user)) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
-    const { error } = await supabase.from("resource_offer").delete().eq("id", id);
+    const { error } = await supabase.from("services").delete().eq("id", id);
 
     if (error) {
-      log.error("resourceOffer.remove failed", { code: error.code, resourceOfferId: id });
+      log.error("service.remove failed", { code: error.code, serviceId: id });
       throw new Error("No se pudo eliminar el servicio");
     }
 
-    log.info("resource offer deleted", { resourceOfferId: id, byUser: this.user!.id });
+    log.info("service deleted", { serviceId: id, byUser: this.user!.id });
   }
 
   /** Map explicitly, never spread. */
-  private toDTO(row: Record<string, unknown>): ResourceOfferDTO {
-    return resourceOfferSchema.parse({
+  private toDTO(row: Record<string, unknown>): ServiceDTO {
+    return serviceSchema.parse({
       id: row.id,
       type: row.type,
       description: row.description,

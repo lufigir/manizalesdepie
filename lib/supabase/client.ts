@@ -9,8 +9,8 @@ import { clientEnv } from "@/lib/env";
  *
  * It carries only the publishable key and is bound by row-level security, so
  * whatever it can read, an anonymous visitor could read anyway. Nothing
- * sensitive is reachable from here: `work_order_contact` is excluded by policy
- * and is never published on a channel.
+ * sensitive is reachable from here: `needs` — which carries a case's phone
+ * and address — is not published on any realtime channel; only `sites` is.
  */
 export function createClient() {
   return createBrowserClient(

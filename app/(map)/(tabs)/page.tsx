@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The map itself, at `/` — the only route left under `(tabs)`.
+ * The map itself, at `/` — the only route under `(tabs)`.
  *
  * `(tabs)` is a route group, so it adds no segment — this file IS the root,
  * and it inherits the layout that loads every family and renders
@@ -15,11 +15,6 @@ export const metadata: Metadata = {
  * ("help") whenever no `tab` is forced, which opens on the "Todo" chip — the
  * right thing to show at the bare domain. `UnifiedPanel` reads and changes
  * the active filter from there afterwards; this page has nothing else to do.
- *
- * `/necesito`, `/mascotas` and `/servicios` used to sit beside this, each
- * seeding one different chip and rendering nothing else — removed for the
- * same reason `/ayudar` was: a chip a reader already has one tap away at `/`
- * does not need a second, thinner URL to reach it.
  */
 export default function MapPage() {
   return null;

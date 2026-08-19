@@ -90,9 +90,14 @@ export function AnimalForm({
 
     formData.set("kind", kind);
     formData.set("species", species);
-    formData.set("lastSeenAt", new Date(
-      String(formData.get("lastSeenAtLocal") || "") || Date.now(),
-    ).toISOString());
+    const lastSeenAtLocal = formData.get("lastSeenAtLocal");
+    formData.set(
+      "lastSeenAt",
+      new Date(
+        (typeof lastSeenAtLocal === "string" && lastSeenAtLocal) ||
+          Date.now(),
+      ).toISOString(),
+    );
     if (barrio) formData.set("zone", barrio.name);
     if (photo) formData.set("photo", photo);
     if (placed) {
@@ -225,7 +230,7 @@ export function AnimalForm({
   const footer = (
     <>
       {error && (
-        <p role="alert" className="text-unclaimed text-sm font-medium">
+        <p role="alert" className="text-pending text-sm font-medium">
           {error}
         </p>
       )}

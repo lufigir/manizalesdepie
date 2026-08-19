@@ -6,17 +6,17 @@ import { LayoutList, Package, PawPrint, Search, Wrench, MapPin } from "lucide-re
 import { Input } from "@/components/ui/input";
 import {
   LIST_LABEL,
+  NEED_LABEL,
   PANEL_LABEL,
   SECTION_EMPTY,
   SERVICES_LABEL,
-  WORK_ORDER_LABEL,
 } from "@/lib/labels";
 import type { PanelChip } from "@/lib/tabs";
 import {
   animalUrgency,
-  resourceOfferUrgency,
+  needUrgency,
+  serviceUrgency,
   siteUrgency,
-  workOrderUrgency,
 } from "@/lib/urgency";
 import { cn } from "@/lib/utils";
 
@@ -27,8 +27,8 @@ import {
   SectionedEntityList,
   type PanelSection,
 } from "./entity-list";
+import { NeedList } from "./need-list";
 import { ServicesPanel } from "./services-panel";
-import { WorkOrderList } from "./work-order-list";
 import { useWorkspace } from "./workspace-context";
 
 /** How many rows of each family "Todo" previews before handing off to that
@@ -60,10 +60,9 @@ export function UnifiedPanel() {
     activeChip,
     setActiveChip,
     sites,
-    workOrders,
+    needs,
     animals,
-    resourceOffers,
-    neighborhoodNeeds,
+    services,
     selectedId,
     select,
     barrio,
@@ -85,14 +84,13 @@ export function UnifiedPanel() {
     {
       id: "all",
       label: PANEL_LABEL.all,
-      count:
-        sites.length + workOrders.length + animals.length + resourceOffers.length,
+      count: sites.length + needs.length + animals.length + services.length,
       icon: <LayoutList className="size-4" />,
     },
-    { id: "workOrders", label: WORK_ORDER_LABEL.heading, count: workOrders.length, icon: <Wrench className="size-4" /> },
+    { id: "needs", label: NEED_LABEL.heading, count: needs.length, icon: <Wrench className="size-4" /> },
     { id: "sites", label: PANEL_LABEL.sites, count: sites.length, icon: <MapPin className="size-4" /> },
     { id: "pets", label: PANEL_LABEL.pets, count: animals.filter((a) => a.resolvedAt === null).length, icon: <PawPrint className="size-4" /> },
-    { id: "services", label: SERVICES_LABEL.title, count: resourceOffers.length, icon: <Package className="size-4" /> },
+    { id: "services", label: SERVICES_LABEL.title, count: services.length, icon: <Package className="size-4" /> },
   ];
 
   const emptyMessage = barrio
@@ -137,13 +135,13 @@ export function UnifiedPanel() {
     // render/useMemo body is exactly the pattern React's purity rule flags.
     return [
       section(
-        "workOrders",
-        WORK_ORDER_LABEL.heading,
-        workOrders,
-        (order) => workOrderUrgency(order, neighborhoodNeeds),
+        "needs",
+        NEED_LABEL.heading,
+        needs,
+        (order) => needUrgency(order),
         (order) => (
           <EntityCard
-            entity={{ kind: "workOrder", order }}
+            entity={{ kind: "need", order }}
             selected={order.id === selectedId}
             onSelect={select}
           />
@@ -153,7 +151,7 @@ export function UnifiedPanel() {
         "sites",
         PANEL_LABEL.sites,
         sites,
-        (site) => siteUrgency(site, neighborhoodNeeds),
+        (site) => siteUrgency(site),
         (site) => (
           <EntityCard
             entity={{ kind: "site", site }}
@@ -178,27 +176,18 @@ export function UnifiedPanel() {
       section(
         "services",
         SERVICES_LABEL.title,
-        resourceOffers,
-        (offer) => resourceOfferUrgency(offer),
-        (offer) => (
+        services,
+        (service) => serviceUrgency(service),
+        (service) => (
           <EntityCard
-            entity={{ kind: "resourceOffer", offer }}
-            selected={offer.id === selectedId}
+            entity={{ kind: "service", service }}
+            selected={service.id === selectedId}
             onSelect={select}
           />
         ),
       ),
     ];
-  }, [
-    sites,
-    workOrders,
-    animals,
-    resourceOffers,
-    neighborhoodNeeds,
-    selectedId,
-    select,
-    setActiveChip,
-  ]);
+  }, [sites, needs, animals, services, selectedId, select, setActiveChip]);
 
   return (
     <>
@@ -273,12 +262,8 @@ export function UnifiedPanel() {
           />
         )}
 
-        {activeChip === "workOrders" && (
-          <WorkOrderList
-            workOrders={workOrders}
-            selectedId={selectedId}
-            onSelect={select}
-          />
+        {activeChip === "needs" && (
+          <NeedList needs={needs} selectedId={selectedId} onSelect={select} />
         )}
 
         {activeChip === "sites" && (

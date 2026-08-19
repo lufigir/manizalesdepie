@@ -28,15 +28,15 @@
     --color-input: var(--input);
     --color-border: var(--border);
 
-    /* Work-order triage. These are the Crisis Cleanup colours: on this map the
+    /* Need triage. These are the Crisis Cleanup colours: on this map the
        colour IS the coordination, so they are semantic tokens and never
        literals in a component. */
-    --color-unclaimed: var(--unclaimed);
-    --color-unclaimed-foreground: var(--unclaimed-foreground);
-    --color-unclaimed-surface: var(--unclaimed-surface);
-    --color-claimed: var(--claimed);
-    --color-claimed-foreground: var(--claimed-foreground);
-    --color-claimed-surface: var(--claimed-surface);
+    --color-pending: var(--pending);
+    --color-pending-foreground: var(--pending-foreground);
+    --color-pending-surface: var(--pending-surface);
+    --color-underway: var(--underway);
+    --color-underway-foreground: var(--underway-foreground);
+    --color-underway-surface: var(--underway-surface);
     --color-resolved: var(--resolved);
     --color-resolved-foreground: var(--resolved-foreground);
     --color-resolved-surface: var(--resolved-surface);
@@ -113,12 +113,12 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
-    --unclaimed: oklch(0.54 0.176 27);
-    --unclaimed-foreground: oklch(0.985 0 0);
-    --unclaimed-surface: oklch(0.955 0.026 27);
-    --claimed: oklch(0.62 0.132 72);
-    --claimed-foreground: oklch(0.985 0 0);
-    --claimed-surface: oklch(0.962 0.038 82);
+    --pending: oklch(0.54 0.176 27);
+    --pending-foreground: oklch(0.985 0 0);
+    --pending-surface: oklch(0.955 0.026 27);
+    --underway: oklch(0.62 0.132 72);
+    --underway-foreground: oklch(0.985 0 0);
+    --underway-surface: oklch(0.962 0.038 82);
     --resolved: oklch(0.5 0.096 162);
     --resolved-foreground: oklch(0.985 0 0);
     --resolved-surface: oklch(0.955 0.028 162);
@@ -172,12 +172,12 @@
 
     /* Lifted and desaturated so the triage hues stay distinguishable against a
        dark basemap without glowing. */
-    --unclaimed: oklch(0.7 0.145 27);
-    --unclaimed-foreground: oklch(0.16 0.02 27);
-    --unclaimed-surface: oklch(0.28 0.055 27);
-    --claimed: oklch(0.78 0.125 78);
-    --claimed-foreground: oklch(0.18 0.03 78);
-    --claimed-surface: oklch(0.3 0.055 78);
+    --pending: oklch(0.7 0.145 27);
+    --pending-foreground: oklch(0.16 0.02 27);
+    --pending-surface: oklch(0.28 0.055 27);
+    --underway: oklch(0.78 0.125 78);
+    --underway-foreground: oklch(0.18 0.03 78);
+    --underway-surface: oklch(0.3 0.055 78);
     --resolved: oklch(0.72 0.105 162);
     --resolved-foreground: oklch(0.16 0.02 162);
     --resolved-surface: oklch(0.27 0.05 162);

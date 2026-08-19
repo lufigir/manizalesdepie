@@ -3,13 +3,9 @@
 import { createContext, useContext } from "react";
 
 import type { AnimalDTO } from "@/data/animal/animal.dto";
-import type {
-  NeighborhoodNeedDTO,
-  NeighborhoodStatusDTO,
-} from "@/data/neighborhood/neighborhood.dto";
-import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
+import type { NeedDTO } from "@/data/need/need.dto";
+import type { ServiceDTO } from "@/data/service/service.dto";
 import type { SiteDTO } from "@/data/site/site.dto";
-import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
 import type { PanelChip } from "@/lib/tabs";
 
 /**
@@ -42,36 +38,25 @@ export type WorkspaceValue = {
    *  narrowing does not apply to them the way it does to everything else
    *  here. */
   animals: AnimalDTO[];
-  /** Every resource offer, narrowed to the barrio like `sites` — offers do
+  /** Every service, narrowed to the barrio like `sites` — a service does
    *  carry a `neighborhood`, even though it is a barrio-level fact (the
    *  form's own centroid) rather than an exact point. */
-  resourceOffers: ResourceOfferDTO[];
+  services: ServiceDTO[];
   /** Individual household requests — "Necesidades" — narrowed to the barrio
    *  like `sites`. */
-  workOrders: WorkOrderDTO[];
-  /** Every frente on record — "este barrio necesita X". Read by
-   *  `lib/urgency.ts`'s priority weighting, which is the only consumer left:
-   *  the dashboard that used to list frentes was built around "armar un grupo
-   *  aquí" and went with the grupos. City-wide, like `neighborhoodStatuses`. */
-  neighborhoodNeeds: NeighborhoodNeedDTO[];
+  needs: NeedDTO[];
   selectedId: string | null;
   select: (id: string | null) => void;
   /** The barrio being filtered by, or null for the whole city. `sites` is
    *  already narrowed to it; this is here so a panel can say which one. */
   barrio: { name: string; comuna: string | null } | null;
   clearBarrio: () => void;
-  /** Filters the panel to a barrio by name alone — what a Frentes row uses to
-   *  filter without the full `BarrioProps` a map tap produces (comuna, the
-   *  label's own coordinate). `comuna` reads null until the reader taps the
-   *  barrio on the map instead; BarrioHeader already treats a missing comuna
-   *  as "don't show that line". */
+  /** Filters the panel to a barrio by name alone — what a filtered chip uses
+   *  to narrow without the full `BarrioProps` a map tap produces (comuna,
+   *  the label's own coordinate). `comuna` reads null until the reader taps
+   *  the barrio on the map instead; BarrioHeader already treats a missing
+   *  comuna as "don't show that line". */
   selectBarrioByName: (name: string) => void;
-  /** The selected barrio's evacuation/utility status, or null when it has none
-   *  on record — most barrios, most of the time. */
-  barrioStatus: NeighborhoodStatusDTO | null;
-  /** Every barrio with a status on record, city-wide reference read the same
-   *  everywhere it appears. */
-  neighborhoodStatuses: NeighborhoodStatusDTO[];
   /** Whether the panel is shrunk to just its tab bar, on mobile, to give the
    *  map more room. Carried in the workspace (not local to PanelTabs) so it
    *  survives moving between sections during the same visit. */
@@ -97,7 +82,7 @@ export type WorkspaceValue = {
    */
   startRelocate: (target: {
     id: string;
-    kind: "site" | "workOrder";
+    kind: "site" | "need";
     longitude: number;
     latitude: number;
   }) => void;

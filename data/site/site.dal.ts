@@ -25,7 +25,7 @@ import {
 } from "./site.policy";
 
 /**
- * The only path from this application to the `site` table.
+ * The only path from this application to the `sites` table.
  *
  * The private constructor is what makes that guarantee hold: an instance
  * cannot exist without a resolved authorization context, so every method runs
@@ -58,8 +58,8 @@ export class SiteDAL {
     const supabase = await createServerSupabase();
 
     let query = supabase
-      .from("site_public")
-      .select("*, items:site_item(id, label, mode, priority)");
+      .from("sites_public")
+      .select("*, items:site_items(id, label, mode, priority)");
 
     // A curator sees a site they hid too, marked on the card by
     // `AdminActions` — otherwise `setPublished(id, false)` would have no
@@ -90,8 +90,8 @@ export class SiteDAL {
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
-      .from("site_public")
-      .select("*, items:site_item(id, label, mode, priority)")
+      .from("sites_public")
+      .select("*, items:site_items(id, label, mode, priority)")
       .eq("id", id)
       .maybeSingle();
 
@@ -158,7 +158,7 @@ export class SiteDAL {
 
     const supabase = createAdminSupabase();
     const { data: row, error } = await supabase
-      .from("site")
+      .from("sites")
       .insert({
         type: data.type,
         name: data.name,
@@ -188,7 +188,7 @@ export class SiteDAL {
 
     const supabase = createAdminSupabase();
     const { error } = await supabase
-      .from("site")
+      .from("sites")
       .update({ published: true, confirmed_at: new Date().toISOString() })
       .eq("id", id);
 
@@ -214,7 +214,7 @@ export class SiteDAL {
     const now = new Date().toISOString();
 
     const { error } = await supabase
-      .from("site")
+      .from("sites")
       .update({
         status,
         confirmed_at: now,
@@ -227,9 +227,12 @@ export class SiteDAL {
       throw new Error("No se pudo confirmar el estado");
     }
 
-    await supabase.from("confirmation").insert({
-      entity: "site",
-      entity_id: id,
+    await supabase.from("site_confirmations").insert({
+      // `site_id` is the whole relationship. The table still carries the old
+      // `entity`/`entity_id` pair, but 20260818040000 made them nullable so
+      // nothing has to write them any more; the contract migration drops them
+      // as dead columns, with no deploy that has to land at the same moment.
+      site_id: id,
       result: status === "closed" ? "no_longer_valid" : "still_valid",
       // Anonymous confirmations are the common case now, so the signature is
       // optional. An unsigned row still counts; it just carries no name.
@@ -254,7 +257,7 @@ export class SiteDAL {
     if (Object.keys(patch).length === 0) return;
 
     const supabase = createAdminSupabase();
-    const { error } = await supabase.from("site").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("sites").update(patch).eq("id", data.id);
 
     if (error) {
       log.error("site.update failed", { code: error.code, siteId: data.id });
@@ -290,7 +293,7 @@ export class SiteDAL {
     const supabase = createAdminSupabase();
 
     const { data: current, error: readError } = await supabase
-      .from("site")
+      .from("sites")
       .select("neighborhood_id")
       .eq("id", id)
       .maybeSingle();
@@ -309,7 +312,7 @@ export class SiteDAL {
     }
 
     const { error } = await supabase
-      .from("site")
+      .from("sites")
       .update({ location: `SRID=4326;POINT(${longitude} ${latitude})` })
       .eq("id", id);
 
@@ -327,7 +330,7 @@ export class SiteDAL {
     if (!canManageSite(this.user)) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
-    const { error } = await supabase.from("site").update({ published }).eq("id", id);
+    const { error } = await supabase.from("sites").update({ published }).eq("id", id);
 
     if (error) {
       log.error("site.setPublished failed", { code: error.code, siteId: id });
@@ -336,12 +339,12 @@ export class SiteDAL {
   }
 
   /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
-   *  to `site_item`. */
+   *  to `site_items`. */
   async remove(id: string): Promise<void> {
     if (!canManageSite(this.user)) throw new Error("Forbidden");
 
     const supabase = createAdminSupabase();
-    const { error } = await supabase.from("site").delete().eq("id", id);
+    const { error } = await supabase.from("sites").delete().eq("id", id);
 
     if (error) {
       log.error("site.remove failed", { code: error.code, siteId: id });

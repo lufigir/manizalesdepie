@@ -7,15 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
-import { reportWorkOrder } from "@/data/work_order/work_order.actions";
+import { reportNeed } from "@/data/need/need.actions";
 import {
-  WORK_ORDER_CATEGORIES,
-  type WorkOrderCategory,
-} from "@/data/work_order/work_order.dto";
+  NEED_CATEGORIES,
+  type NeedCategory,
+} from "@/data/need/need.dto";
 import {
-  WORK_ORDER_CATEGORY_ICON,
-  WORK_ORDER_CATEGORY_LABEL,
-  WORK_ORDER_FORM,
+  NEED_CATEGORY_ICON,
+  NEED_CATEGORY_LABEL,
+  NEED_FORM,
 } from "@/lib/labels";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ const START: [number, number] = [-75.5074, 5.0631];
  * whoever reports it, because reporting damage collects nobody's contact
  * details on the reporter's own behalf.
  */
-export function WorkOrderForm({
+export function NeedForm({
   barrios,
   userName,
   header,
@@ -67,7 +67,7 @@ export function WorkOrderForm({
     () => barrios.find((option) => option.name === fromMap) ?? null,
   );
 
-  const [category, setCategory] = useState<WorkOrderCategory>("debris_removal");
+  const [category, setCategory] = useState<NeedCategory>("debris_removal");
   const [description, setDescription] = useState("");
   const [point, setPoint] = useState({ lng: START[0], lat: START[1] });
   const [exactAddress, setExactAddress] = useState("");
@@ -91,15 +91,14 @@ export function WorkOrderForm({
 
     if (!barrio) {
       setAttempted(true);
-      setError(WORK_ORDER_FORM.barrio);
+      setError(NEED_FORM.barrio);
       return;
     }
 
     try {
-      // The created id used to travel in the URL to select the new pin on
-      // arrival at `/ayudar`; nothing reads a query-driven selection any
-      // more (see `MapWorkspace`), so it is not carried forward to `/`.
-      await reportWorkOrder({
+      // The created id is not carried in the URL: `MapWorkspace` does not
+      // read a query-driven selection, so there is nothing to hand it to.
+      await reportNeed({
         category,
         description,
         longitude: point.lng,
@@ -111,18 +110,18 @@ export function WorkOrderForm({
       });
       router.push("/");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : WORK_ORDER_FORM.failed);
+      setError(cause instanceof Error ? cause.message : NEED_FORM.failed);
     }
   }
 
   const categoryField = (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-2 text-sm font-semibold">
-        {WORK_ORDER_FORM.category}
+        {NEED_FORM.category}
       </legend>
       <div className="flex flex-wrap gap-1.5">
-        {WORK_ORDER_CATEGORIES.map((option) => {
-          const Icon = WORK_ORDER_CATEGORY_ICON[option];
+        {NEED_CATEGORIES.map((option) => {
+          const Icon = NEED_CATEGORY_ICON[option];
           const active = option === category;
           return (
             <button
@@ -138,7 +137,7 @@ export function WorkOrderForm({
               )}
             >
               <Icon className="size-4" aria-hidden />
-              {WORK_ORDER_CATEGORY_LABEL[option]}
+              {NEED_CATEGORY_LABEL[option]}
             </button>
           );
         })}
@@ -147,13 +146,13 @@ export function WorkOrderForm({
   );
 
   const descriptionField = (
-    <Field label={WORK_ORDER_FORM.description} required>
+    <Field label={NEED_FORM.description} required>
       <Textarea
         required
         rows={3}
         value={description}
         onChange={(event) => setDescription(event.target.value)}
-        placeholder={WORK_ORDER_FORM.descriptionPlaceholder}
+        placeholder={NEED_FORM.descriptionPlaceholder}
       />
     </Field>
   );
@@ -165,7 +164,7 @@ export function WorkOrderForm({
   const barrioField = (
     <div className="flex flex-col gap-2">
       <label className="text-sm font-semibold">
-        {WORK_ORDER_FORM.barrio}
+        {NEED_FORM.barrio}
         <RequiredMark />
       </label>
       <BarrioPicker barrios={barrios} value={barrio} onChange={setBarrio} />
@@ -192,16 +191,16 @@ export function WorkOrderForm({
   const contactBlock = (
     <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3">
       <div>
-        <p className="text-sm font-semibold">{WORK_ORDER_FORM.contactTitle}</p>
-        <p className="text-muted-foreground text-xs">{WORK_ORDER_FORM.contactHint}</p>
+        <p className="text-sm font-semibold">{NEED_FORM.contactTitle}</p>
+        <p className="text-muted-foreground text-xs">{NEED_FORM.contactHint}</p>
       </div>
-      <Field label={WORK_ORDER_FORM.exactAddress}>
+      <Field label={NEED_FORM.exactAddress}>
         <Input value={exactAddress} onChange={(e) => setExactAddress(e.target.value)} />
       </Field>
-      <Field label={WORK_ORDER_FORM.contactName}>
+      <Field label={NEED_FORM.contactName}>
         <Input value={contactName} onChange={(e) => setContactName(e.target.value)} />
       </Field>
-      <Field label={WORK_ORDER_FORM.phone}>
+      <Field label={NEED_FORM.phone}>
         <Input
           inputMode="numeric"
           value={phone}
@@ -209,7 +208,7 @@ export function WorkOrderForm({
           placeholder="3001234567"
         />
       </Field>
-      <Field label={WORK_ORDER_FORM.notes}>
+      <Field label={NEED_FORM.notes}>
         <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
     </div>
@@ -218,13 +217,13 @@ export function WorkOrderForm({
   const footer = (
     <>
       {error && (
-        <p role="alert" className="text-unclaimed text-sm font-medium">
+        <p role="alert" className="text-pending text-sm font-medium">
           {error}
         </p>
       )}
 
       <Button type="submit" size="lg" loading={pending}>
-        {pending ? WORK_ORDER_FORM.submitting : WORK_ORDER_FORM.submit}
+        {pending ? NEED_FORM.submitting : NEED_FORM.submit}
       </Button>
     </>
   );

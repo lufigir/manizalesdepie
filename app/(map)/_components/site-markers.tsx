@@ -22,13 +22,12 @@ import { SelectedMarkerLabel } from "./marker-label";
 /**
  * Every pin on the map, each one on its own real coordinate.
  *
- * Pins used to be pushed onto a ring whenever several overlapped on screen,
- * to keep downtown's dozen hospitals from collapsing into one spot at city
- * zoom. It cost more than it bought: the pin a reader tapped was no longer
- * where the place is, and the whole arrangement re-shuffled on every zoom, so
- * the map moved under the hand that was trying to read it. Overlap is the
- * honest failure mode — zoom in and they separate, because they really are
- * separate.
+ * Pins are never pushed onto a ring when several overlap on screen, even
+ * downtown where a dozen hospitals could collapse into one spot at city
+ * zoom: the pin a reader tapped has to stay where the place is, and an
+ * arrangement that re-shuffled on every zoom would mean the map moves under
+ * the hand trying to read it. Overlap is the honest failure mode — zoom in
+ * and they separate, because they really are separate.
  *
  * Except when they do not: an exact coordinate collision never separates, at
  * any zoom, and hides one pin under the other outright. `offsets` carries the

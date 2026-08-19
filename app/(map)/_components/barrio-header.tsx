@@ -1,6 +1,5 @@
 "use client";
 import {
-  AlertTriangle,
   Building2,
   ChevronDown,
   ChevronLeft,
@@ -10,69 +9,41 @@ import {
   X,
 } from "lucide-react";
 
-import type {
-  NeighborhoodStatusDTO,
-  UtilityStatus,
-} from "@/data/neighborhood/neighborhood.dto";
-import { BARRIO_PANEL, NEIGHBORHOOD_STATUS_LABEL, PANEL_LABEL } from "@/lib/labels";
+import { BARRIO_PANEL, PANEL_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { useWorkspace } from "./workspace-context";
-
-/** Which utilities a status marks as suspended, in the order the card shows
- *  them elsewhere: gas, power, water. */
-function suspendedUtilities(status: NeighborhoodStatusDTO): string[] {
-  const entries: [UtilityStatus, string][] = [
-    [status.gasStatus, NEIGHBORHOOD_STATUS_LABEL.gas],
-    [status.powerStatus, NEIGHBORHOOD_STATUS_LABEL.power],
-    [status.waterStatus, NEIGHBORHOOD_STATUS_LABEL.water],
-  ];
-  return entries
-    .filter(([value]) => value === "suspended")
-    .map(([, label]) => label);
-}
 
 /**
  * The panel's one header: where it is looking, how much is in it, and the
  * control that opens and closes it.
  *
- * These used to be two rows — a bare strip holding nothing but a chevron,
- * above a context row — which on a phone spent a whole line of a panel that
- * is already the scarcest space in the app. Merging them also fixes what
- * collapsing used to leave behind: an empty bar that said nothing, where now
- * a shut panel still reports the barrio and the count, so it reads as a
- * closed drawer rather than a dead edge.
+ * One row, not two: a bare strip holding nothing but a chevron would spend
+ * a whole line of a panel that is already the scarcest space in the app on
+ * a phone. A shut panel still reports the barrio and the count, so it reads
+ * as a closed drawer rather than a dead edge.
  *
- * Collapsing works at every width now. On a phone it frees height for the
- * map; on a desktop it frees width, which was simply not possible before —
- * the toggle was `lg:hidden` and the aside's width was fixed, so a laptop
- * could never give the map the whole screen.
+ * Collapsing works at every width. On a phone it frees height for the map;
+ * on a desktop it frees width, giving the map the whole screen when the
+ * aside is not needed.
  */
 export function BarrioHeader() {
   const {
     barrio,
     clearBarrio,
-    barrioStatus,
     panelCollapsed,
     setPanelCollapsed,
     sites,
-    workOrders,
+    needs,
     animals,
-    resourceOffers,
+    services,
   } = useWorkspace();
 
   const total =
     sites.length +
-    workOrders.length +
+    needs.length +
     animals.filter((animal) => animal.resolvedAt === null).length +
-    resourceOffers.length;
-
-  const suspended = barrioStatus ? suspendedUtilities(barrioStatus) : [];
-  const alert = barrioStatus?.evacuated
-    ? NEIGHBORHOOD_STATUS_LABEL.bannerEvacuated
-    : suspended.length > 0
-      ? `${NEIGHBORHOOD_STATUS_LABEL.bannerUtility} ${suspended.join(", ")}.`
-      : null;
+    services.length;
 
   const toggleLabel = panelCollapsed ? PANEL_LABEL.expand : PANEL_LABEL.collapse;
 
@@ -213,23 +184,6 @@ export function BarrioHeader() {
           <ChevronRight className="hidden size-4 lg:block" aria-hidden />
         </button>
       </div>
-
-      {/* Only for a barrio an announcement actually named — most never show
-          this. Evacuation takes the red the map also uses for it; a utility on
-          its own gets the lighter, "in progress" amber. */}
-      {alert && (
-        <div
-          className={cn(
-            "flex items-start gap-2 px-3 py-2 text-xs",
-            barrioStatus?.evacuated
-              ? "bg-unclaimed-surface text-unclaimed"
-              : "bg-claimed-surface text-claimed",
-          )}
-        >
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          <span>{alert}</span>
-        </div>
-      )}
     </div>
   );
 }

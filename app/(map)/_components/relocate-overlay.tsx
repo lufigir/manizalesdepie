@@ -7,7 +7,7 @@ import { useMap } from "@/components/ui/map";
 import { Button } from "@/components/ui/button";
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
 import { relocateSite } from "@/data/site/site.actions";
-import { relocateWorkOrder } from "@/data/work_order/work_order.actions";
+import { relocateNeed } from "@/data/need/need.actions";
 import { RELOCATE_LABEL } from "@/lib/labels";
 
 import { BarrioPicker } from "../reportar/_components/barrio-picker";
@@ -17,7 +17,7 @@ import { BarrioPicker } from "../reportar/_components/barrio-picker";
  *  centroid, so neither has a "wrong corner" to correct. */
 export type Relocating = {
   id: string;
-  kind: "site" | "workOrder";
+  kind: "site" | "need";
   /** Where the pin sits now, so the camera can open on it and Cancel has
    *  something to mean. */
   longitude: number;
@@ -130,7 +130,7 @@ export function RelocateOverlay({
         if (target.kind === "site") {
           await relocateSite(target.id, point.lng, point.lat);
         } else {
-          await relocateWorkOrder(target.id, point.lng, point.lat);
+          await relocateNeed(target.id, point.lng, point.lat);
         }
         onDone();
       } catch (cause) {
@@ -200,7 +200,7 @@ export function RelocateOverlay({
           )}
 
           {error && (
-            <p role="alert" className="text-unclaimed text-xs font-medium">
+            <p role="alert" className="text-pending text-xs font-medium">
               {error}
             </p>
           )}

@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
-import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
+import { ServiceDAL } from "@/data/service/service.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
 import { clientEnv } from "@/lib/env";
 import {
   OG_LABEL,
-  RESOURCE_TYPE_LABEL,
+  SERVICE_TYPE_LABEL,
   SERVICES_LABEL,
 } from "@/lib/labels";
 
@@ -22,7 +21,7 @@ import { MapWorkspace } from "../../_components/map-workspace";
  * answered in a group with a screenshot of a screenshot; this is that answer
  * with the type, the barrio, the hours and a number that is one tap away.
  *
- * Most offers have no exact point — a truck that can drive anywhere in the
+ * Most services have no exact point — a truck that can drive anywhere in the
  * city is a barrio-level fact — so the map often opens where it already was,
  * with the card up. That is correct: the card, not the pin, is the answer
  * here.
@@ -32,14 +31,14 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
-  const offer = await ResourceOfferDAL.public().findById(id);
+  const service = await ServiceDAL.public().findById(id);
 
-  if (!offer) return { title: OG_LABEL.notFound };
+  if (!service) return { title: OG_LABEL.notFound };
 
-  const title = RESOURCE_TYPE_LABEL[offer.type];
+  const title = SERVICE_TYPE_LABEL[service.type];
   const description = [
-    offer.description,
-    offer.neighborhood ?? offer.area ?? SERVICES_LABEL.cityWide,
+    service.description,
+    service.neighborhood ?? service.area ?? SERVICES_LABEL.cityWide,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -50,41 +49,38 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/servicio/${offer.id}`,
+      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/servicio/${service.id}`,
       locale: "es_CO",
       type: "website",
     },
   };
 }
 
-export default async function SharedResourceOfferPage({ params }: Params) {
+export default async function SharedServicePage({ params }: Params) {
   const { id } = await params;
 
-  const [offer, resourceOffers, sites, neighborhoodStatuses, user] =
-    await Promise.all([
-      ResourceOfferDAL.public().findById(id),
-      ResourceOfferDAL.public().listPublished(),
-      SiteDAL.public().listPublished(),
-      NeighborhoodDAL.public().statuses(),
-      getCurrentUser(),
-    ]);
+  const [service, services, sites, user] = await Promise.all([
+    ServiceDAL.public().findById(id),
+    ServiceDAL.public().listPublished(),
+    SiteDAL.public().listPublished(),
+    getCurrentUser(),
+  ]);
 
-  if (!offer) notFound();
+  if (!service) notFound();
 
-  // A link outlives the week an offer is published for: `listPublished` drops
-  // it once `expires_at` passes, so the shared one is added back rather than
-  // opening onto an empty map. The card says how stale it is.
-  const withShared = resourceOffers.some((row) => row.id === offer.id)
-    ? resourceOffers
-    : [offer, ...resourceOffers];
+  // A link outlives the week a service is published for: `listPublished`
+  // drops it once `expires_at` passes, so the shared one is added back
+  // rather than opening onto an empty map. The card says how stale it is.
+  const withShared = services.some((row) => row.id === service.id)
+    ? services
+    : [service, ...services];
 
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
-        resourceOffers={withShared}
-        neighborhoodStatuses={neighborhoodStatuses}
-        initialSelectedId={offer.id}
+        services={withShared}
+        initialSelectedId={service.id}
         tab="services"
         user={user}
       />

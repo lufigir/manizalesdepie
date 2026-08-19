@@ -8,53 +8,53 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  closeWorkOrder,
-  deleteWorkOrder,
-  listWorkOrderUpdates,
-  postWorkOrderUpdate,
-  setWorkOrderPublished,
-  updateWorkOrder,
-} from "@/data/work_order/work_order.actions";
+  closeNeed,
+  deleteNeed,
+  listNeedUpdates,
+  postNeedUpdate,
+  setNeedPublished,
+  updateNeed,
+} from "@/data/need/need.actions";
 import {
-  WORK_ORDER_CATEGORIES,
-  type WorkOrderCategory,
-  type WorkOrderDTO,
-  type WorkOrderUpdateDTO,
-  type WorkOrderUpdateKind,
-} from "@/data/work_order/work_order.dto";
+  NEED_CATEGORIES,
+  type NeedCategory,
+  type NeedDTO,
+  type NeedUpdateDTO,
+  type NeedUpdateKind,
+} from "@/data/need/need.dto";
 import {
   RELOCATE_LABEL,
-  WORK_ORDER_CATEGORY_ICON,
-  WORK_ORDER_CATEGORY_LABEL,
-  WORK_ORDER_LABEL,
-  WORK_ORDER_UPDATE_DEFAULT_NOTE,
-  WORK_ORDER_UPDATE_KIND_ICON,
-  WORK_ORDER_UPDATE_KIND_LABEL,
-  WORK_ORDER_UPDATE_PLACEHOLDER,
-  workOrderRollup,
+  NEED_CATEGORY_ICON,
+  NEED_CATEGORY_LABEL,
+  NEED_LABEL,
+  NEED_UPDATE_DEFAULT_NOTE,
+  NEED_UPDATE_KIND_ICON,
+  NEED_UPDATE_KIND_LABEL,
+  NEED_UPDATE_PLACEHOLDER,
+  needRollup,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
-import { WorkOrderThread } from "./work-order-thread";
+import { NeedThread } from "./need-thread";
 import { useWorkspace } from "./workspace-context";
 
 /** The icon for one of the four entry kinds, at the size every button in
  *  this card uses. One place, so the composer heading and the button that
  *  opened it cannot drift apart. */
-function UpdateIcon({ kind }: { kind: WorkOrderUpdateKind }) {
-  const Icon = WORK_ORDER_UPDATE_KIND_ICON[kind];
+function UpdateIcon({ kind }: { kind: NeedUpdateKind }) {
+  const Icon = NEED_UPDATE_KIND_ICON[kind];
   return <Icon className="size-3.5" aria-hidden />;
 }
 
 /** A curator's two manual verdicts. Everyone else's contribution goes
- *  through the book — see `WORK_ORDER_UPDATE_KINDS`. */
+ *  through the book — see `NEED_UPDATE_KINDS`. */
 type CloseOutcome = "closed_completed" | "closed_rejected";
 
 const CLOSE_ACTION_LABEL: Record<CloseOutcome, string> = {
-  closed_completed: WORK_ORDER_LABEL.closeCompleted,
-  closed_rejected: WORK_ORDER_LABEL.closeRejected,
+  closed_completed: NEED_LABEL.closeCompleted,
+  closed_rejected: NEED_LABEL.closeRejected,
 };
 
 /**
@@ -79,7 +79,7 @@ const CLOSE_ACTION_LABEL: Record<CloseOutcome, string> = {
  * Split out of the list row so the map popup can hold the same actions
  * without being the same shape.
  */
-export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
+export function NeedActions({ order }: { order: NeedDTO }) {
   const { isAdmin, userName, startRelocate } = useWorkspace();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -87,14 +87,14 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   // Which entry the composer is open for, or null when it is shut. One
   // composer for all four kinds: they ask for the same three things and
   // differ only in the sentence they are making.
-  const [composing, setComposing] = useState<WorkOrderUpdateKind | null>(null);
+  const [composing, setComposing] = useState<NeedUpdateKind | null>(null);
   // Seeded from the session so a signed-in reader is not retyping their own
   // name to say "voy". Still a plain editable field: the entry is signed by
   // whoever is going, which is not always the person holding the phone.
   const [name, setName] = useState(userName ?? "");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
-  const [posted, setPosted] = useState<WorkOrderUpdateKind | null>(null);
+  const [posted, setPosted] = useState<NeedUpdateKind | null>(null);
 
   /**
    * The case's thread. Fetched as soon as the card mounts, unconditionally.
@@ -105,23 +105,23 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
    * when the DTO's own counters read zero, but those counters only tally two
    * of the four update kinds, so a case whose only entry was "sigue haciendo
    * falta" or "no es real" never fetched and always showed as empty. The
-   * fetch was never per-case-on-the-map anyway: `WorkOrderActions` only
+   * fetch was never per-case-on-the-map anyway: `NeedActions` only
    * renders inside the card of the SELECTED pin, so this is one request for
    * one case the reader has already chosen to open, not one per pin.
    */
-  const [updates, setUpdates] = useState<WorkOrderUpdateDTO[] | null>(null);
+  const [updates, setUpdates] = useState<NeedUpdateDTO[] | null>(null);
   /** The entry this reader just wrote, so the thread can point at it. */
   const [ownEntryId, setOwnEntryId] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [category, setCategory] = useState<WorkOrderCategory>(order.category);
+  const [category, setCategory] = useState<NeedCategory>(order.category);
   const [description, setDescription] = useState(order.description);
 
   const [confirmingClose, setConfirmingClose] = useState<CloseOutcome | null>(
     null,
   );
 
-  const rollup = workOrderRollup(order);
+  const rollup = needRollup(order);
   const open = rollup !== "done" && rollup !== "dismissed";
 
   // The DTO only tallies two of the four update kinds — `on_the_way` and
@@ -129,11 +129,11 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   // or `not_real`. It is still worth reading before the thread arrives: it
   // gives the heading a number on first paint, and `updates` corrects it as
   // soon as the real count is in.
-  const entryCount = updates?.length ?? order.attendeeCount + order.helpedCount;
+  const entryCount = updates?.length ?? order.onTheWayCount + order.helpedCount;
 
   useEffect(() => {
     let cancelled = false;
-    listWorkOrderUpdates(order.id)
+    listNeedUpdates(order.id)
       .then((rows) => {
         if (!cancelled) setUpdates(rows);
       })
@@ -153,31 +153,31 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
    *
    * The point is that publishing costs one more tap and no thinking: the
    * default says exactly what the button just said, and somebody with more
-   * to add types over it. See `WORK_ORDER_UPDATE_DEFAULT_NOTE`.
+   * to add types over it. See `NEED_UPDATE_DEFAULT_NOTE`.
    */
-  function compose(kind: WorkOrderUpdateKind) {
+  function compose(kind: NeedUpdateKind) {
     setError(null);
-    setNote(WORK_ORDER_UPDATE_DEFAULT_NOTE[kind]);
+    setNote(NEED_UPDATE_DEFAULT_NOTE[kind]);
     setComposing(kind);
   }
 
-  function submitUpdate(kind: WorkOrderUpdateKind) {
+  function submitUpdate(kind: NeedUpdateKind) {
     setError(null);
 
     // A note is still required by the schema — a counter that moves with no
     // words behind it is not evidence of anything. But an emptied box means
     // "no tengo nada que añadir", so it falls back to the default rather
     // than becoming an error the reader has to solve to finish a tap.
-    const trimmedNote = note.trim() || WORK_ORDER_UPDATE_DEFAULT_NOTE[kind];
+    const trimmedNote = note.trim() || NEED_UPDATE_DEFAULT_NOTE[kind];
     if (trimmedNote.length < 3) {
-      setError(WORK_ORDER_LABEL.attendNoteRequired);
+      setError(NEED_LABEL.attendNoteRequired);
       return;
     }
 
     startTransition(async () => {
       try {
-        await postWorkOrderUpdate({
-          workOrderId: order.id,
+        await postNeedUpdate({
+          needId: order.id,
           kind,
           name: name.trim() || undefined,
           phone: phone.trim() || undefined,
@@ -189,15 +189,15 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
         // The thread this reader just joined is the one thing worth showing
         // next: it is where their own note lands, and where they can see
         // that the case did not just switch off.
-        const rows = await listWorkOrderUpdates(order.id);
+        const rows = await listNeedUpdates(order.id);
         setUpdates(rows);
         setOwnEntryId(rows.at(-1)?.id ?? null);
       } catch (cause) {
         const msg =
-          cause instanceof Error ? cause.message : WORK_ORDER_LABEL.failed;
+          cause instanceof Error ? cause.message : NEED_LABEL.failed;
         // Zod v4 serialises issues as a JSON array in .message — a reader
         // should never see that, so fall back to the generic label.
-        setError(msg.startsWith("[") ? WORK_ORDER_LABEL.failed : msg);
+        setError(msg.startsWith("[") ? NEED_LABEL.failed : msg);
       }
     });
   }
@@ -206,9 +206,9 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     setError(null);
     startTransition(async () => {
       try {
-        await closeWorkOrder(order.id, result);
+        await closeNeed(order.id, result);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : WORK_ORDER_LABEL.failed);
+        setError(cause instanceof Error ? cause.message : NEED_LABEL.failed);
       } finally {
         setConfirmingClose(null);
       }
@@ -219,10 +219,10 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     setError(null);
     startTransition(async () => {
       try {
-        await updateWorkOrder({ id: order.id, category, description });
+        await updateNeed({ id: order.id, category, description });
         setEditOpen(false);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : WORK_ORDER_LABEL.failed);
+        setError(cause instanceof Error ? cause.message : NEED_LABEL.failed);
       }
     });
   }
@@ -243,31 +243,31 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     return (
       <div className="mt-2 flex flex-col gap-1.5 border-t pt-2">
         {error && (
-          <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+          <p role="alert" className="text-pending text-[0.7rem] font-medium">
             {error}
           </p>
         )}
         <p className="flex items-center gap-1.5 text-sm font-semibold">
           <UpdateIcon kind={composing} />
-          {WORK_ORDER_UPDATE_KIND_LABEL[composing]}
+          {NEED_UPDATE_KIND_LABEL[composing]}
         </p>
         <Input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder={WORK_ORDER_LABEL.attendName}
+          placeholder={NEED_LABEL.attendName}
         />
         <Input
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
-          placeholder={WORK_ORDER_LABEL.attendPhone}
+          placeholder={NEED_LABEL.attendPhone}
           inputMode="numeric"
         />
         <Textarea
           rows={2}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder={WORK_ORDER_UPDATE_PLACEHOLDER[composing]}
-          aria-label={WORK_ORDER_LABEL.attendNote}
+          placeholder={NEED_UPDATE_PLACEHOLDER[composing]}
+          aria-label={NEED_LABEL.attendNote}
         />
         <div className="flex gap-1">
           <Button
@@ -276,10 +276,10 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             loading={pending}
             onClick={() => submitUpdate(composing)}
           >
-            {pending ? WORK_ORDER_LABEL.attending : WORK_ORDER_LABEL.attendSubmit}
+            {pending ? NEED_LABEL.attending : NEED_LABEL.attendSubmit}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setComposing(null)}>
-            {WORK_ORDER_LABEL.attendCancel}
+            {NEED_LABEL.attendCancel}
           </Button>
         </div>
       </div>
@@ -292,13 +292,13 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     return (
       <div className="mt-2 flex flex-col gap-1.5 border-t pt-2">
         {error && (
-          <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+          <p role="alert" className="text-pending text-[0.7rem] font-medium">
             {error}
           </p>
         )}
         <div className="flex flex-wrap gap-1">
-          {WORK_ORDER_CATEGORIES.map((option) => {
-            const OptionIcon = WORK_ORDER_CATEGORY_ICON[option];
+          {NEED_CATEGORIES.map((option) => {
+            const OptionIcon = NEED_CATEGORY_ICON[option];
             return (
               <button
                 key={option}
@@ -313,7 +313,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 )}
               >
                 <OptionIcon className="size-3" aria-hidden />
-                {WORK_ORDER_CATEGORY_LABEL[option]}
+                {NEED_CATEGORY_LABEL[option]}
               </button>
             );
           })}
@@ -325,7 +325,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
         />
         <div className="flex gap-1">
           <Button size="sm" className="flex-1" loading={pending} onClick={saveEdit}>
-            {pending ? WORK_ORDER_LABEL.editSaving : WORK_ORDER_LABEL.editSave}
+            {pending ? NEED_LABEL.editSaving : NEED_LABEL.editSave}
           </Button>
           <Button
             size="sm"
@@ -336,7 +336,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
               setDescription(order.description);
             }}
           >
-            {WORK_ORDER_LABEL.editCancel}
+            {NEED_LABEL.editCancel}
           </Button>
         </div>
       </div>
@@ -346,7 +346,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   return (
     <>
       {error && (
-        <p role="alert" className="text-unclaimed mt-1 text-[0.7rem] font-medium">
+        <p role="alert" className="text-pending mt-1 text-[0.7rem] font-medium">
           {error}
         </p>
       )}
@@ -376,13 +376,13 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             value="detail"
             className="h-9 flex-1 rounded-none border-0 px-1 text-sm font-semibold data-active:text-primary"
           >
-            {WORK_ORDER_LABEL.tabDetail}
+            {NEED_LABEL.tabDetail}
           </TabsTab>
           <TabsTab
             value="thread"
             className="h-9 flex-1 rounded-none border-0 px-1 text-sm font-semibold data-active:text-primary"
           >
-            {WORK_ORDER_LABEL.threadTitle}
+            {NEED_LABEL.threadTitle}
             {entryCount > 0 && (
               <span className="ml-1 text-xs tabular-nums opacity-70">
                 {entryCount}
@@ -398,7 +398,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             under the old gate they had to commit before they could do either. */}
         <div className="bg-muted/40 mt-2 rounded-md border p-2 text-[0.7rem] leading-snug">
           <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-            {WORK_ORDER_LABEL.contactTitle}
+            {NEED_LABEL.contactTitle}
           </p>
           {hasContact ? (
             <>
@@ -430,7 +430,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                     }
                   >
                     <WhatsappIcon />
-                    {WORK_ORDER_LABEL.contactWhatsapp}
+                    {NEED_LABEL.contactWhatsapp}
                   </Button>
                 </div>
               )}
@@ -440,7 +440,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             </>
           ) : (
             <p className="text-muted-foreground mt-0.5">
-              {WORK_ORDER_LABEL.noContact}
+              {NEED_LABEL.noContact}
             </p>
           )}
 
@@ -449,15 +449,15 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
         {/* What the card is asking for. Full weight, its own section, and the
             only primary button anywhere on it. */}
         {open && (
-          <Section label={WORK_ORDER_LABEL.sectionHelp}>
+          <Section label={NEED_LABEL.sectionHelp}>
             {posted && (
               <p className="text-resolved text-[0.7rem] font-semibold">
-                {WORK_ORDER_LABEL.attendedThanks}
+                {NEED_LABEL.attendedThanks}
               </p>
             )}
             <Button onClick={() => compose("on_the_way")}>
               <UpdateIcon kind="on_the_way" />
-              {WORK_ORDER_UPDATE_KIND_LABEL.on_the_way}
+              {NEED_UPDATE_KIND_LABEL.on_the_way}
             </Button>
 
             {/* Everything somebody reports AFTER standing in front of the
@@ -476,7 +476,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 lot had to hunt for the way to say so. Distance was doing a
                 job that weight does better. */}
             <p className="text-muted-foreground mt-0.5 text-[0.65rem] font-medium">
-              {WORK_ORDER_LABEL.sectionBeenThere}
+              {NEED_LABEL.sectionBeenThere}
             </p>
             <div className="grid grid-cols-2 gap-1">
               <Button
@@ -485,7 +485,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 onClick={() => compose("helped")}
               >
                 <UpdateIcon kind="helped" />
-                {WORK_ORDER_UPDATE_KIND_LABEL.helped}
+                {NEED_UPDATE_KIND_LABEL.helped}
               </Button>
               <Button
                 size="sm"
@@ -493,7 +493,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 onClick={() => compose("still_needed")}
               >
                 <UpdateIcon kind="still_needed" />
-                {WORK_ORDER_UPDATE_KIND_LABEL.still_needed}
+                {NEED_UPDATE_KIND_LABEL.still_needed}
               </Button>
             </div>
             <Button
@@ -503,10 +503,10 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
               onClick={() => compose("not_real")}
             >
               <UpdateIcon kind="not_real" />
-              {WORK_ORDER_UPDATE_KIND_LABEL.not_real}
+              {NEED_UPDATE_KIND_LABEL.not_real}
             </Button>
             <p className="text-muted-foreground text-[0.65rem] leading-snug">
-              {WORK_ORDER_LABEL.updateHint}
+              {NEED_LABEL.updateHint}
             </p>
           </Section>
         )}
@@ -516,11 +516,11 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             real" in particular is an accusation about a household. Ghost
             weight is the design saying so without a warning label. */}
         {open && (
-          <Section label={WORK_ORDER_LABEL.sectionWrong}>
+          <Section label={NEED_LABEL.sectionWrong}>
             <div className="grid grid-cols-2 gap-1">
               <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
                 <Pencil className="size-3" aria-hidden />
-                {WORK_ORDER_LABEL.edit}
+                {NEED_LABEL.edit}
               </Button>
               {/* "El pin está mal puesto" belongs here rather than beside the
                   directions button: it is the third form of "this listing is
@@ -533,7 +533,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                 onClick={() =>
                   startRelocate({
                     id: order.id,
-                    kind: "workOrder",
+                    kind: "need",
                     longitude: order.longitude,
                     latitude: order.latitude,
                   })
@@ -552,14 +552,14 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
         {isAdmin && (
           <div className="border-primary/30 bg-muted/30 mt-2 rounded-md border border-dashed p-2">
             <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
-              {WORK_ORDER_LABEL.sectionCuration}
+              {NEED_LABEL.sectionCuration}
             </p>
 
             {open &&
               (confirmingClose ? (
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span className="text-muted-foreground text-[0.65rem]">
-                    {WORK_ORDER_LABEL.closeConfirm}{" "}
+                    {NEED_LABEL.closeConfirm}{" "}
                     {CLOSE_ACTION_LABEL[confirmingClose]}
                   </span>
                   <Button
@@ -568,7 +568,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                     loading={pending}
                     onClick={() => close(confirmingClose)}
                   >
-                    {WORK_ORDER_LABEL.closeConfirmYes}
+                    {NEED_LABEL.closeConfirmYes}
                   </Button>
                   <Button
                     size="sm"
@@ -576,7 +576,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
                     disabled={pending}
                     onClick={() => setConfirmingClose(null)}
                   >
-                    {WORK_ORDER_LABEL.closeConfirmCancel}
+                    {NEED_LABEL.closeConfirmCancel}
                   </Button>
                 </div>
               ) : (
@@ -598,8 +598,8 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
 
             <AdminActions
               published={order.published}
-              onSetPublished={(published) => setWorkOrderPublished(order.id, published)}
-              onDelete={() => deleteWorkOrder(order.id)}
+              onSetPublished={(published) => setNeedPublished(order.id, published)}
+              onDelete={() => deleteNeed(order.id)}
             />
           </div>
         )}
@@ -613,7 +613,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             it got closed, and it is the only thing left that can be checked
             if somebody thinks it was closed wrongly. */}
         <TabsPanel value="thread" className="mt-2">
-          <WorkOrderThread updates={updates} highlightId={ownEntryId} />
+          <NeedThread updates={updates} highlightId={ownEntryId} />
         </TabsPanel>
       </Tabs>
     </>
@@ -646,7 +646,7 @@ function Section({
           {label}
           {count !== undefined && count > 0 && (
             <span className="font-medium normal-case opacity-70 tabular-nums">
-              {WORK_ORDER_LABEL.threadCount(count)}
+              {NEED_LABEL.threadCount(count)}
             </span>
           )}
         </p>

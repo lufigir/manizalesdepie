@@ -39,7 +39,7 @@ export function AdminActions({
         // public half of the card, since hiding changes nothing a visitor
         // would ever see. So the strip itself carries the colour: amber
         // means "this is off the public map", neutral means it is live.
-        published ? "border-primary/30 bg-primary/5" : "border-claimed/40 bg-claimed-surface",
+        published ? "border-primary/30 bg-primary/5" : "border-underway/40 bg-underway-surface",
       )}
     >
       {/* State first, actions after: what this row IS matters more to
@@ -47,7 +47,7 @@ export function AdminActions({
       <span
         className={cn(
           "inline-flex items-center gap-1 rounded px-1.5 py-1 text-[0.65rem] font-bold",
-          published ? "text-muted-foreground" : "text-claimed",
+          published ? "text-muted-foreground" : "text-underway",
         )}
       >
         {published ? (
@@ -85,7 +85,7 @@ export function AdminActions({
       <div className="ml-auto flex items-center gap-1">
         {confirmingDelete ? (
           <>
-            <span className="text-unclaimed text-[0.65rem] font-semibold">
+            <span className="text-pending text-[0.65rem] font-semibold">
               {ADMIN_LABEL.deleteConfirm}
             </span>
             <Button

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
 import { clientEnv } from "@/lib/env";
@@ -61,14 +60,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedAnimalPage({ params }: Params) {
   const { id } = await params;
 
-  const [animal, animals, sites, neighborhoodStatuses, user] =
-    await Promise.all([
-      AnimalDAL.public().findById(id),
-      AnimalDAL.public().listPublished(),
-      SiteDAL.public().listPublished(),
-      NeighborhoodDAL.public().statuses(),
-      getCurrentUser(),
-    ]);
+  const [animal, animals, sites, user] = await Promise.all([
+    AnimalDAL.public().findById(id),
+    AnimalDAL.public().listPublished(),
+    SiteDAL.public().listPublished(),
+    getCurrentUser(),
+  ]);
 
   if (!animal) notFound();
 
@@ -83,7 +80,6 @@ export default async function SharedAnimalPage({ params }: Params) {
       <MapWorkspace
         sites={sites}
         animals={withShared}
-        neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={animal.id}
         tab="pets"
         user={user}

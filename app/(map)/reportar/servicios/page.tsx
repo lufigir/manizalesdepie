@@ -4,7 +4,7 @@ import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SERVICES_FORM } from "@/lib/labels";
 
 import { ReportLayout } from "../_components/report-layout";
-import { ResourceOfferForm } from "./_components/resource-offer-form";
+import { ServiceForm } from "./_components/service-form";
 
 export const metadata: Metadata = { title: SERVICES_FORM.title };
 
@@ -18,7 +18,7 @@ export default async function ReportServicePage() {
       subtitle={SERVICES_FORM.subtitle}
       backHref="/"
     >
-      <ResourceOfferForm barrios={barrios} />
+      <ServiceForm barrios={barrios} />
     </ReportLayout>
   );
 }

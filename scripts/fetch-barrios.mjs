@@ -375,7 +375,7 @@ const sql = [
     // more than half the file.
     return (
       `with shape as (select st_multi(st_geomfromgeojson('${geojson}')) as g)\n` +
-      `insert into neighborhood (name, municipality, comuna, boundary, centroid)\n` +
+      `insert into neighborhoods (name, municipality, comuna, boundary, centroid)\n` +
       `select '${name}', 'manizales', ${comuna}, g::geography, st_centroid(g)::geography\n` +
       `from shape\n` +
       `on conflict (name, municipality) do update set\n` +

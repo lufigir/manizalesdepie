@@ -15,1248 +15,1248 @@
 
 begin;
 
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Quinta', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Ciudadela la Linda' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Hospital Geriatrico san Isidro', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bella Montaña' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Escuela de Trabajo la Linda', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bella Montaña' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Pilar II', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Torres de Avila', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Venecia', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Luis (Villapilar)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Aquilino Villegas', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Urb. Atalaya', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Urb. Bello Horizonte', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Urb. Santa Mónica', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villapilar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Chipre Viejo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Chipre' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Balcones de Chipre', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Chipre' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bellavista', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Chipre' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Chimenea I y II', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Campohermoso' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Altos de Castilla', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Campohermoso' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Terrazas de Campohermoso', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Campohermoso' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto Campohermoso', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Campohermoso' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Universidad de Manizales', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Campohermoso' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Topacio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Morrogacho' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Montana', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Morrogacho' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Palmar', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Francia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Francisco', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Francia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Poblado', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Francia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Remo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Francia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Candelaria', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Francia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portal de los Alcazares', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Los Alcázares' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portales', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Los Alcázares' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Real', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Los Alcázares' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Quinta Hispania', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Los Alcázares' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Asturias', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Los Alcázares' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Jazmin', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Asís' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Camino del Medio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Avanzada' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Tachuelo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Avanzada' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Alto Galan', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Galán' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Maizal', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Galán' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Holanda', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Galán' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sierra Morena (Estrada)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Estrada' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Vicente', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San José' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Galerias', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Colón' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Riviera', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Alta Suiza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Torres de Oriente', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Colseguros' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Agrícola de Seguros', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Colseguros' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Escuela de Carabineros', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Toscana' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Balcones de la Palma', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques de Niza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Camino de la Palma', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques de Niza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Rincón de la Palma', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques de Niza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Cerro de Oro', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques de Niza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Mirador de la Sierra', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques de Niza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Colinas de San Sebastián', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques de Niza' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'El Pinar', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Marcel' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Arboletes', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Marcel' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto cerrado Santa Ana', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Marcel' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Chachafruto', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Marcel' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bosque Popular', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Marcel' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'El portal del Bosque', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Alhambra' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Colinas del Viento', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Alhambra' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Valles de la Alhambra', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Cerros de la Alhambra' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Juanchito', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Maltería' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sena', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Zona Industrial' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Capilla', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Caserio la Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bosques de la Alhambra', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Caserio la Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Fundemos', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Caserio la Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'El Cairo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Caserio la Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Los Pinos', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sector Gallinazo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Aeropuerto', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Enea' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Baja Leonora', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Leonora' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Estadio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Palogrande' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Universidad de Caldas', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Palogrande' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Universidad Nacional', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Palogrande' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto Ibiza', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Arboleda' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Los Sauces', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Palermo' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bajo Palermo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Palermo' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sector del Batallon', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Camelia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Andes', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Nevado' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bajo Nevado', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Nevado' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Panamericana', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Nevado' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Isla', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Marmato' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Solidaridad (Marmato)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Marmato' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Solidaridad (San Antonio)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Antonio' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Campamento', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Carmen' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Providencia', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Carmen' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Albania', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Carmen' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'El Rocio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Carmen' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bosconia', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Bosque' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portal de Nogales', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Nogales' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Nuevo Horizontes', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Panorama' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bella Montaña (Panorama)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Panorama' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Kempis (Arenillo)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Centenario' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Chapinero', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Centenario' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Jardín', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Estambul' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Torres de  Esponsion', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Estambul' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Niño Jesús de Praga', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Estambul' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Granjas de Estambul', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Estambul' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Estación Uribe', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Estambul' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Samaria', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Solferino' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portón del Guamo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Solferino' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Carolita', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Altos de Granada I y II etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Café I y II etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Cjto cerrado Altos de Granada', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Mirador de la Carola I y II etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Cerros de la Carola', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Altos de la Carola', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Rincón de la Daniela', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Casas de la Colina', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Reserva del Rio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Carola' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Daniela', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villahermosa' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Viña del Rio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villahermosa' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Playa y la Sonora', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Villahermosa' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Alameda', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Cancio' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa del Campo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Cancio' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Loma Verde', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Cancio' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Alto del perro', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Milán' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sierra Bonita', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Milán' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Los Guaduales', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Rincon de Doña Elvira', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Edificio Tejarres del bosque', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Condominio el Tejar', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Rincon del Trebol', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bosques del Trebol', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Sebastian de Buena Vista', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Trébol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Granjas y Viviendas', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Vivienda Popular' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sector del Aguacate', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Vivienda Popular' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Luis (Kennedy)', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Kennedy' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Pepe Caceres', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Kennedy' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Ciudadela del Ciego', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Kennedy' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sector Bolivariana', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Kennedy' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Fernando', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Kennedy' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Santos', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Camilo Torres' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Mercedes', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Camilo Torres' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select '11 de noviembre', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Las Colinas' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Castilla', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Las Colinas' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Sector Malhabar II', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Malhabar' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'El Encuentro', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Aranjuez' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Paz', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Aranjuez' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Nueva', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Uribe' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'El Palmar', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Uribe' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Los Alamos', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Velez' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bajo Persia', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Persia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Isabela', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Persia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Eucaliptus', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Persia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portal Eucaliptus', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Persia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portal de San Luis', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Persia' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Fuente', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Guamal' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Galicia', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Guamal' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Palma', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Las Americas' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Residencias Caldas', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Las Americas' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Terminal de Transportes', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Las Americas' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Valvanera', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Centro' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Hoyo Frio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Campoamor' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Saenz', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Santa Helena' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto cerrado Fundadores', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Santa Helena' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Parque Castilla', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Santa Helena' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Universidad Autonoma', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Santa Helena' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto cerrado la Estación', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Santa Helena' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Urbanizacion el Rio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Los Cedros' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'La Primavera', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Sol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto las Américas', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Sol' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa del Rio', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'La Asunción' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Nuevo Versalles', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Versalles' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bavaria', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Lleras' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Conjunto cerrado Piamonte', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'El Caribe' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bengala', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques del Norte' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Portal de Bengala', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques del Norte' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Bosques de Bengala', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Bosques del Norte' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Sebastián I etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Sebastián' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Sebastián II etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Sebastián' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Sebastián III etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Sebastián' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'San Sebastián IV etapa', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'San Sebastián' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Palonegro', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Altos de Capri' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Altos del Encenillo', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Altos de Capri' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villas del Bosque', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Altos de Capri' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Piamonte II', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Peralonso' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Yarumales I y II', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Viveros' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Licorera', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Viveros' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,
   centroid  = excluded.centroid;
-insert into neighborhood (name, municipality, parent_id, centroid)
+insert into neighborhoods (name, municipality, parent_id, centroid)
 select 'Villa Luz', 'manizales', p.id, p.centroid
-from neighborhood p
+from neighborhoods p
 where p.name = 'Viveros' and p.municipality = 'manizales'
 on conflict (name, municipality) do update set
   parent_id = excluded.parent_id,

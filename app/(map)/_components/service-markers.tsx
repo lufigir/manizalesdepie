@@ -1,14 +1,14 @@
 "use client";
 
 import { MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/map";
-import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
-import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL } from "@/lib/labels";
+import type { ServiceDTO } from "@/data/service/service.dto";
+import { SERVICE_TYPE_ICON, SERVICE_TYPE_LABEL } from "@/lib/labels";
 import type { FanOffsets } from "@/lib/marker-fan";
 import { cn } from "@/lib/utils";
 
 import { SelectedMarkerLabel } from "./marker-label";
 
-type Located = ResourceOfferDTO & { longitude: number; latitude: number };
+type Located = ServiceDTO & { longitude: number; latitude: number };
 
 /**
  * Offers on the map — a truck, a warehouse, a spare room.
@@ -26,18 +26,18 @@ type Located = ResourceOfferDTO & { longitude: number; latitude: number };
  * ring is what says the point is a barrio; the fan only says how many things
  * are on it. See `lib/marker-fan.ts`.
  */
-export function ResourceOfferMarkers({
-  resourceOffers,
+export function ServiceMarkers({
+  services,
   selectedId,
   onSelect,
   offsets,
 }: {
-  resourceOffers: ResourceOfferDTO[];
+  services: ServiceDTO[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   offsets: FanOffsets;
 }) {
-  const located = resourceOffers.filter(
+  const located = services.filter(
     (offer): offer is Located =>
       offer.longitude !== null && offer.latitude !== null,
   );
@@ -68,7 +68,7 @@ function SinglePin({
   onSelect: (id: string) => void;
   offset?: [number, number];
 }) {
-  const Icon = RESOURCE_TYPE_ICON[offer.type];
+  const Icon = SERVICE_TYPE_ICON[offer.type];
 
   return (
     <MapMarker
@@ -84,17 +84,17 @@ function SinglePin({
             "border-muted-foreground/60 bg-background text-foreground ring-background flex size-7 items-center justify-center rounded-full border-2 border-dashed shadow-md ring-2 transition-transform",
             selected && "scale-125",
           )}
-          aria-label={`${RESOURCE_TYPE_LABEL[offer.type]}: ${offer.description}`}
+          aria-label={`${SERVICE_TYPE_LABEL[offer.type]}: ${offer.description}`}
         >
           <Icon className="size-3.5" strokeWidth={2.5} aria-hidden />
         </span>
         {selected && (
-          <SelectedMarkerLabel>{RESOURCE_TYPE_LABEL[offer.type]}</SelectedMarkerLabel>
+          <SelectedMarkerLabel>{SERVICE_TYPE_LABEL[offer.type]}</SelectedMarkerLabel>
         )}
         </span>
       </MarkerContent>
       {!selected && (
-        <MarkerTooltip offset={18}>{RESOURCE_TYPE_LABEL[offer.type]}</MarkerTooltip>
+        <MarkerTooltip offset={18}>{SERVICE_TYPE_LABEL[offer.type]}</MarkerTooltip>
       )}
     </MapMarker>
   );

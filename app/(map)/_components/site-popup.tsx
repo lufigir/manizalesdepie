@@ -17,6 +17,7 @@ import {
   ADMIN_LABEL,
   RELOCATE_LABEL,
   SHEET_LABEL,
+  SITE_ITEMS_LABEL,
   SITE_STATUS_LABEL,
   SITE_STATUS_MARKER,
   SITE_STATUS_STYLE,
@@ -102,7 +103,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     <p
       className={cn(
         "text-[0.7rem]",
-        stale ? "text-claimed" : "text-muted-foreground",
+        stale ? "text-underway" : "text-muted-foreground",
       )}
     >
       {freshLabel}
@@ -153,18 +154,70 @@ export function SitePopup({ site }: { site: SiteDTO }) {
 
       {metaLine}
 
+      {/* What this place refuses sits above what it needs — the ordering
+          this whole card follows, stated in the header comment above: the
+          Red Cross has asked publicly that people stop bringing used
+          clothing, and someone reading in a hurry has to hit that before
+          they load the car, not after. `notAccepted` is styled as a warning
+          for the same reason; `received` reads as plain information. */}
+      {site.items.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {(() => {
+            const notAccepted = site.items
+              .filter((item) => item.mode === "not_accepted")
+              .sort((a, b) => b.priority - a.priority);
+            const received = site.items
+              .filter((item) => item.mode !== "not_accepted")
+              .sort((a, b) => b.priority - a.priority);
+
+            return (
+              <>
+                {notAccepted.length > 0 && (
+                  <div className="bg-pending-surface border-pending/30 rounded-md border p-2">
+                    <p className="text-pending text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {SITE_ITEMS_LABEL.notAccepted}
+                    </p>
+                    <ul className="mt-1 flex flex-wrap gap-1">
+                      {notAccepted.map((item) => (
+                        <li
+                          key={item.id}
+                          className="bg-pending text-pending-foreground rounded-full px-2 py-0.5 text-[0.7rem] font-medium"
+                        >
+                          {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {received.length > 0 && (
+                  <div>
+                    <p className="text-muted-foreground text-[0.65rem] font-semibold tracking-wide uppercase">
+                      {SITE_ITEMS_LABEL.received}
+                    </p>
+                    <ul className="mt-1 flex flex-wrap gap-1">
+                      {received.map((item) => (
+                        <li
+                          key={item.id}
+                          className="bg-muted text-foreground rounded-full px-2 py-0.5 text-[0.7rem] font-medium"
+                        >
+                          {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Everything true about the place, in the card itself. It used to fold
           behind "ver más" — a lateral sheet beside the map, an accordion in
           the drawer under it. Both surfaces scroll on their own, so the fold
           was buying a shorter card at the price of a tap on facts (the
           address, the hours) that someone deciding where to drive actually
-          reads.
-
-          The "Necesita" chips and the "NO recibe" box are gone: they were a
-          second, structured way of saying what the description already says
-          in plain words, and keeping the two in sync was a job nobody was
-          doing. `site_item` still exists — this is a display decision, not a
-          schema one. */}
+          reads. */}
       <div className="flex flex-col gap-2.5 text-[0.8rem]">
           {site.schedule && (
             <div>
@@ -343,7 +396,7 @@ export function SitePopup({ site }: { site: SiteDTO }) {
             placeholder={ADMIN_LABEL.fieldWhatsapp}
           />
           {editError && (
-            <p role="alert" className="text-unclaimed text-[0.7rem] font-medium">
+            <p role="alert" className="text-pending text-[0.7rem] font-medium">
               {editError}
             </p>
           )}

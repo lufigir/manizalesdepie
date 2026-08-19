@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
+import { NeedDAL } from "@/data/need/need.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 import { OG_LABEL } from "@/lib/labels";
 
 import {
@@ -33,11 +33,11 @@ export const contentType = OG_CONTENT_TYPE;
 export const revalidate = 3600;
 
 export default async function Image() {
-  const [fonts, logo, sites, workOrders] = await Promise.all([
+  const [fonts, logo, sites, needs] = await Promise.all([
     ogFonts(),
     ogLogo(),
     SiteDAL.public().listPublished(),
-    WorkOrderDAL.public().listPublished(),
+    NeedDAL.public().listPublished(),
   ]);
 
   return new ImageResponse(
@@ -45,7 +45,7 @@ export default async function Image() {
       <OgCard
         eyebrow={OG_LABEL.siteName}
         title={OG_LABEL.homeTitle}
-        meta={OG_LABEL.homeCounts(sites.length, workOrders.length)}
+        meta={OG_LABEL.homeCounts(sites.length, needs.length)}
         icon={OgMapIcon}
         logo={logo}
         accent="resolved"

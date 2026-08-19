@@ -8,18 +8,13 @@ import type { CurrentUser } from "@/data/user/require-user";
 import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import { animalMapCoordinates } from "@/data/animal/animal.policy";
-import type {
-  NeighborhoodDTO,
-  NeighborhoodNeedDTO,
-  NeighborhoodStatusDTO,
-} from "@/data/neighborhood/neighborhood.dto";
-import type { ResourceOfferDTO } from "@/data/resource_offer/resource_offer.dto";
-import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
+import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
+import type { ServiceDTO } from "@/data/service/service.dto";
+import type { NeedDTO } from "@/data/need/need.dto";
 import { PANEL_LABEL } from "@/lib/labels";
 import {
   ALL_REPORT_ENTRIES,
   DEFAULT_TAB_ID,
-  SITE_TYPE_TAB,
   initialChipForTab,
   type PanelChip,
   type TabId,
@@ -43,12 +38,12 @@ import {
   type Relocating,
 } from "./relocate-overlay";
 import { ReportMenu } from "./report-menu";
-import { ResourceOfferMarkers } from "./resource-offer-markers";
-import { ResourceOfferPopup } from "./resource-offer-popup";
+import { ServiceMarkers } from "./service-markers";
+import { ServicePopup } from "./service-popup";
 import { SharedLinkBar } from "./shared-link-bar";
 import { SightingMarkers } from "./sighting-markers";
-import { WorkOrderMarkers } from "./work-order-markers";
-import { WorkOrderPopup } from "./work-order-popup";
+import { NeedMarkers } from "./need-markers";
+import { NeedPopup } from "./need-popup";
 import { SiteMarkers } from "./site-markers";
 import { SitePopup } from "./site-popup";
 import { UnifiedPanel } from "./unified-panel";
@@ -77,16 +72,11 @@ type Props = {
   sites: SiteDTO[];
   /** Animal reports. Not sites: they mostly have no location at all. */
   animals?: AnimalDTO[];
-  /** Resource offers — a truck, a warehouse, a spare room. Pinned at the
-   *  barrio's own centroid when they carry a point. */
-  resourceOffers?: ResourceOfferDTO[];
+  /** Services — a truck, a warehouse, a spare room. Pinned at the barrio's
+   *  own centroid when they carry a point. */
+  services?: ServiceDTO[];
   /** Individual household requests — "Necesidades". */
-  workOrders?: WorkOrderDTO[];
-  /** Every barrio with an evacuation/utility status on record. */
-  neighborhoodStatuses?: NeighborhoodStatusDTO[];
-  /** Every frente on record — "este barrio necesita X". Curated by hand, see
-   *  `neighborhood_need`. Not shown as its own chip yet — see `PanelChip`. */
-  neighborhoodNeeds?: NeighborhoodNeedDTO[];
+  needs?: NeedDTO[];
   /** Set when arriving from a shared link. The map opens already centred on
    *  that pin with its card up, because the question the link was sent to
    *  answer is "¿por dónde queda exactamente?" and it should be answered
@@ -134,10 +124,8 @@ type Props = {
 export function MapWorkspace({
   sites,
   animals = [],
-  resourceOffers = [],
-  workOrders = [],
-  neighborhoodStatuses = [],
-  neighborhoodNeeds = [],
+  services = [],
+  needs = [],
   barrios = [],
   initialSelectedId,
   tab: forcedTab,
@@ -157,15 +145,11 @@ export function MapWorkspace({
    * Seeded once, from `forcedTab` when the caller is one of the four shared
    * entity routes, or `DEFAULT_TAB_ID` at the bare `/`.
    *
-   * This used to also resync from the active child route segment, for the
-   * era when `(tabs)/layout.tsx` had siblings (`/necesito`, `/mascotas`,
-   * `/servicios`) it stayed mounted across while a reader moved between
-   * them. It has none now — every section lives behind a chip inside `/`
-   * instead of its own route — and the four shared-entity routes each own
-   * their page outright, so navigating between e.g. `/punto/a` and
-   * `/necesidad/b` remounts `MapWorkspace` fresh with the new `forcedTab`
-   * rather than needing to be told about a change. A plain initializer is
-   * what is left once syncing has nothing to sync from.
+   * Every section lives behind a chip inside `/` instead of its own route,
+   * and the four shared-entity routes each own their page outright, so
+   * navigating between e.g. `/punto/a` and `/necesidad/b` remounts
+   * `MapWorkspace` fresh with the new `forcedTab`. A plain initializer is
+   * enough: there is no active route segment to resync from.
    */
   const [activeChip, setActiveChip] = useState<PanelChip>(() =>
     initialChipForTab(forcedTab ?? DEFAULT_TAB_ID),
@@ -315,14 +299,10 @@ export function MapWorkspace({
     [sites, liveStatus],
   );
 
-  /** Every site the map ever draws — the ones mapped to `null` in
-   *  `SITE_TYPE_TAB` still never appear, because they are still not part of
-   *  any question this app answers. No filtering beyond that: the map is
-   *  unconditional now, the panel does the narrowing. */
-  const mapSites = useMemo(
-    () => withLiveStatus.filter((site) => SITE_TYPE_TAB[site.type] !== null),
-    [withLiveStatus],
-  );
+  /** Every site the map ever draws. Every `SiteType` belongs to a section
+   *  now (see `SITE_TYPE_TAB`), so there is nothing left to filter out here
+   *  — the map is unconditional, and the panel does the narrowing. */
+  const mapSites = withLiveStatus;
 
   /**
    * The panel narrows to the chosen barrio; the map never does.
@@ -338,23 +318,23 @@ export function MapWorkspace({
     [mapSites, barrio],
   );
 
-  const panelWorkOrders = useMemo(
+  const panelNeeds = useMemo(
     () =>
       barrio
-        ? workOrders.filter((order) => order.neighborhood === barrio.name)
-        : workOrders,
-    [workOrders, barrio],
+        ? needs.filter((order) => order.neighborhood === barrio.name)
+        : needs,
+    [needs, barrio],
   );
 
-  /** Offers carry a `neighborhood`, even though the point behind it is a
+  /** Services carry a `neighborhood`, even though the point behind it is a
    *  barrio-level fact rather than an exact corner — narrowing by it is
    *  still meaningful, unlike for animals (see `animals` below, unfiltered). */
-  const panelResourceOffers = useMemo(
+  const panelServices = useMemo(
     () =>
       barrio
-        ? resourceOffers.filter((offer) => offer.neighborhood === barrio.name)
-        : resourceOffers,
-    [resourceOffers, barrio],
+        ? services.filter((service) => service.neighborhood === barrio.name)
+        : services,
+    [services, barrio],
   );
 
   const barriosByName = useMemo(
@@ -368,11 +348,8 @@ export function MapWorkspace({
   /**
    * One selection, four families, one card.
    *
-   * Animals and offers used to be the two that could be selected and had
-   * nothing to show for it — the marker grew and that was all. They have
-   * their own cards now (`AnimalPopup`, `ResourceOfferPopup`), which is what
-   * makes "tap anything on this map and it tells you about itself" true
-   * rather than nearly true.
+   * Every family has its own card (`SitePopup`, `NeedPopup`, `AnimalPopup`,
+   * `ServicePopup`), so tapping anything on this map tells you about itself.
    *
    * `coordinates` is null for the ones that genuinely have no point: an animal
    * with no barrio named, a truck lent across the whole city. Those still open
@@ -390,11 +367,11 @@ export function MapWorkspace({
       };
     }
 
-    const order = workOrders.find((row) => row.id === selectedId);
+    const order = needs.find((row) => row.id === selectedId);
     if (order) {
       return {
         coordinates: { longitude: order.longitude, latitude: order.latitude },
-        card: <WorkOrderPopup order={order} />,
+        card: <NeedPopup order={order} />,
       };
     }
 
@@ -406,19 +383,19 @@ export function MapWorkspace({
       };
     }
 
-    const offer = resourceOffers.find((row) => row.id === selectedId);
-    if (offer) {
+    const service = services.find((row) => row.id === selectedId);
+    if (service) {
       return {
         coordinates:
-          offer.longitude !== null && offer.latitude !== null
-            ? { longitude: offer.longitude, latitude: offer.latitude }
+          service.longitude !== null && service.latitude !== null
+            ? { longitude: service.longitude, latitude: service.latitude }
             : null,
-        card: <ResourceOfferPopup offer={offer} />,
+        card: <ServicePopup service={service} />,
       };
     }
 
     return null;
-  }, [selectedId, withLiveStatus, workOrders, animals, resourceOffers, barriosByName]);
+  }, [selectedId, withLiveStatus, needs, animals, services, barriosByName]);
 
   /**
    * The nudge for pins landing on one identical coordinate.
@@ -434,7 +411,7 @@ export function MapWorkspace({
     () =>
       fanOutCollisions([
         mapSites,
-        workOrders,
+        needs,
         animals
           .filter((animal) => animal.resolvedAt === null)
           .map((animal) => {
@@ -445,17 +422,9 @@ export function MapWorkspace({
               latitude: point?.latitude ?? null,
             };
           }),
-        resourceOffers,
+        services,
       ]),
-    [mapSites, workOrders, animals, resourceOffers, barriosByName],
-  );
-
-  const barrioStatus = useMemo(
-    () =>
-      barrio
-        ? (neighborhoodStatuses.find((s) => s.name === barrio.name) ?? null)
-        : null,
-    [neighborhoodStatuses, barrio],
+    [mapSites, needs, animals, services, barriosByName],
   );
 
   const workspace = useMemo(
@@ -466,17 +435,14 @@ export function MapWorkspace({
       // unfiltered sets above instead.
       sites: panelSites,
       animals,
-      resourceOffers: panelResourceOffers,
-      workOrders: panelWorkOrders,
-      neighborhoodNeeds,
+      services: panelServices,
+      needs: panelNeeds,
       selectedId,
       select,
       barrio,
       clearBarrio: () => setBarrio(null),
       selectBarrioByName: (name: string) =>
         setBarrio({ id: name, name, comuna: null, lon: 0, lat: 0 }),
-      barrioStatus,
-      neighborhoodStatuses,
       panelCollapsed,
       setPanelCollapsed,
       isAdmin,
@@ -487,14 +453,11 @@ export function MapWorkspace({
       activeChip,
       panelSites,
       animals,
-      panelResourceOffers,
-      panelWorkOrders,
-      neighborhoodNeeds,
+      panelServices,
+      panelNeeds,
       selectedId,
       select,
       barrio,
-      barrioStatus,
-      neighborhoodStatuses,
       panelCollapsed,
       setPanelCollapsed,
       isAdmin,
@@ -515,9 +478,7 @@ export function MapWorkspace({
       <div className="flex h-full w-full flex-col lg:flex-row">
         {/* The map takes whatever the panel does not, at every width and in
             both states — it is the one element here that is happy at any
-            size. All the sizing decisions live on the aside below, which
-            replaced a pair of mirrored rules that had the map fixed and the
-            panel growing for some chips and the reverse for others. */}
+            size. All the sizing decisions live on the aside below. */}
         <div className="relative min-h-0 flex-1">
           <Map
             className="h-full w-full"
@@ -551,20 +512,19 @@ export function MapWorkspace({
               onHoverChange={setHoverBarrio}
               selected={barrio?.name ?? null}
               onSelect={setBarrio}
-              statuses={neighborhoodStatuses}
             />
             {/* Framed over everything the map can ever draw, once, on load. */}
             <FitToSites
               sites={[
                 ...mapSites,
-                ...workOrders,
+                ...needs,
                 ...animals.flatMap((animal) => {
                   const point = animalMapCoordinates(animal, barriosByName);
                   return point ? [point] : [];
                 }),
-                ...resourceOffers.filter(
-                  (o): o is ResourceOfferDTO & { longitude: number; latitude: number } =>
-                    o.longitude !== null && o.latitude !== null,
+                ...services.filter(
+                  (s): s is ServiceDTO & { longitude: number; latitude: number } =>
+                    s.longitude !== null && s.latitude !== null,
                 ),
               ]}
             />
@@ -585,8 +545,8 @@ export function MapWorkspace({
               offsets={markerOffsets}
             />
 
-            <WorkOrderMarkers
-              workOrders={workOrders}
+            <NeedMarkers
+              needs={needs}
               selectedId={selectedId}
               onSelect={select}
               offsets={markerOffsets}
@@ -600,8 +560,8 @@ export function MapWorkspace({
               offsets={markerOffsets}
             />
 
-            <ResourceOfferMarkers
-              resourceOffers={resourceOffers}
+            <ServiceMarkers
+              services={services}
               selectedId={selectedId}
               onSelect={select}
               offsets={markerOffsets}
@@ -648,17 +608,14 @@ export function MapWorkspace({
             />
           )}
 
-          {/* Only the clock and the barrio chip live up here now. The old
-              section switcher (Todo/Ayudar/Necesito/Mascotas/Servicios) was
-              removed rather than shrunk further: every one of its five
-              actions was already reachable through `UnifiedPanel`'s own row
-              of chips — four mapped it 1:1, and "Ayudar" landed on the exact
-              same "Todo" chip the panel's own Todo button already opens — so
-              it was a second control surface for something the panel already
-              did, not a distinct capability. The four routes still exist and
-              still seed which chip a fresh visit opens on (see
-              `initialChipForTab`); they just have no button of their own to
-              click while already inside the app. */}
+          {/* The account bubble and, on a shared route, the way back to the
+              whole map, on the left; the live count and the barrio-under-
+              cursor chip on the right. Every other action here is already
+              reachable through `UnifiedPanel`'s own row of chips, so there
+              is no separate section switcher. The four shared-entity routes
+              still exist and still seed which chip a fresh visit opens on
+              (see `initialChipForTab`); they just have no button of their
+              own to click while already inside the app. */}
           <div
             className={cn(
               "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-2 sm:p-3",
@@ -678,24 +635,17 @@ export function MapWorkspace({
             </div>
 
             {/*
-              The filter half of the old barrio chip stays gone: it was a
-              second copy of a control the panel header already holds, and
-              that header now goes primary with its "Ver toda la ciudad" chip
-              inside it, at every width — more visible than this chip was and
-              attached to the counts the filter changes.
-
-              The hover half is back: naming the barrio under the cursor is a
-              fact the map already draws, and hiding it just because the
-              filter chip was redundant threw out the one reading that a
-              device without a cursor could never have anyway.
+              Only the hover chip lives here, not a filter control: the panel
+              header already carries the barrio filter, going primary with
+              its "Ver toda la ciudad" chip inside it at every width — a
+              second copy up here would be redundant. Naming the barrio under
+              the cursor is a fact the map already draws, and a device
+              without a cursor could never read it anyway, so it stays.
             */}
             {/*
-              The clock that used to sit above this is gone too. It said "this
-              page is live", which is the weakest thing a corner of this map
-              could be saying — and it said it only on a desktop, where it was
-              also the least needed. The counts below carry the same
-              reassurance by moving when the city moves, and they carry a fact
-              as well.
+              The count below reassures that this page is live by moving as
+              the city moves, and it carries a fact along with that
+              reassurance.
             */}
             <div className="pointer-events-auto flex shrink-0 flex-col items-end gap-1.5">
               <AttendanceStats />
@@ -710,14 +660,12 @@ export function MapWorkspace({
           {/* Bottom-left: the thumb's reach on a phone, and clear of the map
               controls on the right.
 
-              One button, the same one on every chip, carrying every form in
-              the app. It used to change with the filter: a promoted primary
-              action per chip, plus a "+" holding whatever that chip did not
-              promote. Which meant the way to report a lost animal existed
-              only while the Mascotas filter happened to be open — the filter
-              is about what the reader is LOOKING at, and it was silently
-              deciding what they were allowed to WRITE. Reporting is not a
-              view of the data, so it does not narrow with one. */}
+              One button, the same one regardless of filter, carrying every
+              form in the app. The filter is about what the reader is
+              LOOKING at; letting it decide which report action is promoted
+              would let it silently decide what they are allowed to WRITE
+              too. Reporting is not a view of the data, so it does not
+              narrow with one. */}
           {/* Hidden while aiming: the relocation panel owns the bottom edge,
               and reporting something new is not the job in hand. */}
           {!relocating && (
@@ -814,7 +762,7 @@ function useLiveSiteStatus() {
       .channel("site-status")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "site" },
+        { event: "UPDATE", schema: "public", table: "sites" },
         (payload) => {
           const row = payload.new as { id?: string; status?: SiteStatus };
           if (!row.id || !row.status) return;

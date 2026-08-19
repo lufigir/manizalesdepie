@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { proposeResourceOffer } from "@/data/resource_offer/resource_offer.actions";
+import { proposeService } from "@/data/service/service.actions";
 import {
-  RESOURCE_TYPES,
-  type ResourceType,
-} from "@/data/resource_offer/resource_offer.dto";
+  SERVICE_TYPES,
+  type ServiceType,
+} from "@/data/service/service.dto";
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
-import { RESOURCE_TYPE_ICON, RESOURCE_TYPE_LABEL, SERVICES_FORM } from "@/lib/labels";
+import { SERVICE_TYPE_ICON, SERVICE_TYPE_LABEL, SERVICES_FORM } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { BarrioPicker } from "../../_components/barrio-picker";
@@ -34,12 +34,12 @@ import { Field } from "../../_components/field";
  * it into the right barrio and no more precise a claim than the offer
  * itself makes.
  */
-export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
+export function ServiceForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [type, setType] = useState<ResourceType>("dump_truck");
+  const [type, setType] = useState<ServiceType>("dump_truck");
   const [description, setDescription] = useState("");
   const [barrio, setBarrio] = useState<NeighborhoodDTO | null>(null);
   const [wholeCity, setWholeCity] = useState(false);
@@ -61,7 +61,7 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
       // Same as the work-order form: the created id used to travel in the
       // URL to select the new pin on arrival at `/servicios`; nothing reads
       // a query-driven selection any more, so it is not carried forward.
-      await proposeResourceOffer({
+      await proposeService({
         type,
         description,
         area,
@@ -88,8 +88,8 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
           {SERVICES_FORM.type}
         </legend>
         <div className="flex flex-wrap gap-1.5">
-          {RESOURCE_TYPES.map((option) => {
-            const Icon = RESOURCE_TYPE_ICON[option];
+          {SERVICE_TYPES.map((option) => {
+            const Icon = SERVICE_TYPE_ICON[option];
             const active = option === type;
             return (
               <button
@@ -105,7 +105,7 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
                 )}
               >
                 <Icon className="size-4" aria-hidden />
-                {RESOURCE_TYPE_LABEL[option]}
+                {SERVICE_TYPE_LABEL[option]}
               </button>
             );
           })}
@@ -164,7 +164,7 @@ export function ResourceOfferForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
       </Field>
 
       {error && (
-        <p role="alert" className="text-unclaimed text-sm font-medium">
+        <p role="alert" className="text-pending text-sm font-medium">
           {error}
         </p>
       )}

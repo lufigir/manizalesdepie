@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
 import { clientEnv } from "@/lib/env";
 import { SITE_STATUS_LABEL, SITE_TYPE_LABEL, confidence } from "@/lib/labels";
-import { DEFAULT_TAB_ID, SITE_TYPE_TAB } from "@/lib/tabs";
+import { SITE_TYPE_TAB } from "@/lib/tabs";
 
 import { MapWorkspace } from "../../_components/map-workspace";
 
@@ -62,14 +61,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function SharedSitePage({ params }: Params) {
   const { id } = await params;
 
-  const [site, sites, animals, neighborhoodStatuses, user] =
-    await Promise.all([
-      SiteDAL.public().findById(id),
-      SiteDAL.public().listPublished(),
-      AnimalDAL.public().listPublished(),
-      NeighborhoodDAL.public().statuses(),
-      getCurrentUser(),
-    ]);
+  const [site, sites, animals, user] = await Promise.all([
+    SiteDAL.public().findById(id),
+    SiteDAL.public().listPublished(),
+    AnimalDAL.public().listPublished(),
+    getCurrentUser(),
+  ]);
 
   if (!site) notFound();
 
@@ -80,16 +77,14 @@ export default async function SharedSitePage({ params }: Params) {
     : [site, ...sites];
 
   // The section is a property of the pin that was shared, not of the route, so
-  // it is passed in rather than read off the URL. A type that belongs to no
-  // section still opens: the pin is the answer the link was sent to give.
-  const tab = SITE_TYPE_TAB[site.type] ?? DEFAULT_TAB_ID;
+  // it is passed in rather than read off the URL.
+  const tab = SITE_TYPE_TAB[site.type];
 
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
         sites={withShared}
         animals={animals}
-        neighborhoodStatuses={neighborhoodStatuses}
         initialSelectedId={site.id}
         tab={tab}
         user={user}

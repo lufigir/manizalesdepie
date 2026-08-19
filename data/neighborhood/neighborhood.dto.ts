@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { workOrderCategorySchema } from "@/data/work_order/work_order.dto";
-
 /**
  * A barrio, as the report forms need it: a name to pick and a coordinate to
  * fly the map to.
@@ -50,72 +48,3 @@ export const neighborhoodSchema = z.object({
 });
 
 export type NeighborhoodDTO = z.infer<typeof neighborhoodSchema>;
-
-/**
- * A barrio's current state: evacuation and utilities.
- *
- * Not derived from anything the app writes — these rows come from utility and
- * Alcaldía announcements, loaded by hand the same way `closed_road` was.
- * `unknown` is the honest default: silence from Efigas about a barrio is not
- * evidence the gas is on.
- */
-export const UTILITY_STATUSES = ["normal", "suspended", "unknown"] as const;
-
-export const utilityStatusSchema = z.enum(UTILITY_STATUSES);
-
-export type UtilityStatus = z.infer<typeof utilityStatusSchema>;
-
-export const neighborhoodStatusSchema = z.object({
-  neighborhoodId: z.uuid(),
-  /** Matches `NeighborhoodDTO.name` and `barrios.geojson`'s `name` property —
-   *  the key the rest of the app already filters and colours by. */
-  name: z.string(),
-  municipality: municipalitySchema,
-  evacuated: z.boolean(),
-  gasStatus: utilityStatusSchema,
-  powerStatus: utilityStatusSchema,
-  waterStatus: utilityStatusSchema,
-  notes: z.string().nullable(),
-  confirmedAt: z.iso.datetime({ offset: true }),
-  expiresAt: z.iso.datetime({ offset: true }),
-});
-
-export type NeighborhoodStatusDTO = z.infer<typeof neighborhoodStatusSchema>;
-
-/**
- * A frente: "este barrio necesita X", declared by hand so that a barrio's
- * standing problem is on record instead of having to be inferred from the
- * individual cases inside it.
- *
- * `category` is `WorkOrderCategory`, not a category of its own. It used to be
- * `CallCategory`, on the reasoning that a frente's category IS the kind of
- * work a grupo does there — with the grupos gone (see the migration
- * `20260815060000_drop_calls`) the only thing a frente can describe is the
- * kind of necesidad a barrio is full of, so it takes the vocabulary the
- * cases themselves use. That also makes the match in `lib/urgency.ts` exact
- * rather than the near-miss it always was: a frente now weights the cases in
- * its own category instead of falling back to the whole barrio.
- */
-export const NEED_PRIORITIES = ["critical", "high", "normal"] as const;
-
-export const needPrioritySchema = z.enum(NEED_PRIORITIES);
-
-export type NeedPriority = z.infer<typeof needPrioritySchema>;
-
-export const neighborhoodNeedSchema = z.object({
-  id: z.uuid(),
-  neighborhoodId: z.uuid(),
-  /** Matches `NeighborhoodDTO.name`, same convention as
-   *  `NeighborhoodStatusDTO.name`. */
-  name: z.string(),
-  municipality: municipalitySchema,
-  longitude: z.number(),
-  latitude: z.number(),
-  category: workOrderCategorySchema,
-  priority: needPrioritySchema,
-  note: z.string().nullable(),
-  confirmedAt: z.iso.datetime({ offset: true }),
-  expiresAt: z.iso.datetime({ offset: true }),
-});
-
-export type NeighborhoodNeedDTO = z.infer<typeof neighborhoodNeedSchema>;

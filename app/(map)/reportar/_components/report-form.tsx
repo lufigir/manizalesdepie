@@ -255,8 +255,8 @@ export function ReportForm({
   const footer = (
     <>
       {nearby && (
-        <div className="border-claimed/30 bg-claimed-surface flex flex-col gap-2 rounded-lg border p-3">
-          <p className="text-claimed text-sm font-semibold">
+        <div className="border-underway/30 bg-underway-surface flex flex-col gap-2 rounded-lg border p-3">
+          <p className="text-underway text-sm font-semibold">
             {REPORT_LABEL.nearbyTitle}
           </p>
           <ul className="flex flex-col gap-1 text-sm">
@@ -296,7 +296,7 @@ export function ReportForm({
       )}
 
       {error && (
-        <p role="alert" className="text-unclaimed text-sm font-medium">
+        <p role="alert" className="text-pending text-sm font-medium">
           {error}
         </p>
       )}

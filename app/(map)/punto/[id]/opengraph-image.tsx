@@ -41,8 +41,8 @@ export const revalidate = 3600;
  *  right now", closed and unknown are neither. */
 const STATUS_ACCENT: Record<SiteStatus, OgAccent> = {
   open: "resolved",
-  full: "claimed",
-  closed: "unclaimed",
+  full: "underway",
+  closed: "pending",
   unknown: "neutral",
 };
 

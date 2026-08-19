@@ -3,48 +3,46 @@
 import { MapPin, Navigation, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { WorkOrderDTO } from "@/data/work_order/work_order.dto";
+import type { NeedDTO } from "@/data/need/need.dto";
 import {
   SHEET_LABEL,
-  WORK_ORDER_CATEGORY_ICON,
-  WORK_ORDER_CATEGORY_LABEL,
-  WORK_ORDER_LABEL,
-  WORK_ORDER_ROLLUP_LABEL,
-  WORK_ORDER_ROLLUP_MARKER,
-  WORK_ORDER_ROLLUP_STYLE,
+  NEED_CATEGORY_ICON,
+  NEED_CATEGORY_LABEL,
+  NEED_LABEL,
+  NEED_ROLLUP_LABEL,
+  NEED_ROLLUP_MARKER,
+  NEED_ROLLUP_STYLE,
   freshness,
-  workOrderRollup,
+  needRollup,
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 import { ShareButton } from "./share-button";
-import { WorkOrderActions } from "./work-order-actions";
+import { NeedActions } from "./need-actions";
 
 /**
  * The card that opens on a case's pin.
  *
- * This did not exist until now: the map rendered `WorkOrderItem`, the list
- * row, straight into the popup frame — which is exactly why a necesidad's
- * card looked nothing like a sitio's or a grupo's. Those two have always
- * had popups written as popups (icon chip, eyebrow, bold title, badge row,
- * a directions button), and a truncating one-line row wearing the same
- * frame reads as a different app.
+ * Written as a popup, like every other family's card (icon chip, eyebrow,
+ * bold title, badge row, a directions button), not as the list row rendered
+ * straight into the popup frame — a truncating one-line row wearing the
+ * same frame would read as a different app.
  *
- * The order inside follows `CallPopup`'s reasoning rather than
- * `SitePopup`'s, because a case is read the same way a shift is: not "what
- * do they receive here" but "what is needed, where, and is anyone on it".
- * Name, then the ask, then the context around it, then what to do about it.
+ * The order inside reads a case the way a shift is read: not "what do they
+ * receive here" (see `SitePopup`) but "what is needed, where, and is anyone
+ * on it". Name, then the ask, then the context around it, then what to do
+ * about it.
  *
- * The pin itself is only a block-level `approx_location`; the exact address
+ * The pin itself is only a block-level `location`; the exact address
  * and the phone, when the reporter left them, are shown by
- * `WorkOrderActions` — public since 15 August, see AGENTS.md.
+ * `NeedActions` (see AGENTS.md on why contact details are public).
  */
-export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
-  const rollup = workOrderRollup(order);
-  const Icon = WORK_ORDER_CATEGORY_ICON[order.category];
+export function NeedPopup({ order }: { order: NeedDTO }) {
+  const rollup = needRollup(order);
+  const Icon = NEED_CATEGORY_ICON[order.category];
   const { label: freshLabel, stale } = freshness(
     order.confirmedAt,
-    WORK_ORDER_LABEL.fresh,
+    NEED_LABEL.fresh,
   );
 
   /**
@@ -57,18 +55,18 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
    * teaches that helping does not switch it off.
    */
   const people = [
-    order.attendeeCount === 0
+    order.onTheWayCount === 0
       ? order.helpedCount === 0
-        ? WORK_ORDER_LABEL.attendeeCountNone
+        ? NEED_LABEL.onTheWayCountNone
         : null
-      : order.attendeeCount === 1
-        ? WORK_ORDER_LABEL.attendeeCountOne
-        : WORK_ORDER_LABEL.attendeeCountMany(order.attendeeCount),
+      : order.onTheWayCount === 1
+        ? NEED_LABEL.onTheWayCountOne
+        : NEED_LABEL.onTheWayCountMany(order.onTheWayCount),
     order.helpedCount === 0
       ? null
       : order.helpedCount === 1
-        ? WORK_ORDER_LABEL.helpedCountOne
-        : WORK_ORDER_LABEL.helpedCountMany(order.helpedCount),
+        ? NEED_LABEL.helpedCountOne
+        : NEED_LABEL.helpedCountMany(order.helpedCount),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -79,7 +77,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         <span
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-md",
-            WORK_ORDER_ROLLUP_MARKER[rollup],
+            NEED_ROLLUP_MARKER[rollup],
           )}
         >
           <Icon className="size-4" strokeWidth={2.5} aria-hidden />
@@ -91,25 +89,25 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
               that needs every pixel it can get. */}
           <div className="flex items-center gap-1.5">
             <p className="text-muted-foreground truncate text-[0.65rem] font-semibold tracking-wide uppercase">
-              {WORK_ORDER_LABEL.heading}
+              {NEED_LABEL.heading}
             </p>
             <span
               className={cn(
                 "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.6rem] leading-tight font-semibold",
-                WORK_ORDER_ROLLUP_STYLE[rollup],
+                NEED_ROLLUP_STYLE[rollup],
               )}
             >
-              {WORK_ORDER_ROLLUP_LABEL[rollup]}
+              {NEED_ROLLUP_LABEL[rollup]}
             </span>
           </div>
-          {/* The category is the heading, like every other family's name is.
-              The ask used to be, on the argument that "Riesgo estructural" is
-              a label nobody can act on — true, but these descriptions run to
-              142 characters, so as a heading it was five bold lines pushing
-              the whole card below the fold. It is directly underneath, at
+          {/* The category is the heading, like every other family's name is
+              — not the ask itself: "Riesgo estructural" is a label nobody
+              can act on, but these descriptions run to 142 characters,
+              which as a heading would be five bold lines pushing the whole
+              card below the fold. The ask sits directly underneath, at
               reading weight, which is what a paragraph is for. */}
           <h2 className="text-sm leading-tight font-bold text-balance">
-            {WORK_ORDER_CATEGORY_LABEL[order.category]}
+            {NEED_CATEGORY_LABEL[order.category]}
           </h2>
         </div>
       </header>
@@ -132,21 +130,21 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
           <Users className="size-3.5 shrink-0" aria-hidden />
           {people}
         </span>
-        <span className={cn(stale && "text-claimed")}>{freshLabel}</span>
+        <span className={cn(stale && "text-underway")}>{freshLabel}</span>
       </div>
 
       {/*
-       * Above the tabs, not buried at the bottom of the contact block inside
-       * "Detalle" — that spot disappeared entirely on "Hilo" and was the
-       * last thing on the card even when it was visible. This is the control
-       * the whole product runs on: nobody arrives here by browsing, every
-       * reader showed up because somebody forwarded a link, and this is what
-       * produces the next one. It has to survive whichever tab is open, so
-       * it sits above them — full width, filled, its own row.
+       * Above the tabs, not buried inside "Detalle": a spot there would
+       * disappear entirely on "Hilo", and be easy to miss even on "Detalle".
+       * This is the control the whole product runs on: nobody arrives here
+       * by browsing, every reader showed up because somebody forwarded a
+       * link, and this is what produces the next one. It has to survive
+       * whichever tab is open, so it sits above them — full width, filled,
+       * its own row.
        */}
       <ShareButton
         path={`/necesidad/${order.id}`}
-        title={`${WORK_ORDER_CATEGORY_LABEL[order.category]}${
+        title={`${NEED_CATEGORY_LABEL[order.category]}${
           order.neighborhood ? ` · ${order.neighborhood}` : ""
         }`}
         text={order.description}
@@ -154,7 +152,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
       />
 
       {/* Getting there, on its own row like the sitio and grupo cards: the
-          pin is only a block-level `approx_location`, enough to drive to the
+          pin is only a block-level `location`, enough to drive to the
           corner. It used to live inside "Detalle", where it read as the main
           thing to do with a case nobody had claimed — same argument that
           keeps `ShareButton` above the tabs. */}
@@ -174,7 +172,7 @@ export function WorkOrderPopup({ order }: { order: WorkOrderDTO }) {
         {SHEET_LABEL.directions}
       </Button>
 
-      <WorkOrderActions order={order} />
+      <NeedActions order={order} />
     </div>
   );
 }

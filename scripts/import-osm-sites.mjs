@@ -1,5 +1,5 @@
 /**
- * Imports emergency-serving places from OpenStreetMap into `site`.
+ * Imports emergency-serving places from OpenStreetMap into `sites`.
  *
  * Run by hand: `node --env-file=.env.local scripts/import-osm-sites.mjs`
  *
@@ -16,8 +16,11 @@
  * should move behind a DAL.
  *
  * Scope is narrow on purpose. Only the categories that answer "where do I get
- * or give help": hospitals, clinics, vets, drinking water. Pharmacies and
- * supermarkets were left out — AGENTS.md is explicit that this is not a
+ * or give help": hospitals and clinics. Vets and drinking-water taps were
+ * dropped along with `vet_clinic`/`water_point` — the map stopped drawing
+ * either, and importing rows into types nobody offers or accepts any more
+ * would just be dead data. Pharmacies and supermarkets were left out for the
+ * same underlying reason — AGENTS.md is explicit that this is not a
  * directory, and hundreds of pins nobody reported would bury the ones somebody
  * did.
  */
@@ -45,8 +48,7 @@ const QUERY = `
   area["name"="Villamaría"]["boundary"="administrative"]["admin_level"="6"];
 )->.a;
 (
-  nwr(area.a)["amenity"~"^(hospital|clinic|doctors|veterinary)$"];
-  nwr(area.a)["amenity"="drinking_water"];
+  nwr(area.a)["amenity"~"^(hospital|clinic|doctors)$"];
 );
 out center tags;
 `;
@@ -58,10 +60,6 @@ function siteType(tags) {
     case "clinic":
     case "doctors":
       return "medical_post";
-    case "veterinary":
-      return "vet_clinic";
-    case "drinking_water":
-      return "water_point";
     default:
       return null;
   }
@@ -93,10 +91,9 @@ const candidates = elements
     const lon = el.lon ?? el.center?.lon;
     const lat = el.lat ?? el.center?.lat;
 
-    // A drinking-water tap legitimately has no name; everything else without
-    // one is unusable, because "Hospital" alone tells nobody where to go.
-    const name =
-      tags.name ?? (type === "water_point" ? "Punto de agua" : null);
+    // "Hospital" alone tells nobody where to go, so an unnamed one is
+    // unusable.
+    const name = tags.name ?? null;
 
     if (!type || !name || lon == null || lat == null) return null;
 
@@ -115,10 +112,10 @@ const candidates = elements
 
 // Existing rows, to avoid planting a second pin on top of one already there.
 const { data: existing, error: readError } = await supabase
-  .from("site_public")
+  .from("sites_public")
   .select("name, longitude, latitude");
 
-if (readError) throw new Error(`No se pudo leer site_public: ${readError.message}`);
+if (readError) throw new Error(`No se pudo leer sites_public: ${readError.message}`);
 
 const kept = [];
 for (const c of candidates) {
@@ -149,7 +146,7 @@ if (rows.length === 0) {
   process.exit(0);
 }
 
-const { error: writeError } = await supabase.from("site").insert(rows);
+const { error: writeError } = await supabase.from("sites").insert(rows);
 if (writeError) throw new Error(`Fallo al insertar: ${writeError.message}`);
 
 const byType = rows.reduce((acc, r) => {

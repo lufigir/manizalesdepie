@@ -12,15 +12,14 @@ import { SHEET_LABEL } from "@/lib/labels";
  * This is the button the whole product turns on. Nothing here is discovered
  * by browsing to manizalesdepie.co — every reader arrives because somebody
  * pasted a link into a WhatsApp group, and this is the control that produces
- * the next one of those links. It used to be a bare icon in the corner of
- * five different cards, sized like an afterthought next to "Cómo llegar",
- * which is exactly backwards: navigation helps one person, a share reaches
- * forty.
+ * the next one of those links. It carries its label and takes real width
+ * rather than sitting as a bare icon sized like an afterthought next to
+ * "Cómo llegar", which would be exactly backwards: navigation helps one
+ * person, a share reaches forty.
  *
- * So it carries its label and takes real width. It also stops being five
- * copies of the same twenty lines — the native-sheet-then-clipboard flow was
- * written out separately in every card, and the moment one of them drifted,
- * two screens would be sharing differently.
+ * One shared implementation rather than five copies of the same twenty
+ * lines: the native-sheet-then-clipboard flow lives here once, so no card
+ * can drift into sharing differently from the rest.
  */
 /**
  * Copies, on every browser this actually runs in.

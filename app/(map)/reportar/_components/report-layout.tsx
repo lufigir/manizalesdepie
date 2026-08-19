@@ -149,7 +149,7 @@ export function ReportMapPane({
     <div
       className={cn(
         "relative flex min-h-0 flex-1 flex-col",
-        invalid && "ring-unclaimed ring-2 ring-inset",
+        invalid && "ring-pending ring-2 ring-inset",
       )}
     >
       {children}

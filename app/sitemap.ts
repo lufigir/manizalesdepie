@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { ResourceOfferDAL } from "@/data/resource_offer/resource_offer.dal";
+import { NeedDAL } from "@/data/need/need.dal";
+import { ServiceDAL } from "@/data/service/service.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { WorkOrderDAL } from "@/data/work_order/work_order.dal";
 import { clientEnv } from "@/lib/env";
 
 /**
@@ -27,11 +27,11 @@ import { clientEnv } from "@/lib/env";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = clientEnv.NEXT_PUBLIC_SITE_URL;
 
-  const [sites, workOrders, animals, resourceOffers] = await Promise.all([
+  const [sites, needs, animals, services] = await Promise.all([
     SiteDAL.public().listPublished(),
-    WorkOrderDAL.public().listPublished(),
+    NeedDAL.public().listPublished(),
     AnimalDAL.public().listPublished(),
-    ResourceOfferDAL.public().listPublished(),
+    ServiceDAL.public().listPublished(),
   ]);
 
   return [
@@ -42,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.8,
     })),
-    ...workOrders.map((order) => ({
+    ...needs.map((order) => ({
       url: `${base}/necesidad/${order.id}`,
       lastModified: new Date(order.confirmedAt),
       changeFrequency: "daily" as const,
@@ -57,9 +57,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.6,
     })),
-    ...resourceOffers.map((offer) => ({
-      url: `${base}/servicio/${offer.id}`,
-      lastModified: new Date(offer.confirmedAt),
+    ...services.map((service) => ({
+      url: `${base}/servicio/${service.id}`,
+      lastModified: new Date(service.confirmedAt),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),

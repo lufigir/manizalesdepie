@@ -24,7 +24,7 @@
 -- the `neighborhood_id`-stamping trigger, which resolves to null until a
 -- barrio has a `boundary` polygon — that only exists after `barrios.sql` runs.
 
-insert into neighborhood (name, municipality, centroid) values
+insert into neighborhoods (name, municipality, centroid) values
   ('Centro',            'manizales',  st_point(-75.5174, 5.0689)::geography),
   ('Chipre',            'manizales',  st_point(-75.5253, 5.0733)::geography),
   ('Avenida Santander', 'manizales',  st_point(-75.4990, 5.0660)::geography),
@@ -42,9 +42,9 @@ on conflict (name, municipality) do nothing;
 
 -- ---------------------------------------------------------------- sites ----
 
-insert into site (type, name, description, address, location, neighborhood_id, status, schedule, published, expires_at)
+insert into sites (type, name, description, address, location, neighborhood_id, status, schedule, published, expires_at)
 select v.type, v.name, v.description, v.address, v.location,
-       (select id from neighborhood n where n.name = v.neighborhood and n.municipality = v.municipality),
+       (select id from neighborhoods n where n.name = v.neighborhood and n.municipality = v.municipality),
        v.status, v.schedule, false, now() + interval '24 hours'
 from (values
   ('shelter'::site_type,
@@ -141,57 +141,15 @@ from (values
    null)
 ) as v(type, name, description, address, location, neighborhood, municipality, status, schedule);
 
--- ---------------------------------------------------- neighborhood status --
--- Utility or Alcaldía announcements named these barrios specifically. Rows are
--- short-lived on purpose: no silence is promoted into "normal".
-
-insert into neighborhood_status (
-  neighborhood_id,
-  evacuated,
-  gas_status,
-  power_status,
-  water_status,
-  notes,
-  confirmed_at,
-  expires_at
-)
-select n.id,
-       v.evacuated,
-       v.gas_status,
-       v.power_status,
-       v.water_status,
-       v.notes,
-       now(),
-       now() + interval '24 hours'
-from (values
-  ('La Estrella', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
-   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.'),
-  ('Milán', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
-   'Efigas reportó afectación/intermitencia del servicio de gas en el sector.'),
-  ('Centro', 'manizales'::municipality, false, 'suspended'::utility_status, 'unknown'::utility_status, 'unknown'::utility_status,
-   'Efigas reportó afectación/intermitencia del servicio de gas en la zona centro.')
-) as v(neighborhood, municipality, evacuated, gas_status, power_status, water_status, notes)
-join neighborhood n
-  on n.name = v.neighborhood
- and n.municipality = v.municipality
-on conflict (neighborhood_id) do update set
-  evacuated = excluded.evacuated,
-  gas_status = excluded.gas_status,
-  power_status = excluded.power_status,
-  water_status = excluded.water_status,
-  notes = excluded.notes,
-  confirmed_at = excluded.confirmed_at,
-  expires_at = excluded.expires_at;
-
 -- ------------------------------------------------------------ site items ---
 -- What each collection point wants, and what it explicitly refuses. The
 -- refusals are the reason this table exists: the Red Cross has asked publicly
 -- that people stop donating used clothing and shoes, and Asocapitales warned
 -- against "envíos desarticulados" that don't match identified needs.
 
-insert into site_item (site_id, label, mode, priority)
+insert into site_items (site_id, label, mode, priority)
 select s.id, v.label, v.mode, v.priority
-from site s
+from sites s
 cross join (values
   ('Agua embotellada',                                  'needed'::item_mode,       10),
   ('Alimentos no perecederos (arroz, aceite, granos)',  'needed'::item_mode,        9),
@@ -208,18 +166,18 @@ cross join (values
 ) as v(label, mode, priority)
 where s.type = 'collection_point';
 
-insert into site_item (site_id, label, mode, priority)
+insert into site_items (site_id, label, mode, priority)
 select s.id, v.label, v.mode, v.priority
-from site s
+from sites s
 cross join (values
   ('Sangre tipo O negativo', 'needed'::item_mode, 10),
   ('Sangre tipo O positivo', 'needed'::item_mode, 10)
 ) as v(label, mode, priority)
 where s.type = 'blood_donation';
 
-insert into site_item (site_id, label, mode, priority)
+insert into site_items (site_id, label, mode, priority)
 select s.id, v.label, v.mode, v.priority
-from site s
+from sites s
 cross join (values
   ('Alimento para perros y gatos', 'needed'::item_mode,      8),
   ('Cobijas y colchonetas',        'needed'::item_mode,      7),
@@ -227,7 +185,7 @@ cross join (values
 ) as v(label, mode, priority)
 where s.type = 'shelter';
 
--- ------------------------------------------------------------ work orders --
+-- ------------------------------------------------------------------ needs --
 -- Individual household requests, reported the 14th and 15th of August on
 -- mapa-necesidades.site — an independent, unaffiliated community mapping
 -- effort for the same earthquake (see its own footer: "plataforma solidaria
@@ -238,62 +196,61 @@ where s.type = 'shelter';
 -- One row from that source (a "Viviendas afectadas" entry in La Unión,
 -- Valle del Cauca — 150 km away, well outside `CITY_BOUNDS`) is left out
 -- entirely: it was tagged `ciudad=manizales` in their data but is not this
--- city, and `createWorkOrderSchema`'s own out-of-area rule would reject it
+-- city, and `createNeedSchema`'s own out-of-area rule would reject it
 -- if it ever reached the form.
 --
 -- Same privacy split as everywhere else in this file: the reporter's name
--- and phone are columns on `work_order` itself, and public since 15 August
--- (see the migration `20260815000000_public_work_order_contact`). These rows
--- come from press reporting, so the names were already published elsewhere —
--- but they still stay `published = false` until a curator reads them.
--- `approx_location` is rounded to three decimal places (~100 m) rather than
--- the source's original precision, which sat close enough to a real
--- household to be an address in practice — the whole reason
--- `work_order.approx_location` exists is to never publish that.
+-- and phone are columns on `needs` itself, public since 15 August (see
+-- AGENTS.md — the reveal-on-attend gate is gone). These rows come from press
+-- reporting, so the names were already published elsewhere — but they still
+-- stay `published = false` until a curator reads them. `location` is rounded
+-- to three decimal places (~100 m) rather than the source's original
+-- precision, which sat close enough to a real household to be an address in
+-- practice — the whole reason the rounding exists is to never publish that.
 --
 -- published = false, same as every other row in this file: this is a
 -- crowdsourced report from a platform we do not run, and a curator has to
 -- read it before it reaches the public map.
 
-insert into work_order (id, category, description, approx_location, status, published, confirmed_at)
-select v.id, v.category, v.description, st_point(v.lng, v.lat)::geography, 'unclaimed', false, now()
+insert into needs (id, category, description, location, status, published, confirmed_at)
+select v.id, v.category, v.description, st_point(v.lng, v.lat)::geography, 'pending', false, now()
 from (values
-  ('c793b455-cde0-4506-814b-217fb0982c16'::uuid, 'supplies'::work_order_category,
+  ('c793b455-cde0-4506-814b-217fb0982c16'::uuid, 'supplies'::need_category,
    'Se necesitan herramientas de corte: un disco de corte para metal (4 pulgadas), uno para madera y dos cajas de puntilla de 1/2 pulgada. Sector La Linda.',
    -75.546, 5.092),
-  ('d23eb76d-f837-4506-bf33-305b56e201e1'::uuid, 'animal_rescue'::work_order_category,
+  ('d23eb76d-f837-4506-bf33-305b56e201e1'::uuid, 'animal_rescue'::need_category,
    'Refugio de animales con 92 perros, 4 gatos y una pareja de adultos a cargo: se necesita alimento y medicamentos veterinarios, elementos de aseo y mercado. Sector El Arenillo.',
    -75.537, 5.064),
-  ('a7f91c85-d321-490f-a937-65a788dae202'::uuid, 'structural_risk'::work_order_category,
+  ('a7f91c85-d321-490f-a937-65a788dae202'::uuid, 'structural_risk'::need_category,
    'Familia de bajos recursos con la vivienda muy afectada: se necesita gravilla, cemento, láminas, tejas y otros materiales para reconstruir. Sector Alto Persia.',
    -75.503, 5.059),
-  ('8fdd8c69-bf33-4911-9298-4670a87c49f9'::uuid, 'other'::work_order_category,
+  ('8fdd8c69-bf33-4911-9298-4670a87c49f9'::uuid, 'other'::need_category,
    'Bomberos voluntarios del sector Fundadores piden apoyo con combustible para los vehículos de ayuda que circulan por la ciudad.',
    -75.510, 5.069),
-  ('75909d60-577b-445a-93ad-ecc991d908f8'::uuid, 'supplies'::work_order_category,
+  ('75909d60-577b-445a-93ad-ecc991d908f8'::uuid, 'supplies'::need_category,
    'Varias familias del sector El Nevado necesitan comida, agua potable y alojamiento temporal; quien reporta indica que hay más familias en la misma situación.',
    -75.514, 5.060),
-  ('88542281-0df7-420a-aeee-3b5a2db7a769'::uuid, 'other'::work_order_category,
+  ('88542281-0df7-420a-aeee-3b5a2db7a769'::uuid, 'other'::need_category,
    'Persona desalojada de su vivienda tras el sismo. Sector El Nevado.',
    -75.514, 5.060),
-  ('3f735f74-39ee-49d8-9f6f-eedebc6f4eb7'::uuid, 'animal_rescue'::work_order_category,
+  ('3f735f74-39ee-49d8-9f6f-eedebc6f4eb7'::uuid, 'animal_rescue'::need_category,
    'Refugio de mascotas con 48 perros y 20 gatos: se necesita ayuda para poner tejas en el techo y trasladar escombros del lugar. Centro de Villamaría.',
    -75.514, 5.046),
-  ('d0bc5ff3-3f7d-4596-ac65-5973beaf8bc4'::uuid, 'supplies'::work_order_category,
+  ('d0bc5ff3-3f7d-4596-ac65-5973beaf8bc4'::uuid, 'supplies'::need_category,
    'Familia de escasos recursos con varios niños, cerca de la calle 16 con 17, requiere alimentos. Sector Los Agustinos.',
    -75.522, 5.071),
-  ('5d9b15a7-3916-4cd5-bd4a-182d2be76c04'::uuid, 'supplies'::work_order_category,
+  ('5d9b15a7-3916-4cd5-bd4a-182d2be76c04'::uuid, 'supplies'::need_category,
    'Un joven (talla M, pantalón 34, zapatos 39) y su hija de 5 a 6 años lo perdieron todo: se necesita ropa de esas tallas, implementos de aseo y mercado. Sector Enea.',
    -75.516, 5.062),
-  ('2b44a0e9-e784-4556-bbac-f6080b7a62b4'::uuid, 'structural_risk'::work_order_category,
+  ('2b44a0e9-e784-4556-bbac-f6080b7a62b4'::uuid, 'structural_risk'::need_category,
    'Vivienda cerca de la carrera 29 #38-18, barrio Villanueva, necesita materiales para reconstruir.',
    -75.508, 5.061),
-  ('34d2a43f-98a9-46dd-8243-130df442b65a'::uuid, 'structural_risk'::work_order_category,
+  ('34d2a43f-98a9-46dd-8243-130df442b65a'::uuid, 'structural_risk'::need_category,
    'Se requieren lonas para cubrir casas dañadas y evitar robos de lo poco que quedó. Barrio Galán.',
    -75.512, 5.078)
 ) as v(id, category, description, lng, lat);
 
-update work_order w set exact_address = v.exact_address, contact_name = v.contact_name, phone = v.phone, notes = v.notes
+update needs w set exact_address = v.exact_address, contact_name = v.contact_name, phone = v.phone, notes = v.notes
 from (values
   ('c793b455-cde0-4506-814b-217fb0982c16', 'Sector La Linda, Manizales (dirección exacta por confirmar)',
    'Guadalupe Nieto M', '3246219748', null),

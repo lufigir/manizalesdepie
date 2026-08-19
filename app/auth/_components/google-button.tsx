@@ -35,7 +35,7 @@ export function GoogleButton({ next }: { next: string }) {
         {AUTH_LABEL.google}
       </Button>
       {failed && (
-        <p role="alert" className="text-unclaimed text-sm">
+        <p role="alert" className="text-pending text-sm">
           {AUTH_LABEL.failed}
         </p>
       )}

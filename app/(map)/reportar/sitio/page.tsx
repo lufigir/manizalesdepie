@@ -11,9 +11,9 @@ export const metadata: Metadata = { title: REPORT_LABEL.title };
 /**
  * A place that stays put: acopio, sangre, PMU, albergue, censo.
  *
- * One route for all five, replacing `/reportar/ayudar` and `/reportar/necesito`
- * — both wrote a `site` row, and their names ("dónde ayudar", "punto de ayuda")
- * asked the reader to sort out who benefits before they could pick either.
+ * One route for all five, decided by what the place is rather than by who
+ * it's for: "esto es un acopio" resolves in a second, but "¿esto es dónde
+ * ayudo o es un punto de ayuda?" does not, so the form never asks it.
  *
  * A full route rather than a dialog over the map — the form carries its own map
  * for placing the pin, and two maps stacked in a modal on a phone is a fight

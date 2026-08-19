@@ -83,7 +83,7 @@ export default async function Image({
           meta={where}
           icon={OgPawPrintIcon}
           logo={logo}
-          accent={animal.resolvedAt ? "resolved" : "claimed"}
+          accent={animal.resolvedAt ? "resolved" : "underway"}
         />
       ),
       { ...size, fonts },
