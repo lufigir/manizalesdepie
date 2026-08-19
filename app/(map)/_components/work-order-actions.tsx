@@ -97,15 +97,17 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   const [posted, setPosted] = useState<WorkOrderUpdateKind | null>(null);
 
   /**
-   * The case's thread. Fetched as soon as the card mounts, whenever there is
-   * anything to fetch.
+   * The case's thread. Fetched as soon as the card mounts, unconditionally.
    *
    * It used to sit behind a "Ver qué ha pasado (3)" button, so the most
    * valuable thing on the card — what people found when they got there — was
-   * the one thing a reader had to ask for. The fetch it was avoiding was
-   * never per-case anyway: `WorkOrderActions` only renders inside the card of
-   * the SELECTED pin, so this is one request for one case the reader has
-   * already chosen to open, not one per pin on the map.
+   * the one thing a reader had to ask for. It also used to skip the fetch
+   * when the DTO's own counters read zero, but those counters only tally two
+   * of the four update kinds, so a case whose only entry was "sigue haciendo
+   * falta" or "no es real" never fetched and always showed as empty. The
+   * fetch was never per-case-on-the-map anyway: `WorkOrderActions` only
+   * renders inside the card of the SELECTED pin, so this is one request for
+   * one case the reader has already chosen to open, not one per pin.
    */
   const [updates, setUpdates] = useState<WorkOrderUpdateDTO[] | null>(null);
   /** The entry this reader just wrote, so the thread can point at it. */
@@ -122,14 +124,14 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
   const rollup = workOrderRollup(order);
   const open = rollup !== "done" && rollup !== "dismissed";
 
-  // Entries the counters already know about, before the thread itself has
-  // arrived. Reading it off the DTO rather than off `updates` is what lets
-  // the heading show a count on first paint instead of appearing late.
-  const entryCount = order.attendeeCount + order.helpedCount;
+  // The DTO only tallies two of the four update kinds — `on_the_way` and
+  // `helped` — so it undercounts a case whose only entry is `still_needed`
+  // or `not_real`. It is still worth reading before the thread arrives: it
+  // gives the heading a number on first paint, and `updates` corrects it as
+  // soon as the real count is in.
+  const entryCount = updates?.length ?? order.attendeeCount + order.helpedCount;
 
   useEffect(() => {
-    if (entryCount === 0) return;
-
     let cancelled = false;
     listWorkOrderUpdates(order.id)
       .then((rows) => {
@@ -144,7 +146,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
     return () => {
       cancelled = true;
     };
-  }, [order.id, entryCount]);
+  }, [order.id]);
 
   /**
    * Opens the composer with the note already written.
@@ -611,16 +613,7 @@ export function WorkOrderActions({ order }: { order: WorkOrderDTO }) {
             it got closed, and it is the only thing left that can be checked
             if somebody thinks it was closed wrongly. */}
         <TabsPanel value="thread" className="mt-2">
-          {/* `entryCount === 0` never fires the fetch above, so `updates`
-              would otherwise sit at its initial `null` forever — which the
-              thread reads as "still loading" rather than "nothing here yet".
-              Derived here instead of through the effect, which would trip
-              the set-state-in-effect rule for a value already knowable from
-              a prop. */}
-          <WorkOrderThread
-            updates={entryCount === 0 ? [] : updates}
-            highlightId={ownEntryId}
-          />
+          <WorkOrderThread updates={updates} highlightId={ownEntryId} />
         </TabsPanel>
       </Tabs>
     </>
