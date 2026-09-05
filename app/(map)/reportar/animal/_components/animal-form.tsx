@@ -15,10 +15,12 @@ import {
   type AnimalSpecies,
 } from "@/data/animal/animal.dto";
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
-import { compressImage } from "@/lib/image";
+import { compressImage, toDataUrl } from "@/lib/image";
 import { ANIMAL_FORM, ANIMAL_LABEL } from "@/lib/labels";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
+
+import { useDemo } from "../../../_components/demo-store";
 
 import { BarrioPicker } from "../../_components/barrio-picker";
 import { Field } from "../../_components/field";
@@ -42,6 +44,7 @@ export function AnimalForm({
   header: React.ReactNode;
 }) {
   const router = useRouter();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
   const fileInput = useRef<HTMLInputElement>(null);
   // From `lg` the zone (barrio + optional pin) moves into its own column
@@ -75,7 +78,10 @@ export function AnimalForm({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const small = await compressImage(file);
+    // 700px rather than the default 1400: this photo is about to be base64'd
+    // into a server action's payload instead of uploaded to a bucket, and
+    // base64 costs a third more than the bytes it encodes.
+    const small = await compressImage(file, 700);
     setPhoto(small);
     // A local preview, so the reporter sees what they are about to publish
     // before anything is uploaded.
@@ -88,25 +94,35 @@ export function AnimalForm({
   async function submit(formData: FormData) {
     setError(null);
 
-    formData.set("kind", kind);
-    formData.set("species", species);
+    /** A text field's value. `FormData.get` can also hand back a `File`,
+     *  which none of these are — this says so once instead of at four call
+     *  sites. */
+    const text = (field: string) => {
+      const value = formData.get(field);
+      return typeof value === "string" ? value : "";
+    };
+
     const lastSeenAtLocal = formData.get("lastSeenAtLocal");
-    formData.set(
-      "lastSeenAt",
-      new Date(
-        (typeof lastSeenAtLocal === "string" && lastSeenAtLocal) ||
-          Date.now(),
-      ).toISOString(),
-    );
-    if (barrio) formData.set("zone", barrio.name);
-    if (photo) formData.set("photo", photo);
-    if (placed) {
-      formData.set("longitude", String(point.lng));
-      formData.set("latitude", String(point.lat));
-    }
+    const lastSeenAt = new Date(
+      (typeof lastSeenAtLocal === "string" && lastSeenAtLocal) || Date.now(),
+    ).toISOString();
 
     try {
-      await reportAnimal(formData);
+      const animal = await reportAnimal({
+        kind,
+        species,
+        petName: text("petName") || undefined,
+        description: text("description"),
+        // The photo goes inline, as a data URL, and never reaches storage —
+        // there is none. See `toDataUrl`.
+        photoUrl: photo ? await toDataUrl(photo) : undefined,
+        lastSeenAt,
+        longitude: placed ? point.lng : undefined,
+        latitude: placed ? point.lat : undefined,
+        zone: barrio?.name,
+        whatsapp: text("whatsapp"),
+      });
+      demo.add("animals", animal);
       router.push("/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : ANIMAL_FORM.failed);

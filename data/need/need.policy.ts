@@ -1,4 +1,6 @@
-import type { CurrentUser } from "@/data/user/require-user";
+import type { CurrentUser } from "@/data/user/current-user";
+
+import type { NeedStatus, NeedUpdateKind } from "./need.dto";
 
 /**
  * Pure predicates. No database, no session lookup, no side effects.
@@ -20,10 +22,10 @@ export function canReportNeed(): boolean {
  * "sigue haciendo falta" has to be at least as easy as saying "ya ayudé",
  * or the counterweight does not work.
  *
- * Open does not mean consequence-free. No single entry decides anything —
- * `sync_need_state` needs two "ya ayudé" from two different numbers
- * before a case closes — so the thing this predicate lets anyone do is
- * contribute to a count, not set a state.
+ * Open does not mean consequence-free. No single entry decides anything: the
+ * status is read back out of the whole book by `deriveNeedState` below, so
+ * the thing this predicate lets anyone do is contribute to a count, not set
+ * a state. Nothing an entry can say closes a case.
  */
 export function canPostNeedUpdate(): boolean {
   return true;
@@ -38,10 +40,10 @@ export function canPostNeedUpdate(): boolean {
  * "this case annoys me" be recorded as "this was a lie" about a household
  * with no way to find out.
  *
- * The ordinary way a case ends is now the threshold in the database, which
- * no one person can reach alone. This is the exception for the two things a
- * count genuinely cannot decide: a real case that only one person ever
- * helped with, and a case that actually is fake.
+ * There is no ordinary way a case ends any more — a case cools instead of
+ * closing. This is the exception for the two things a count genuinely cannot
+ * decide: a real case that only one person ever helped with, and a case that
+ * actually is fake.
  */
 export function canCloseNeed(user: CurrentUser | null): boolean {
   return user?.role === "curator";
@@ -64,16 +66,83 @@ export function canManageNeed(user: CurrentUser | null): boolean {
  *
  * The book is append-only by design — it is the evidence behind a status
  * nobody can set by hand, and letting people delete entries would hand back
- * exactly the power the append-only rule took away: two "ya ayudé" close a
- * case, so anyone who could delete one could reopen any case at will, or
- * erase the "sigue haciendo falta" that was keeping one open.
+ * exactly the power the append-only rule took away: anyone who could delete
+ * an entry could erase the "sigue haciendo falta" that is keeping a case
+ * red, or the help that turned it green.
  *
  * What is left for a curator is the thing an append-only log genuinely
  * cannot handle: an entry containing abuse, a phone number that should never
- * have been published, or spam. Deleting one re-fires
- * `sync_need_state`, so the case's status stays honest about whatever
- * entries remain.
+ * have been published, or spam. The state is derived from whatever entries
+ * remain, so removing one keeps the case honest by construction.
  */
 export function canDeleteNeedUpdate(user: CurrentUser | null): boolean {
   return user?.role === "curator";
+}
+
+/**
+ * The state of a case, read out of its own book.
+ *
+ * This is `sync_need_state` — the Postgres trigger that used to run on every
+ * insert into `need_updates` — as a pure function. It moved here rather than
+ * being dropped with the database because the rule it encodes is the product:
+ * nobody writes a status, everybody writes an entry, and the status is what
+ * the entries add up to. AGENTS.md states it as a guardrail; this is where it
+ * is now enforced.
+ *
+ * Two readers, one copy: the DAL derives the state of a fixture case, and the
+ * browser derives it again the moment somebody adds an entry of their own, so
+ * a pin recolours without a round trip. Pure, so both can.
+ *
+ *   nothing yet ........................ pending
+ *   ≥1 "voy" ........................... on_the_way
+ *   ≥1 "ya ayudé" ...................... attended
+ *   "sigue haciendo falta" last ........ attended, but `reopened`
+ *
+ * `reopened` is a colour, not a status: `needRollup` paints a contested case
+ * red again while it stays `attended`, because people did turn up and the
+ * thread should keep saying so. A curator's verdict freezes everything —
+ * later entries still move the counts, never the status.
+ */
+export function deriveNeedState(
+  entries: { kind: NeedUpdateKind; createdAt: string }[],
+  closedStatus: "closed_completed" | "closed_rejected" | null,
+  /** What `confirmed_at` falls back to on a case nobody has written on: when
+   *  it was reported. */
+  createdAt: string,
+): {
+  status: NeedStatus;
+  onTheWayCount: number;
+  helpedCount: number;
+  reopened: boolean;
+  confirmedAt: string;
+} {
+  const onTheWayCount = entries.filter((e) => e.kind === "on_the_way").length;
+  const helpedCount = entries.filter((e) => e.kind === "helped").length;
+
+  const last = (kind: NeedUpdateKind) =>
+    entries
+      .filter((entry) => entry.kind === kind)
+      .reduce<string | null>(
+        (latest, entry) =>
+          latest === null || entry.createdAt > latest ? entry.createdAt : latest,
+        null,
+      );
+
+  const lastHelped = last("helped");
+  const lastStillNeeded = last("still_needed");
+
+  const reopened =
+    lastStillNeeded !== null &&
+    (lastHelped === null || lastStillNeeded > lastHelped);
+
+  const status: NeedStatus =
+    closedStatus ??
+    (helpedCount >= 1 ? "attended" : onTheWayCount >= 1 ? "on_the_way" : "pending");
+
+  const confirmedAt = entries.reduce(
+    (latest, entry) => (entry.createdAt > latest ? entry.createdAt : latest),
+    createdAt,
+  );
+
+  return { status, onTheWayCount, helpedCount, reopened, confirmedAt };
 }

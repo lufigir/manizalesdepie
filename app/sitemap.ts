@@ -4,7 +4,7 @@ import { AnimalDAL } from "@/data/animal/animal.dal";
 import { NeedDAL } from "@/data/need/need.dal";
 import { ServiceDAL } from "@/data/service/service.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { clientEnv } from "@/lib/env";
+import { SITE_URL } from "@/lib/env";
 
 /**
  * The map itself, plus every shareable pin.
@@ -25,7 +25,7 @@ import { clientEnv } from "@/lib/env";
  * even though the DAL would show it to a curator.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = clientEnv.NEXT_PUBLIC_SITE_URL;
+  const base = SITE_URL;
 
   const [sites, needs, animals, services] = await Promise.all([
     SiteDAL.public().listPublished(),

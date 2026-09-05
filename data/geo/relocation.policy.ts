@@ -1,4 +1,4 @@
-import type { CurrentUser } from "@/data/user/require-user";
+import type { CurrentUser } from "@/data/user/current-user";
 
 /**
  * Who may move a pin, and how far.

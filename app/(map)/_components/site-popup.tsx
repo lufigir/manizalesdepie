@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils";
 
 import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
+import { DemoContactButton } from "./demo-contact";
+import { useDemo } from "./demo-store";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
 
@@ -54,6 +56,7 @@ import { useWorkspace } from "./workspace-context";
  */
 export function SitePopup({ site }: { site: SiteDTO }) {
   const { isAdmin, startRelocate } = useWorkspace();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -69,15 +72,20 @@ export function SitePopup({ site }: { site: SiteDTO }) {
     setEditError(null);
     startTransition(async () => {
       try {
-        await updateSite({
-          id: site.id,
-          type,
-          name,
-          description,
-          address,
-          schedule,
-          whatsapp: whatsapp || undefined,
-        });
+        // The action hands back exactly the fields it accepted, and the
+        // store lays them over the server's copy for the rest of the visit.
+        demo.patch(
+          site.id,
+          await updateSite({
+            id: site.id,
+            type,
+            name,
+            description,
+            address,
+            schedule,
+            whatsapp: whatsapp || undefined,
+          }),
+        );
         setEditOpen(false);
       } catch (cause) {
         setEditError(cause instanceof Error ? cause.message : ADMIN_LABEL.failed);
@@ -271,21 +279,10 @@ export function SitePopup({ site }: { site: SiteDTO }) {
           {SHEET_LABEL.directions}
         </Button>
         {site.whatsapp && (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="w-full"
-            render={
-              <a
-                href={`https://wa.me/${site.whatsapp}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            }
-          >
+          <DemoContactButton className="w-full">
             <WhatsappIcon />
             {SHEET_LABEL.whatsapp}
-          </Button>
+          </DemoContactButton>
         )}
       </div>
 
@@ -304,7 +301,17 @@ export function SitePopup({ site }: { site: SiteDTO }) {
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await confirmSiteStatus(site.id, status);
+                  const patch = await confirmSiteStatus(site.id, status);
+                  // The count is the one field the action cannot compute: it
+                  // would have been `confirmed_count + 1` inside the update,
+                  // and the only copy of the current value is the card's own.
+                  demo.patch(site.id, {
+                    ...patch,
+                    confirmedCount:
+                      status === "closed"
+                        ? site.confirmedCount
+                        : site.confirmedCount + 1,
+                  });
                 })
               }
               // Each one wears the status it would set, which is the whole
@@ -426,8 +433,13 @@ export function SitePopup({ site }: { site: SiteDTO }) {
         <div className="border-t pt-2">
           <AdminActions
             published={site.published}
-            onSetPublished={(published) => setSitePublished(site.id, published)}
-            onDelete={() => deleteSite(site.id)}
+            onSetPublished={async (published) =>
+              demo.patch(site.id, await setSitePublished(site.id, published))
+            }
+            onDelete={async () => {
+              await deleteSite(site.id);
+              demo.remove(site.id);
+            }}
           />
         </div>
       )}

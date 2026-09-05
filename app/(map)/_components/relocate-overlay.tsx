@@ -11,6 +11,7 @@ import { relocateNeed } from "@/data/need/need.actions";
 import { RELOCATE_LABEL } from "@/lib/labels";
 
 import { BarrioPicker } from "../reportar/_components/barrio-picker";
+import { useDemo } from "./demo-store";
 
 /** What is being moved. Only the two families whose point is an exact place:
  *  an animal sighting is a trace and a service is pinned at its barrio's
@@ -119,6 +120,7 @@ export function RelocateOverlay({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -127,11 +129,16 @@ export function RelocateOverlay({
     setError(null);
     startTransition(async () => {
       try {
-        if (target.kind === "site") {
-          await relocateSite(target.id, point.lng, point.lat);
-        } else {
-          await relocateNeed(target.id, point.lng, point.lat);
-        }
+        // The barrio comes back with the coordinate rather than being
+        // recomputed here: whether this move was allowed at all was decided
+        // by where it lands, on the server, and the answer to both questions
+        // has to be the same one.
+        demo.patch(
+          target.id,
+          target.kind === "site"
+            ? await relocateSite(target.id, point.lng, point.lat)
+            : await relocateNeed(target.id, point.lng, point.lat),
+        );
         onDone();
       } catch (cause) {
         // The DAL's refusal is the message worth showing — "solo puedes mover

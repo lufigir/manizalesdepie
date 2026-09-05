@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { getCurrentUser } from "@/data/user/require-user";
-import { clientEnv } from "@/lib/env";
+import { getCurrentUser } from "@/data/user/current-user";
+import { SITE_URL } from "@/lib/env";
 import { SITE_STATUS_LABEL, SITE_TYPE_LABEL, confidence } from "@/lib/labels";
 import { SITE_TYPE_TAB } from "@/lib/tabs";
 
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title: site.name,
       description,
-      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/punto/${site.id}`,
+      url: `${SITE_URL}/punto/${site.id}`,
       locale: "es_CO",
       type: "website",
     },
@@ -81,7 +81,7 @@ export default async function SharedSitePage({ params }: Params) {
   const tab = SITE_TYPE_TAB[site.type];
 
   return (
-    <main className="h-dvh w-full overflow-hidden">
+    <main className="h-full w-full overflow-hidden">
       <MapWorkspace
         sites={withShared}
         animals={animals}

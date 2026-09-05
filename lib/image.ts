@@ -14,15 +14,22 @@
 const MAX_EDGE = 1400;
 const QUALITY = 0.82;
 
-export async function compressImage(file: File): Promise<File> {
+export async function compressImage(
+  file: File,
+  /** The longest edge to keep. The default is what a board of lost animals
+   *  needs to show a recognisable face; the demo asks for less, because its
+   *  photos travel inside a server action rather than to a bucket and a
+   *  server action is not a file transport (see `animal-form.tsx`). */
+  maxEdge: number = MAX_EDGE,
+): Promise<File> {
   // Anything already small enough is left alone: re-encoding it would only
   // lose detail for no gain.
-  if (file.size < 400_000) return file;
+  if (file.size < 400_000 && maxEdge === MAX_EDGE) return file;
 
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file;
 
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const width = Math.round(bitmap.width * scale);
   const height = Math.round(bitmap.height * scale);
 
@@ -46,5 +53,27 @@ export async function compressImage(file: File): Promise<File> {
 
   return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", {
     type: "image/jpeg",
+  });
+}
+
+/**
+ * The file as a `data:` URL.
+ *
+ * What replaces the upload. With no bucket behind the app, a photo has
+ * nowhere to be stored and no URL to be served from, so it travels inline
+ * with the report and lives in the reader's own browser for the visit.
+ * Shrink first: base64 costs a third more than the bytes it encodes.
+ */
+export async function toDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    // `readAsDataURL` always produces a string; the union is FileReader's,
+    // shared with `readAsArrayBuffer`.
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("No se pudo leer la foto"));
+    reader.onerror = () => reject(new Error("No se pudo leer la foto"));
+    reader.readAsDataURL(file);
   });
 }

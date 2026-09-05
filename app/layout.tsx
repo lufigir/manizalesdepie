@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
-import { clientEnv } from "@/lib/env";
+import { SITE_URL } from "@/lib/env";
 
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
    * renders with no image at all, which is the failure mode nobody notices
    * until a link is already circulating.
    */
-  metadataBase: new URL(clientEnv.NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Manizales de Pie",
     template: "%s · Manizales de Pie",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     // a shorter list.
     description:
       "Dónde ayudar hoy en Manizales y Villamaría: necesidades, acopios, albergues, donación de sangre y mascotas.",
-    url: clientEnv.NEXT_PUBLIC_SITE_URL,
+    url: SITE_URL,
     locale: "es_CO",
     type: "website",
   },

@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { getCurrentUser } from "@/data/user/require-user";
-import { clientEnv } from "@/lib/env";
+import { getCurrentUser } from "@/data/user/current-user";
+import { SITE_URL } from "@/lib/env";
 import { ANIMAL_LABEL, OG_LABEL, freshness } from "@/lib/labels";
 
 import { MapWorkspace } from "../../_components/map-workspace";
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/mascota/${animal.id}`,
+      url: `${SITE_URL}/mascota/${animal.id}`,
       locale: "es_CO",
       type: "website",
     },
@@ -76,7 +76,7 @@ export default async function SharedAnimalPage({ params }: Params) {
     : [animal, ...animals];
 
   return (
-    <main className="h-dvh w-full overflow-hidden">
+    <main className="h-full w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
         animals={withShared}

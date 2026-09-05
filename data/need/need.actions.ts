@@ -1,18 +1,18 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
+import type { NeedDTO, NeedUpdateDTO } from "./need.dto";
 import { NeedDAL } from "./need.dal";
 
 /**
  * A server action compiles to a public POST endpoint. It never checks
- * anything itself — it orchestrates: build the DAL, call it, revalidate.
+ * anything itself — it orchestrates: build the DAL, call it, hand back what
+ * it returned.
  *
- * `closeNeed` used to be the counter-example that proved the rule: it
- * was reachable by anyone with a crafted request AND it wrote a terminal
- * status, so a loop over every case id could have emptied the map. It is a
- * curator's action now, and the ordinary way a case ends is a threshold the
- * database computes — see `sync_need_state`.
+ * `closeNeed` used to be the counter-example that proved the rule: it was
+ * reachable by anyone with a crafted request AND it wrote a terminal status,
+ * so a loop over every case id could have emptied the map. It is a curator's
+ * action now, and the ordinary state of a case is derived from its own
+ * thread — see `deriveNeedState`.
  */
 
 export async function reportNeed(input: {
@@ -24,21 +24,18 @@ export async function reportNeed(input: {
   contactName?: string;
   phone?: string;
   notes?: string;
-}) {
+}): Promise<NeedDTO> {
   const dal = await NeedDAL.create();
-  const { id } = await dal.report(input);
-
-  revalidatePath("/");
-  revalidatePath("/admin");
-  return { id };
+  return dal.report(input);
 }
 
 /**
  * One entry in a case's book: "voy", "ya ayudé", "sigue haciendo falta",
- * "esto no es real". Anonymous, signed with a name and a phone.
+ * "esto no es real". Anonymous, optionally signed with a name and a phone.
  *
- * Sends no status and cannot: the case's state is derived from every entry
- * on it, so this adds one voice to a count rather than deciding anything.
+ * Returns the entry and no status: the case's state is derived from every
+ * entry on it, so this adds one voice to a count rather than deciding
+ * anything.
  */
 export async function postNeedUpdate(input: {
   needId: string;
@@ -46,13 +43,9 @@ export async function postNeedUpdate(input: {
   name?: string;
   phone?: string;
   note: string;
-}) {
+}): Promise<NeedUpdateDTO> {
   const dal = NeedDAL.public();
-  await dal.postUpdate(input);
-  // The card is server-rendered and the status may have just moved with this
-  // entry, so the next reader has to see both.
-  revalidatePath("/");
-  revalidatePath(`/necesidad/${input.needId}`);
+  return dal.postUpdate(input);
 }
 
 /** Everything that has happened to a case, as a thread. */
@@ -68,9 +61,7 @@ export async function closeNeed(
   result: "closed_completed" | "closed_rejected",
 ) {
   const dal = await NeedDAL.create();
-  await dal.close(id, result);
-  revalidatePath("/");
-  revalidatePath("/admin");
+  return dal.close(id, result);
 }
 
 export async function updateNeed(input: {
@@ -79,8 +70,7 @@ export async function updateNeed(input: {
   description?: string;
 }) {
   const dal = NeedDAL.public();
-  await dal.update(input);
-  revalidatePath("/");
+  return dal.update(input);
 }
 
 /**
@@ -95,30 +85,21 @@ export async function relocateNeed(
   latitude: number,
 ) {
   const dal = await NeedDAL.create();
-  await dal.relocate({ id, longitude, latitude });
-  revalidatePath("/");
-  revalidatePath("/admin");
+  return dal.relocate({ id, longitude, latitude });
 }
 
 export async function setNeedPublished(id: string, published: boolean) {
   const dal = await NeedDAL.create();
-  await dal.setPublished(id, published);
-  revalidatePath("/");
-  revalidatePath("/admin");
+  return dal.setPublished(id, published);
 }
 
-/** Curator-only — see `canDeleteNeedUpdate`. Revalidates because the
- *  entry's removal recomputes the case's own status and counts. */
+/** Curator-only — see `canDeleteNeedUpdate`. */
 export async function deleteNeedUpdate(id: string) {
   const dal = await NeedDAL.create();
   await dal.removeUpdate(id);
-  revalidatePath("/");
-  revalidatePath("/admin");
 }
 
 export async function deleteNeed(id: string) {
   const dal = await NeedDAL.create();
   await dal.remove(id);
-  revalidatePath("/");
-  revalidatePath("/admin");
 }

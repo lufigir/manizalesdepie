@@ -52,9 +52,9 @@ export function ReportLayout({
   return (
     <main
       className={cn(
-        "mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-6 px-5 py-6",
+        "mx-auto flex min-h-full w-full max-w-lg flex-col gap-6 px-5 py-6",
         split &&
-          "lg:mx-0 lg:h-dvh lg:max-w-none lg:gap-5 lg:overflow-hidden lg:px-10 lg:py-7",
+          "lg:mx-0 lg:h-full lg:max-w-none lg:gap-5 lg:overflow-hidden lg:px-10 lg:py-7",
       )}
     >
       {typeof children === "function" ? (

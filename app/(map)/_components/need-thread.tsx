@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useWorkspace } from "./workspace-context";
+import { DemoContactButton } from "./demo-contact";
+import { useDemo } from "./demo-store";
 import { WhatsappIcon } from "./whatsapp-icon";
 
 /**
@@ -99,6 +101,7 @@ function Entry({
   mine: boolean;
 }) {
   const { isAdmin } = useWorkspace();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
 
   const name = update.name ?? NEED_LABEL.anonymous;
@@ -185,20 +188,10 @@ function Entry({
         {(update.phone || isAdmin) && (
           <div className="mt-1 flex items-center gap-1">
             {update.phone && (
-              <Button
-                size="xs"
-                variant="outline"
-                render={
-                  <a
-                    href={`https://wa.me/57${update.phone}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  />
-                }
-              >
+              <DemoContactButton size="xs">
                 <WhatsappIcon />
                 {update.phone}
-              </Button>
+              </DemoContactButton>
             )}
 
             {/* Curator only — see `canDeleteNeedUpdate`. The book is
@@ -220,6 +213,7 @@ function Entry({
                 onClick={() =>
                   startTransition(async () => {
                     await deleteNeedUpdate(update.id);
+                    demo.remove(update.id);
                   })
                 }
               >

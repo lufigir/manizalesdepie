@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
+import type { AnimalDTO } from "./animal.dto";
 import { AnimalDAL } from "./animal.dal";
 
 /**
@@ -10,45 +9,31 @@ import { AnimalDAL } from "./animal.dal";
  * assume.
  *
  * Which is why an action never checks anything itself. It orchestrates: build
- * the DAL, call it, revalidate. The DAL validates the input, authorizes the
- * caller and validates what comes back.
+ * the DAL, call it, hand back what it returned.
+ *
+ * `reportAnimal` no longer takes a `FormData` with a file in it. There is no
+ * bucket to upload to, so the photo arrives already shrunk and encoded as a
+ * `data:` URL — see `compressImage` and `animal-form.tsx`.
  */
-
-export async function reportAnimal(formData: FormData) {
+export async function reportAnimal(input: {
+  kind: string;
+  species: string;
+  petName?: string;
+  description: string;
+  photoUrl?: string;
+  lastSeenAt: string;
+  longitude?: number;
+  latitude?: number;
+  zone?: string;
+  whatsapp: string;
+}): Promise<AnimalDTO> {
   const dal = await AnimalDAL.create();
-
-  // The photo travels as a file and is stored first, so only its path — a
-  // short string — goes into the row.
-  const photo = formData.get("photo");
-  const photoPath =
-    photo instanceof File && photo.size > 0
-      ? await dal.uploadPhoto(photo)
-      : undefined;
-
-  const longitude = formData.get("longitude");
-  const latitude = formData.get("latitude");
-
-  const { id } = await dal.report({
-    kind: formData.get("kind"),
-    species: formData.get("species"),
-    petName: formData.get("petName") || undefined,
-    description: formData.get("description"),
-    photoPath,
-    lastSeenAt: formData.get("lastSeenAt"),
-    longitude: longitude ? Number(longitude) : undefined,
-    latitude: latitude ? Number(latitude) : undefined,
-    zone: formData.get("zone") || undefined,
-    whatsapp: formData.get("whatsapp"),
-  });
-
-  revalidatePath("/");
-  return { id };
+  return dal.report(input);
 }
 
 export async function resolveAnimal(id: string) {
   const dal = await AnimalDAL.create();
-  await dal.resolve(id);
-  revalidatePath("/");
+  return dal.resolve(id);
 }
 
 /** Corrects a report's fields. Open to anyone — see `canEditAnimal`. */
@@ -62,18 +47,15 @@ export async function updateAnimal(input: {
   whatsapp?: string;
 }) {
   const dal = await AnimalDAL.create();
-  await dal.update(input);
-  revalidatePath("/");
+  return dal.update(input);
 }
 
 export async function setAnimalPublished(id: string, published: boolean) {
   const dal = await AnimalDAL.create();
-  await dal.setPublished(id, published);
-  revalidatePath("/");
+  return dal.setPublished(id, published);
 }
 
 export async function deleteAnimal(id: string) {
   const dal = await AnimalDAL.create();
   await dal.remove(id);
-  revalidatePath("/");
 }

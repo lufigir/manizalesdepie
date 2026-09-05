@@ -1,5 +1,5 @@
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
-import type { CurrentUser } from "@/data/user/require-user";
+import type { CurrentUser } from "@/data/user/current-user";
 
 import type { AnimalDTO } from "./animal.dto";
 

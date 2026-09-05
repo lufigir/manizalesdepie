@@ -1,90 +1,49 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, Loader2, LogIn, LogOut } from "lucide-react";
+import { ChevronDown, Eye, RotateCcw, ShieldCheck } from "lucide-react";
 
-import { signOut } from "@/app/auth/actions";
-import type { CurrentUser } from "@/data/user/require-user";
+import type { CurrentUser } from "@/data/user/current-user";
+import { setDemoRole } from "@/data/user/user.actions";
 import { AUTH_LABEL } from "@/lib/labels";
-import { startGoogleSignIn } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
+import { useDemo } from "./demo-store";
+
 /**
- * The account bubble, top-left of the map.
+ * The bubble top-left of the map: which hat the reader is wearing, and the
+ * way to swap it.
+ *
+ * It used to be an account. One tap went to Google, came back with a session,
+ * and a `profiles` row decided whether the curator strips appeared on the
+ * cards. The demo has no accounts — see `data/user/current-user.ts` — but it
+ * kept the thing the account was actually for, because the alternative is a
+ * visitor who never finds out that half of this product exists: the
+ * moderation queue, the hidden rows, closing a case, deleting spam.
+ *
+ * So the hat is offered out loud rather than hidden behind a query string,
+ * and the menu says what each one lets you see. The bubble also carries the
+ * reset, which belongs beside it: both are "put the demo back how you found
+ * it" controls, and the reset is the only way back from a map somebody has
+ * been reporting into for ten minutes.
  *
  * Shares its silhouette with the other two things floating over the map —
- * `ReportMenu` bottom-left and `AttendanceStats` top-right — deliberately:
- * same radius, same border, same translucent background, same shadow. Three
- * controls with three different shapes read as three unrelated apps stacked
- * on one canvas.
- *
- * Signed out it is one word — "Entrar" — and nothing else, because the map
- * never asks for an account (see `AUTH_LABEL`): the bubble is a door, not a
- * nag. One tap goes straight to Google — there is no `/auth/login` page in
- * the way — and the reader lands back where they were heading, because the
- * current path rides along as `next`. Signed in it becomes a roundel with
- * the reader's initial, opening a small menu with who they are, what their
- * role lets them do, and the way out.
- *
- * The role is named, not hidden: it is what decides whether the edit/hide/
- * delete strips appear on the cards, so somebody holding it should be able to
- * say why the map changed under them.
+ * `ReportMenu` bottom-left, `AttendanceStats` top-right — deliberately: same
+ * radius, same border, same translucent background, same shadow.
  */
 export function AccountMenu({ user }: { user: CurrentUser | null }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [signingIn, setSigningIn] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [avatarFailed, setAvatarFailed] = useState(false);
+  const { reset, touched } = useDemo();
 
-  async function signIn() {
-    setSigningIn(true);
-    setFailed(false);
+  const curator = user?.role === "curator";
 
-    // The path, not the origin: `startGoogleSignIn` builds the callback URL
-    // from `window.location.origin` itself, and only a same-site path is
-    // safe to hand to it (see `safeNext`).
-    const started = await startGoogleSignIn(window.location.pathname);
-
-    // On success the browser is already navigating to Google, so the spinner
-    // stays up until the page is replaced.
-    if (!started) {
-      setFailed(true);
-      setSigningIn(false);
-    }
+  function swap() {
+    setOpen(false);
+    startTransition(async () => {
+      await setDemoRole(curator ? "visitor" : "curator");
+    });
   }
-
-  if (!user) {
-    return (
-      // Filled, where the signed-in state is translucent like everything
-      // else floating here. Sitting on a basemap, a bordered pill at 0.7rem
-      // was indistinguishable from the chip opposite it — readers were not
-      // declining the account, they were not finding the door. The shape is
-      // shared; the fill is what marks the one control up here that is
-      // asking to be pressed, and it is the same fill `ReportMenu` uses for
-      // the same reason.
-      <button
-        type="button"
-        onClick={signIn}
-        disabled={signingIn}
-        className="bg-primary text-primary-foreground focus-visible:ring-ring flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold shadow-lg transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-70"
-      >
-        {signingIn ? (
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-        ) : (
-          <LogIn className="size-4" strokeWidth={2.5} aria-hidden />
-        )}
-        {AUTH_LABEL.enter}
-        {failed && (
-          <span className="sr-only" role="alert">
-            {AUTH_LABEL.failed}
-          </span>
-        )}
-      </button>
-    );
-  }
-
-  const initial = user.fullName.trim().charAt(0).toUpperCase() || "?";
 
   return (
     <div className="relative">
@@ -94,32 +53,36 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={AUTH_LABEL.menuLabel}
-        className="bg-background/95 focus-visible:ring-ring flex items-center gap-1.5 rounded-xl border py-1.5 pr-2.5 pl-1.5 text-xs font-semibold shadow-lg backdrop-blur focus-visible:ring-2 focus-visible:outline-none"
-      >
-        {user.avatarUrl && !avatarFailed ? (
-          // The provider's photo when Google sent one; the initial is only
-          // the fallback for a sign-in that carried no picture — or for a
-          // photo the browser refuses (a CSP that forgot googleusercontent
-          // did exactly that, and a broken <img> is worse than an initial).
-          <span className="relative size-6 shrink-0 overflow-hidden rounded-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.avatarUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              onError={() => setAvatarFailed(true)}
-              className="size-full object-cover"
-            />
-          </span>
-        ) : (
-          <span className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold">
-            {initial}
-          </span>
+        disabled={pending}
+        className={cn(
+          "focus-visible:ring-ring flex items-center gap-1.5 rounded-xl border py-1.5 pr-2.5 pl-1.5 text-xs font-semibold shadow-lg backdrop-blur transition-opacity focus-visible:ring-2 focus-visible:outline-none disabled:opacity-70",
+          // The hat is the one state worth spotting from across the screen:
+          // every card renders differently under it.
+          curator
+            ? "bg-primary/10 border-primary/40"
+            : "bg-background/95",
         )}
-        <span className="max-w-24 truncate">{user.fullName}</span>
+      >
+        <span
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center rounded-full",
+            curator
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground",
+          )}
+        >
+          {curator ? (
+            <ShieldCheck className="size-3.5" aria-hidden />
+          ) : (
+            <Eye className="size-3.5" aria-hidden />
+          )}
+        </span>
+        <span className="max-w-28 truncate">
+          {curator ? AUTH_LABEL.roles.curator : AUTH_LABEL.roles.visitor}
+        </span>
         <ChevronDown
           className={cn(
-            "size-3 text-muted-foreground transition-transform",
+            "text-muted-foreground size-3 transition-transform",
             open && "rotate-180",
           )}
           aria-hidden
@@ -139,29 +102,54 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
           />
           <div
             role="menu"
-            className="bg-background/95 absolute top-full left-0 z-20 mt-1.5 min-w-44 rounded-xl border p-1.5 shadow-lg backdrop-blur"
+            className="bg-background/95 absolute top-full left-0 z-20 mt-1.5 w-64 rounded-xl border p-1.5 shadow-lg backdrop-blur"
           >
             <div className="px-2 py-1.5">
-              <p className="text-sm font-semibold">{user.fullName}</p>
-              <p className="text-muted-foreground text-xs">
-                {AUTH_LABEL.roles[user.role]}
+              <p className="text-sm font-semibold">
+                {curator ? AUTH_LABEL.curatorTitle : AUTH_LABEL.roles.visitor}
               </p>
-              {user.email && (
-                <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                  {user.email}
-                </p>
-              )}
+              <p className="text-muted-foreground mt-0.5 text-xs leading-snug">
+                {curator ? AUTH_LABEL.curatorHint : AUTH_LABEL.visitorHint}
+              </p>
             </div>
+
             <div className="bg-border my-1 h-px" />
+
             <button
               type="button"
               role="menuitem"
               disabled={pending}
-              onClick={() => startTransition(() => void signOut())}
+              onClick={swap}
               className="hover:bg-accent focus-visible:ring-ring flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <LogOut className="size-3.5" aria-hidden />
-              {AUTH_LABEL.signOut}
+              {curator ? (
+                <Eye className="size-3.5" aria-hidden />
+              ) : (
+                <ShieldCheck className="size-3.5" aria-hidden />
+              )}
+              {curator ? AUTH_LABEL.leave : AUTH_LABEL.enter}
+            </button>
+
+            {/* Disabled until there is something to undo, so it reads as a
+                consequence of what the reader did rather than as a button
+                that might wipe the map they are looking at. */}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!touched}
+              onClick={() => {
+                reset();
+                setOpen(false);
+              }}
+              className="hover:bg-accent focus-visible:ring-ring flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40"
+            >
+              <RotateCcw className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>
+                {AUTH_LABEL.reset}
+                <span className="text-muted-foreground block text-xs font-normal">
+                  {AUTH_LABEL.resetHint}
+                </span>
+              </span>
             </button>
           </div>
         </>

@@ -15,6 +15,8 @@ import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
 import { SERVICE_TYPE_ICON, SERVICE_TYPE_LABEL, SERVICES_FORM } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
+import { useDemo } from "../../../_components/demo-store";
+
 import { BarrioPicker } from "../../_components/barrio-picker";
 import { Field } from "../../_components/field";
 
@@ -36,6 +38,7 @@ import { Field } from "../../_components/field";
  */
 export function ServiceForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
   const router = useRouter();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +64,7 @@ export function ServiceForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
       // Same as the work-order form: the created id used to travel in the
       // URL to select the new pin on arrival at `/servicios`; nothing reads
       // a query-driven selection any more, so it is not carried forward.
-      await proposeService({
+      const service = await proposeService({
         type,
         description,
         area,
@@ -69,6 +72,7 @@ export function ServiceForm({ barrios }: { barrios: NeighborhoodDTO[] }) {
         latitude: barrio?.latitude ?? undefined,
         whatsapp,
       });
+      demo.add("services", service);
       router.push("/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : SERVICES_FORM.failed);

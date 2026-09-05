@@ -134,30 +134,52 @@ export const SITE_ITEMS_LABEL = {
  * map never asks for an account, and the copy has to say so or people bounce.
  */
 export const AUTH_LABEL = {
-  title: "Entra para ayudar",
-  subtitle:
-    "Solo necesitas cuenta para hacerte cargo de un caso. Reportar y ver el mapa nunca la piden.",
-  google: "Continuar con Google",
-  /** The bubble top-left of the map when nobody is signed in. "Entrar" and
-   *  nothing else: what the account is FOR is said on the login screen. */
-  enter: "Entrar",
-  /** Screen-reader name for the bubble itself, since the visible text changes
-   *  with the session. */
-  menuLabel: "Tu cuenta",
-  /** How a role reads to the person holding it, on the account bubble. The
-   *  role drives what they can DO (curator actions), so it is named rather
-   *  than left as the machine word. */
+  /**
+   * The bubble top-left of the map. It used to say "Entrar" and start a
+   * Google sign-in; this demo has no accounts, so what it offers instead is
+   * the hat — the one thing the session was ever really for here.
+   *
+   * Named as an act of looking, not of being: "Ver como curador" cannot be
+   * mistaken for having signed into anything.
+   */
+  enter: "Ver como curador",
+  leave: "Ver como visitante",
+  /** Screen-reader name for the bubble, since its visible text changes. */
+  menuLabel: "Modo de la demo",
+  /** How a role reads to the person holding it. The role drives what they
+   *  can DO, so it is named rather than left as the machine word. */
   roles: {
     visitor: "Visitante",
     contributor: "Colaborador",
     curator: "Curador",
   } as const,
-  signOut: "Cerrar sesión",
-  back: "Volver al mapa",
-  failed: "No se pudo iniciar sesión. Vuelve a intentarlo.",
-  errorTitle: "No pudimos completar el ingreso",
-  errorBody:
-    "El enlace pudo haber vencido o ya se usó. Intenta entrar otra vez desde el mapa.",
+  curatorTitle: "Curador de la demo",
+  curatorHint:
+    "Ves los reportes ocultos y las acciones de curación: publicar, ocultar, cerrar y eliminar.",
+  visitorHint: "Estás viendo el mapa como cualquier persona que llega a él.",
+  reset: "Reiniciar la demo",
+  resetHint: "Borra lo que reportaste en esta visita.",
+  failed: "No se pudo cambiar el modo.",
+} as const;
+
+/**
+ * The demo's own voice: the strip along the top, and what a contact button
+ * says when somebody presses it.
+ *
+ * This copy is load-bearing, not decoration. Every phone number, name and
+ * case on this map is invented, and the one thing that must never happen is
+ * somebody in a real emergency finding this page and calling one of them.
+ */
+export const DEMO_LABEL = {
+  banner: "Demo de portafolio",
+  bannerBody:
+    "Datos ficticios: ningún caso, dirección ni teléfono de este mapa es real.",
+  bannerShort: "Datos ficticios",
+  /** Shown where a real build would open WhatsApp or the dialler. */
+  contactTitle: "Contacto de ejemplo",
+  contactBody:
+    "Este número es inventado para la demo, así que el botón no marca ni abre WhatsApp.",
+  contactClose: "Entendido",
 } as const;
 
 /**
@@ -823,9 +845,8 @@ export type NeedRollup =
  * **A contested case was the worst of it.** "Ya ayudé" then "sigue haciendo
  * falta" leaves `status` at `attended`, because people genuinely did turn up
  * — so the one case on the map most in need of hands was wearing the colour
- * that means handled. `reopened` is the second axis the database persists for
- * exactly this — see `sync_need_state` — and it outranks every open state
- * here.
+ * that means handled. `reopened` is the second axis derived for exactly this
+ * — see `deriveNeedState` — and it outranks every open state here.
  *
  * The intensity ramp within amber is the honest version of "how far along is
  * this": it is a count of people, not a percentage of a job nobody has

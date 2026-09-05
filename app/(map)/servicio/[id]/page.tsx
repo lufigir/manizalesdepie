@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { ServiceDAL } from "@/data/service/service.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { getCurrentUser } from "@/data/user/require-user";
-import { clientEnv } from "@/lib/env";
+import { getCurrentUser } from "@/data/user/current-user";
+import { SITE_URL } from "@/lib/env";
 import {
   OG_LABEL,
   SERVICE_TYPE_LABEL,
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/servicio/${service.id}`,
+      url: `${SITE_URL}/servicio/${service.id}`,
       locale: "es_CO",
       type: "website",
     },
@@ -76,7 +76,7 @@ export default async function SharedServicePage({ params }: Params) {
     : [service, ...services];
 
   return (
-    <main className="h-dvh w-full overflow-hidden">
+    <main className="h-full w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
         services={withShared}

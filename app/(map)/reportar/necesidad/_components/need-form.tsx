@@ -20,6 +20,8 @@ import {
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
+import { useDemo } from "../../../_components/demo-store";
+
 import { BarrioPicker } from "../../_components/barrio-picker";
 import { Field, RequiredMark } from "../../_components/field";
 import { PinPicker } from "../../_components/pin-picker";
@@ -52,6 +54,7 @@ export function NeedForm({
   header: React.ReactNode;
 }) {
   const router = useRouter();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   // True once "Publicar" was hit with no barrio. Gates the map's red frame
@@ -98,7 +101,7 @@ export function NeedForm({
     try {
       // The created id is not carried in the URL: `MapWorkspace` does not
       // read a query-driven selection, so there is nothing to hand it to.
-      await reportNeed({
+      const need = await reportNeed({
         category,
         description,
         longitude: point.lng,
@@ -108,6 +111,7 @@ export function NeedForm({
         phone: phone || undefined,
         notes: notes || undefined,
       });
+      demo.add("needs", need);
       router.push("/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : NEED_FORM.failed);

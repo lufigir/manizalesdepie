@@ -24,8 +24,16 @@ export const animalSchema = z.object({
   species: animalSpeciesSchema,
   petName: z.string().nullable(),
   description: z.string(),
-  /** Public URL of the photo, already resolved from the storage path. */
-  photoUrl: z.url().nullable(),
+  /**
+   * Where the photo is, or null.
+   *
+   * A plain string rather than `z.url()`, because neither of the two things
+   * it now holds is an absolute URL: a fixture points at a file committed
+   * under `/public`, and a photo added during a visit is a `data:` URL that
+   * never leaves the browser it was chosen in. The Supabase Storage bucket
+   * this used to resolve against is gone with the rest of the database.
+   */
+  photoUrl: z.string().nullable(),
   lastSeenAt: z.iso.datetime({ offset: true }),
   longitude: z.number().nullable(),
   latitude: z.number().nullable(),
@@ -46,8 +54,12 @@ export type AnimalDTO = z.infer<typeof animalSchema>;
 /**
  * What the public form may submit.
  *
- * The photo is not in here: it is uploaded separately and only its path
- * arrives, so a multi-megabyte file never travels inside a server action.
+ * The photo arrives inline, as a `data:` URL the form built after shrinking
+ * the file in the browser (see `compressImage`). It used to be uploaded to a
+ * bucket first so that only a short path travelled inside the server action;
+ * with no bucket to upload to, the bound that replaces that one is the size
+ * cap below — a server action payload is not a file transport, and the demo
+ * should refuse a 4 MB photo rather than fail obscurely on one.
  */
 export const createAnimalSchema = z.object({
   kind: animalKindSchema,
@@ -58,7 +70,11 @@ export const createAnimalSchema = z.object({
     .trim()
     .min(10, "Describe cómo reconocerlo: color, tamaño, collar")
     .max(600),
-  photoPath: z.string().trim().max(300).optional(),
+  photoUrl: z
+    .string()
+    .trim()
+    .max(900_000, "La foto es demasiado grande")
+    .optional(),
   lastSeenAt: z.iso.datetime({ offset: true }),
   // Bounded to Manizales–Villamaría like every other coordinate here, but
   // optional throughout: someone may only know the barrio.

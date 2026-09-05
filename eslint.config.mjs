@@ -11,10 +11,16 @@ import oxlint from "eslint-plugin-oxlint";
  *   app/  →  data/  →  lib/
  *
  * A Server Component importing a DAL is correct and expected — that is the
- * intended path to the database. What is forbidden is going around it: the
- * service-role client, raw supabase-js, or server-only configuration reaching
- * the UI layer. A client component that imports a DAL fails at build time on
- * the `server-only` marker, which is a stronger guarantee than a lint rule.
+ * intended path to the data. What is forbidden is going around it: reaching
+ * the data source directly from the UI, or from anywhere in `data/` that is
+ * not a DAL. A client component that imports a DAL fails at build time on the
+ * `server-only` marker, which is a stronger guarantee than a lint rule.
+ *
+ * The door these rules guard used to be `@/lib/supabase/*` and
+ * `@supabase/supabase-js`. It is `@/lib/demo/*` now — the fixtures that
+ * replaced the database (see the README). The rule did not change with the
+ * vendor, which is the point of writing it as a boundary rather than as a
+ * mention of Postgres.
  *
  * Everything below turns a violation into an error at the first bad import,
  * instead of after eighty percent of a feature is written.
@@ -24,11 +30,11 @@ const eslintConfig = defineConfig([
   ...nextTs,
 
   {
-    // Deny-by-default: every submodule of `@/lib/supabase/*` is off limits to
-    // the UI unless a `!` line below says otherwise. A vendor added next
-    // month, or a new file under `lib/supabase/`, is unreachable from here
-    // until someone deliberately negates it — never unreachable by omission.
-    name: "manizales/ui-may-not-reach-the-database",
+    // Deny-by-default: every submodule of `@/lib/demo/*` is off limits to the
+    // UI. A new file under `lib/demo/`, or a real database put back behind
+    // the DALs one day, is unreachable from here until someone deliberately
+    // negates it — never unreachable by omission.
+    name: "manizales/ui-may-not-reach-the-data-source",
     files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
     ignores: ["app/api/**"],
     rules: {
@@ -37,58 +43,14 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: [
-                "@/lib/supabase/*",
-                "@supabase/supabase-js",
-                // `map-workspace.tsx` subscribes to realtime straight from
-                // the browser (see AGENTS.md: "Realtime goes browser →
-                // Postgres directly"), which is the one place the UI is
-                // meant to hold a Supabase client at all.
-                "!@/lib/supabase/client",
-              ],
+              // Deny by default and with no exceptions: nothing in the UI
+              // reads the fixtures directly. A page that wants data asks a
+              // DAL, which is what applies the visibility rules — the job
+              // row-level security used to do inside Postgres and that only
+              // `listPublished` does now.
+              group: ["@/lib/demo/*"],
               message:
-                "El cliente con rol de servicio, o cualquier otro cliente de Supabase, salta row-level security o la única puerta de entrada. Solo un *.dal.ts puede importarlo, salvo el cliente de navegador para realtime.",
-            },
-            {
-              group: ["@/lib/env.server"],
-              message:
-                "Las variables de servidor no cruzan a la capa de UI. Pásalas como props desde un Server Component.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-
-  {
-    // The session lives outside `data/` on purpose (see `app/auth/actions.ts`):
-    // signing in and out touches only cookies, never a query, so routing it
-    // through a DAL would blur the one rule that keeps queries in one place.
-    // This narrows the block above back open for `@/lib/supabase/server`
-    // here and nowhere else — the service-role client stays denied.
-    name: "manizales/auth-session-may-use-the-server-client",
-    files: ["app/auth/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: [
-                "@/lib/supabase/*",
-                "@supabase/supabase-js",
-                "!@/lib/supabase/server",
-                // The Google button starts the OAuth redirect from the
-                // browser, so it needs the browser client too.
-                "!@/lib/supabase/client",
-              ],
-              message:
-                "El cliente con rol de servicio salta row-level security. Solo *.dal.ts o la sesión de auth (cliente de servidor o de navegador) pueden importar un cliente de Supabase aquí.",
-            },
-            {
-              group: ["@/lib/env.server"],
-              message:
-                "Las variables de servidor no cruzan a la capa de UI. Pásalas como props desde un Server Component.",
+                "La fuente de datos no se lee desde la UI. Pide los datos a un DAL: es donde se aplica qué puede ver cada quien.",
             },
           ],
         },
@@ -98,27 +60,19 @@ const eslintConfig = defineConfig([
 
   {
     // Deny-by-default for the data layer too: only a `*.dal.ts` file may ever
-    // hold a Supabase client, so nothing here gets a `!` back open.
-    name: "manizales/only-the-dal-touches-the-database",
+    // read the fixtures, so nothing here gets a `!` back open.
+    name: "manizales/only-the-dal-touches-the-data-source",
     files: ["data/**/*.ts"],
-    ignores: [
-      "data/**/*.dal.ts",
-      // Not named `*.dal.ts`, but the same shape by necessity: `requireUser`
-      // resolves the session and reads `profile` before any DAL factory can
-      // run, since every `create()` needs it to build its authorization
-      // context. A second door, opened for the one caller with nowhere else
-      // to stand.
-      "data/user/require-user.ts",
-    ],
+    ignores: ["data/**/*.dal.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           patterns: [
             {
-              group: ["@/lib/supabase/*", "@supabase/supabase-js"],
+              group: ["@/lib/demo/*"],
               message:
-                "Solo *.dal.ts habla con la base de datos. Un DTO, una policy o una action que consulte rompe la única puerta de entrada.",
+                "Solo *.dal.ts lee la fuente de datos. Un DTO, una policy o una action que la consulte rompe la única puerta de entrada.",
             },
           ],
         },
@@ -135,7 +89,7 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/lib/supabase/*", "next/headers", "next/navigation"],
+              group: ["@/lib/demo/*", "next/headers", "next/navigation"],
               message:
                 "Una policy es una función pura: recibe lo que necesita y devuelve un booleano. Sin sesión, sin base de datos, sin efectos.",
             },

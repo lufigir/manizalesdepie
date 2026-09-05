@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { clientEnv } from "@/lib/env";
+import { SITE_URL } from "@/lib/env";
 
 /**
  * Open to crawlers on purpose — someone searching "acopio Manizales" is
@@ -20,6 +20,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/auth/", "/admin", "/reportar/"],
     },
-    sitemap: `${clientEnv.NEXT_PUBLIC_SITE_URL}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

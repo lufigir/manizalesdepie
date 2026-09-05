@@ -1,11 +1,14 @@
 import "server-only";
 
-import { createAdminSupabase } from "@/lib/supabase/admin";
-import { createServerSupabase } from "@/lib/supabase/server";
+import {
+  distanceMeters,
+  sites as siteRows,
+  type SiteRow,
+} from "@/lib/demo/dataset";
 import { log } from "@/lib/log";
-import { getCurrentUser, type CurrentUser } from "@/data/user/require-user";
+import { getCurrentUser, type CurrentUser } from "@/data/user/current-user";
 
-import { resolveNeighborhoodId } from "@/data/geo/geo.dal";
+import { resolveNeighborhood } from "@/data/geo/geo.dal";
 import { canRelocate } from "@/data/geo/relocation.policy";
 
 import {
@@ -24,14 +27,26 @@ import {
   canPublishSite,
 } from "./site.policy";
 
+/** How long a confirmation keeps a site fresh. The database wrote this into
+ *  `expires_at` on every confirmation; it is the same 24 hours. */
+const FRESH_HOURS = 24;
+
 /**
- * The only path from this application to the `sites` table.
+ * The only path from this application to the sites.
  *
- * The private constructor is what makes that guarantee hold: an instance
- * cannot exist without a resolved authorization context, so every method runs
- * with a known identity. The two factories make the difference visible at the
- * call site — `SiteDAL.public()` says "this data is public" out loud, which is
- * much harder to get wrong by accident than an optional parameter.
+ * It used to be the only path to the `sites` table, through PostgREST and
+ * row-level security. The table is gone — see `lib/demo/dataset.ts` — and the
+ * shape of this class is not, because the shape was never about Postgres.
+ * The private constructor is what guarantees an instance cannot exist without
+ * a resolved authorization context, so every method below runs with a known
+ * identity; the two factories make the difference visible at the call site,
+ * where `SiteDAL.public()` says "this data is public" out loud.
+ *
+ * What the demo changed is the far side of every mutation. There is nothing
+ * to write to, so a mutation validates, authorizes, and RETURNS the row it
+ * would have written; the browser holds it for the rest of the visit (see
+ * `demo-store.tsx`). Which means the order below is unchanged and still the
+ * rule: validate input → authorize → mutate → validate output.
  */
 export class SiteDAL {
   private constructor(private readonly user: CurrentUser | null) {}
@@ -49,226 +64,156 @@ export class SiteDAL {
   /**
    * Every published site, newest confirmation first.
    *
-   * Read through the session-bound client so row-level security applies: an
-   * anonymous visitor sees published rows, a curator additionally sees the
-   * pending queue. The filter is the database's job, not a WHERE clause we
-   * could forget.
+   * The `published` filter was row-level security's job and is this line's
+   * now — the one thing lost with the database that had to be replaced by
+   * hand rather than deleted. A curator sees a site they hid too, marked on
+   * the card by `AdminActions`; otherwise `setPublished(id, false)` would
+   * have no way back.
    */
   async listPublished(): Promise<SiteDTO[]> {
-    const supabase = await createServerSupabase();
+    const curator = this.user?.role === "curator";
 
-    let query = supabase
-      .from("sites_public")
-      .select("*, items:site_items(id, label, mode, priority)");
-
-    // A curator sees a site they hid too, marked on the card by
-    // `AdminActions` — otherwise `setPublished(id, false)` would have no
-    // way back short of a direct database query.
-    if (this.user?.role !== "curator") {
-      query = query.eq("published", true);
-    }
-
-    const { data, error } = await query.order("confirmed_at", { ascending: false });
-
-    if (error) {
-      log.error("site.listPublished failed", { code: error.code });
-      throw new Error("No se pudieron cargar los puntos");
-    }
-
-    return (data ?? []).map((row) => this.toDTO(row));
+    return siteRows()
+      .filter((row) => curator || row.published)
+      .sort((a, b) => b.confirmedAt.localeCompare(a.confirmedAt))
+      .map((row) => this.toDTO(row));
   }
 
   /**
-   * One site, or null.
+   * One site, or null. What a shared link resolves to.
    *
-   * This is what a shared link resolves to. It reads through the same
-   * session-bound client as the map, so a link to something unpublished is a
-   * 404 for a stranger and visible to a curator — the link carries no more
-   * authority than the person opening it.
+   * Hidden rows resolve for a curator and 404 for everyone else, exactly as
+   * the list above: the link carries no more authority than the person
+   * opening it.
    */
   async findById(id: string): Promise<SiteDTO | null> {
-    const supabase = await createServerSupabase();
+    const curator = this.user?.role === "curator";
+    const row = siteRows().find((candidate) => candidate.id === id);
 
-    const { data, error } = await supabase
-      .from("sites_public")
-      .select("*, items:site_items(id, label, mode, priority)")
-      .eq("id", id)
-      .maybeSingle();
+    if (!row || (!row.published && !curator)) return null;
 
-    if (error) {
-      log.error("site.findById failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo cargar el punto");
-    }
-
-    return data ? this.toDTO(data) : null;
+    return this.toDTO(row);
   }
 
   /**
-   * Sites within `radiusMeters` of a point, nearest first. Backed by the
-   * PostGIS `<->` operator against the GiST index.
+   * Sites within `radiusMeters` of a point, nearest first.
    *
    * This is what the report form calls before creating anything: if there is
    * already a site 30 m away, the answer is "confirm that one", not "create a
-   * second pin for the same coliseum".
+   * second pin for the same coliseum". PostGIS answered it with `<->`
+   * against a GiST index; at this size a pass over the rows answers it just
+   * as well.
    */
   async findNearby(
     longitude: number,
     latitude: number,
     radiusMeters = 50,
   ): Promise<{ id: string; name: string; type: string; distanceM: number }[]> {
-    const supabase = await createServerSupabase();
-
-    const { data, error } = await supabase.rpc("find_nearby_sites", {
-      lng: longitude,
-      lat: latitude,
-      radius_m: radiusMeters,
-    });
-
-    if (error) {
-      log.error("site.findNearby failed", { code: error.code });
-      throw new Error("No se pudo verificar si ya existe un punto cercano");
-    }
-
-    return (data ?? []).map(
-      (row: { id: string; name: string; type: string; distance_m: number }) => ({
+    return siteRows()
+      .filter((row) => row.published)
+      .map((row) => ({
         id: row.id,
         name: row.name,
         type: row.type,
-        distanceM: Math.round(row.distance_m),
-      }),
-    );
+        distanceM: Math.round(
+          distanceMeters(longitude, latitude, row.longitude, row.latitude),
+        ),
+      }))
+      .filter((row) => row.distanceM <= radiusMeters)
+      .sort((a, b) => a.distanceM - b.distanceM);
   }
 
   /**
-   * Reports a site. It is on the map immediately.
-   *
-   * It used to land unpublished behind a curator. That gate was removed on
-   * purpose: in a fast emergency the reviewer becomes the bottleneck and the
-   * information arrives after it was needed. What replaces it is confidence
-   * shown rather than enforced — a new report reads "sin confirmar" until
-   * people vouch for it, and a curator can still take it down.
+   * Reports a site. It is on the map immediately — for the person who
+   * reported it, which in this demo is as far as anything travels.
    *
    * Order, in every mutation, without exception:
    *   1. validate input   2. authorize   3. mutate   4. validate output
    */
-  async propose(input: unknown): Promise<{ id: string }> {
+  async propose(input: unknown): Promise<SiteDTO> {
     const data = createSiteSchema.parse(input);
 
     if (!canProposeSite()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const { data: row, error } = await supabase
-      .from("sites")
-      .insert({
-        type: data.type,
-        name: data.name,
-        description: data.description ?? null,
-        address: data.address ?? null,
-        location: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
-        schedule: data.schedule ?? null,
-        whatsapp: data.whatsapp ?? null,
-        published: true,
-        created_by: this.user?.id ?? null,
-      })
-      .select("id")
-      .single();
+    const now = new Date();
 
-    if (error || !row) {
-      log.error("site.propose failed", { code: error?.code });
-      throw new Error("No se pudo guardar el punto");
-    }
+    // The barrio is derived from the point, never sent by the caller — the
+    // `site_sets_neighborhood` trigger's rule, kept.
+    const site = siteSchema.parse({
+      id: crypto.randomUUID(),
+      type: data.type,
+      name: data.name,
+      description: data.description ?? null,
+      address: data.address ?? null,
+      longitude: data.longitude,
+      latitude: data.latitude,
+      neighborhood: resolveNeighborhood(data.longitude, data.latitude)?.name ?? null,
+      status: "unknown",
+      schedule: data.schedule ?? null,
+      whatsapp: data.whatsapp ?? null,
+      confirmedCount: 0,
+      confirmedAt: now.toISOString(),
+      expiresAt: new Date(
+        now.getTime() + FRESH_HOURS * 3_600_000,
+      ).toISOString(),
+      items: [],
+      published: true,
+    });
 
-    log.info("site proposed", { siteId: row.id, byUser: this.user?.id ?? "anon" });
-    return { id: row.id };
+    log.info("site proposed", { siteId: site.id, byUser: this.user?.id ?? "anon" });
+    return site;
   }
 
   /** Makes a site visible to the city. Curators only. */
-  async publish(id: string): Promise<void> {
+  async publish(id: string): Promise<Partial<SiteDTO>> {
     if (!canPublishSite(this.user)) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const { error } = await supabase
-      .from("sites")
-      .update({ published: true, confirmed_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) {
-      log.error("site.publish failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo publicar el punto");
-    }
-
     log.info("site published", { siteId: id, byUser: this.user?.id });
+    return { published: true, confirmedAt: new Date().toISOString() };
   }
 
   /**
    * Someone stood in front of the place and told us what they saw. Resets the
-   * freshness clock and logs the confirmation, which is the mechanism that
-   * keeps this map from becoming a list of places that closed last Tuesday.
+   * freshness clock, which is the mechanism that keeps this map from becoming
+   * a list of places that closed last Tuesday.
    */
-  async confirmStatus(input: unknown): Promise<void> {
+  async confirmStatus(input: unknown): Promise<Partial<SiteDTO>> {
     const { id, status } = updateSiteStatusSchema.parse(input);
 
     if (!canConfirmSite()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const now = new Date().toISOString();
+    const now = new Date();
 
-    const { error } = await supabase
-      .from("sites")
-      .update({
-        status,
-        confirmed_at: now,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      log.error("site.confirmStatus failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo confirmar el estado");
-    }
-
-    await supabase.from("site_confirmations").insert({
-      // `site_id` is the whole relationship. The table still carries the old
-      // `entity`/`entity_id` pair, but 20260818040000 made them nullable so
-      // nothing has to write them any more; the contract migration drops them
-      // as dead columns, with no deploy that has to land at the same moment.
-      site_id: id,
-      result: status === "closed" ? "no_longer_valid" : "still_valid",
-      // Anonymous confirmations are the common case now, so the signature is
-      // optional. An unsigned row still counts; it just carries no name.
-      created_by: this.user?.id ?? null,
-    });
+    log.info("site status confirmed", { siteId: id, status });
+    return {
+      status,
+      confirmedAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + FRESH_HOURS * 3_600_000).toISOString(),
+    };
   }
 
   /** Corrects a site's own fields. Open to anyone — see `canEditSite`.
-   *  Never the coordinate: that is `relocate` above. */
-  async update(input: unknown): Promise<void> {
+   *  Never the coordinate: that is `relocate` below. */
+  async update(input: unknown): Promise<Partial<SiteDTO>> {
     const data = updateSiteSchema.parse(input);
 
     if (!canEditSite()) throw new Error("Forbidden");
 
-    const patch: Record<string, unknown> = {};
+    const patch: Partial<SiteDTO> = {};
     if (data.type !== undefined) patch.type = data.type;
     if (data.name !== undefined) patch.name = data.name;
     if (data.description !== undefined) patch.description = data.description;
     if (data.address !== undefined) patch.address = data.address;
     if (data.schedule !== undefined) patch.schedule = data.schedule;
     if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
-    if (Object.keys(patch).length === 0) return;
-
-    const supabase = createAdminSupabase();
-    const { error } = await supabase.from("sites").update(patch).eq("id", data.id);
-
-    if (error) {
-      log.error("site.update failed", { code: error.code, siteId: data.id });
-      throw new Error("No se pudo actualizar el punto");
-    }
 
     log.info("site updated", {
       siteId: data.id,
       fields: Object.keys(patch),
       byUser: this.user?.id ?? "anon",
     });
+
+    return patch;
   }
 
   /**
@@ -278,85 +223,59 @@ export class SiteDAL {
    * anywhere in the covered area. See `canRelocate` for why the rule is that
    * shape rather than curator-only.
    *
-   * The barrio is NOT written here. `site_sets_neighborhood` re-derives it
-   * from the new point, the same trigger that stamped it on insert, so the
-   * name in the panel and the pin on the map cannot disagree. That is also
-   * why `neighborhood_id` stays out of the patch: the trigger returns early
-   * when an update changes it by hand, which would pin the old barrio onto
-   * the new coordinate.
-   *
-   * Order, as in every mutation: validate input → authorize → mutate.
+   * The barrio is re-derived from the destination rather than carried over,
+   * which is what the `site_sets_neighborhood` trigger did and for the same
+   * reason: the name in the panel and the pin on the map cannot be allowed
+   * to disagree.
    */
-  async relocate(input: unknown): Promise<void> {
+  async relocate(input: unknown): Promise<Partial<SiteDTO>> {
     const { id, longitude, latitude } = relocateSiteSchema.parse(input);
 
-    const supabase = createAdminSupabase();
+    const current = siteRows().find((row) => row.id === id);
+    const currentBarrio = current
+      ? (resolveNeighborhood(current.longitude, current.latitude)?.id ?? null)
+      : // A pin created during this visit is not in the fixtures, so there is
+        // no stored barrio to compare against. It was placed by the person
+        // moving it, minutes ago, which is the case `canRelocate` is least
+        // worried about.
+        null;
 
-    const { data: current, error: readError } = await supabase
-      .from("sites")
-      .select("neighborhood_id")
-      .eq("id", id)
-      .maybeSingle();
+    const target = resolveNeighborhood(longitude, latitude);
 
-    if (readError || !current) {
-      log.error("site.relocate lookup failed", { code: readError?.code, siteId: id });
-      throw new Error("No se pudo encontrar el punto");
-    }
-
-    const target = await resolveNeighborhoodId(longitude, latitude);
-
-    if (!canRelocate(this.user, current.neighborhood_id, target)) {
+    if (!canRelocate(this.user, currentBarrio, target?.id ?? null)) {
       throw new Error(
         "Solo puedes mover el punto dentro de su propio barrio. Si está en el barrio equivocado, repórtalo.",
       );
     }
 
-    const { error } = await supabase
-      .from("sites")
-      .update({ location: `SRID=4326;POINT(${longitude} ${latitude})` })
-      .eq("id", id);
-
-    if (error) {
-      log.error("site.relocate failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo mover el punto");
-    }
-
     log.info("site relocated", { siteId: id, byUser: this.user?.id ?? "anon" });
+    return { longitude, latitude, neighborhood: target?.name ?? null };
   }
 
   /** A curator hides or republishes a site — reversible, the same
-   *  `published` column every list already filters by. */
-  async setPublished(id: string, published: boolean): Promise<void> {
+   *  `published` flag every list above filters by. */
+  async setPublished(id: string, published: boolean): Promise<Partial<SiteDTO>> {
     if (!canManageSite(this.user)) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const { error } = await supabase.from("sites").update({ published }).eq("id", id);
-
-    if (error) {
-      log.error("site.setPublished failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo cambiar la visibilidad del punto");
-    }
+    log.info("site visibility changed", {
+      siteId: id,
+      published,
+      byUser: this.user!.id,
+    });
+    return { published };
   }
 
-  /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
-   *  to `site_items`. */
+  /** Removing a site outright — curators only, for spam and test rows. */
   async remove(id: string): Promise<void> {
     if (!canManageSite(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const { error } = await supabase.from("sites").delete().eq("id", id);
-
-    if (error) {
-      log.error("site.remove failed", { code: error.code, siteId: id });
-      throw new Error("No se pudo eliminar el punto");
-    }
 
     log.info("site deleted", { siteId: id, byUser: this.user!.id });
   }
 
-  /** Map explicitly, never spread. A column added tomorrow stays server-side
-   *  until someone deliberately adds it here and to the schema. */
-  private toDTO(row: Record<string, unknown>): SiteDTO {
+  /** Map explicitly, never spread. A field added to the fixture tomorrow
+   *  stays server-side until someone deliberately adds it here and to the
+   *  schema. */
+  private toDTO(row: SiteRow): SiteDTO {
     return siteSchema.parse({
       id: row.id,
       type: row.type,
@@ -369,10 +288,10 @@ export class SiteDAL {
       status: row.status,
       schedule: row.schedule,
       whatsapp: row.whatsapp,
-      confirmedCount: row.confirmed_count,
-      confirmedAt: row.confirmed_at,
-      expiresAt: row.expires_at,
-      items: row.items ?? [],
+      confirmedCount: row.confirmedCount,
+      confirmedAt: row.confirmedAt,
+      expiresAt: row.expiresAt,
+      items: row.items,
       published: row.published,
     });
   }

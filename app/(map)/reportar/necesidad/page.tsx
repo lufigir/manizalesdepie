@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
-import { getCurrentUser } from "@/data/user/require-user";
+import { getCurrentUser } from "@/data/user/current-user";
 import { NEED_FORM } from "@/lib/labels";
 
 import { ReportLayout } from "../_components/report-layout";

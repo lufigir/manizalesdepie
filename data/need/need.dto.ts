@@ -18,8 +18,8 @@ import { z } from "zod";
  * this".
  *
  * Later the same day, status stopped being something anyone writes at all.
- * It is derived in the database from `need_updates` — see
- * `sync_need_state` — because closing used to be one anonymous tap and
+ * It is derived from the case's own thread — see `deriveNeedState` — because
+ * closing used to be one anonymous tap and
  * a single bad actor could take any case off the map. Nothing in this module
  * sends a status; it only ever reads one back.
  */
@@ -70,8 +70,8 @@ export const needSchema = z.object({
    *  same case at once, so there is no single "was it me" flag to give
    *  back the way a lone claimant used to have. */
   onTheWayCount: z.number().int().min(0),
-  /** Distinct people who said "ya ayudé". Two of them, from two different
-   *  numbers, is what closes a case — see `sync_need_state`. Shown
+  /** People who said "ya ayudé". It closes nothing — a second one buys the
+   *  case a colour, not a terminal status (see `deriveNeedState`). Shown
    *  beside the count above because "cuántos van" and "cuántos ya fueron"
    *  are different questions and a reader deciding whether to go needs
    *  both. */
@@ -79,8 +79,8 @@ export const needSchema = z.object({
   /**
    * Somebody said "sigue haciendo falta" AFTER the last "ya ayudé".
    *
-   * Derived in the database alongside `status` and never written by this
-   * application — see `sync_need_state`. It exists because the status of a
+   * Derived alongside `status` and never written by this application — see
+   * `deriveNeedState`. It exists because the status of a
    * contested case is still `attended` (people did turn up, and the thread
    * should keep saying so), which on its own would paint the pin green.
    * Read it with `needRollup`, which is where the two are combined into the
@@ -168,11 +168,9 @@ export type NeedUpdateKind = z.infer<typeof needUpdateKindSchema>;
  * blank publishes the entry as "Anónimo", the same way a site report already
  * can.
  *
- * That trade has one real consequence, documented where it is enforced: a
- * `helped` entry with no phone still shows in the thread and still counts
- * toward "attended", but it can never be one of the two DISTINCT phone
- * numbers `sync_need_state` needs to close a case. Anonymity is free
- * everywhere except the one action that takes a case off the map.
+ * Anonymity costs nothing at all now: an unsigned entry counts exactly like a
+ * signed one, because no count closes a case any more. What a phone buys is
+ * that the next person on the case can ask what you found.
  *
  * Phone, when given, is a bare Colombian mobile number — ten digits, no
  * indicativo. This app covers Manizales and Villamaría only.

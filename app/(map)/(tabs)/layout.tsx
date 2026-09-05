@@ -3,7 +3,7 @@ import { NeighborhoodDAL } from "@/data/neighborhood/neighborhood.dal";
 import { NeedDAL } from "@/data/need/need.dal";
 import { ServiceDAL } from "@/data/service/service.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { getCurrentUser } from "@/data/user/require-user";
+import { getCurrentUser } from "@/data/user/current-user";
 
 import { MapWorkspace } from "../_components/map-workspace";
 
@@ -40,7 +40,7 @@ export default async function TabsLayout() {
   ]);
 
   return (
-    <main className="h-dvh w-full overflow-hidden">
+    <main className="h-full w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
         animals={animals}

@@ -17,26 +17,37 @@ The product answers one question: **"¿dónde ayudo hoy?"** It is not a director
 When a change makes that question harder to answer in the first three seconds,
 the change is wrong regardless of how good the feature is.
 
-## Open debt: a rename migration is written but NOT applied
+## This runs as a demo: there is no database
 
-`supabase/migrations/20260818090000_contract_drop_legacy_names.sql` exists in
-the repo and has **not** been run against the database. Every table went
-plural on 18 August (`sites`, `site_items`, `site_confirmations`, `needs`,
-`need_updates`, `services`, `animal_reports`, `neighborhoods`, `profiles`),
-and the code in this repo already talks to the plural tables and the
-`*_public` views built on them. What keeps a still-deployed build of the old
-code alive during the rollout is 14 compatibility views under the old
-singular names (`site`, `need`, `work_order`, `confirmation`, …) plus their
-own `*_public` wrappers — see `20260818030000_expand_plural_names.sql`.
+The emergency is over and the Supabase project is gone. What replaces it is
+`lib/demo/dataset.ts` plus the JSON beside it: a fixed snapshot of invented
+reports, read at request time, plus `public/barrios.geojson` for the barrio
+each pin falls in. Every name, phone and address in the fixtures is made up,
+and the copy says so — see `DEMO_LABEL` and `demo-banner.tsx`.
 
-Applying the contract migration drops all 14 of those views, drops the
-redundant `needs.state` column, and drops the dead `entity`/`entity_id`
-columns on `site_confirmations`. **Do this only after the plural-named code
-in this repo is confirmed running in production** — applying it earlier
-takes down whatever old build is still receiving traffic. If you are looking
-for the compatibility views and cannot find them, this is why: check whether
-the contract migration has already run before assuming they were never
-there.
+The shape of the code did not change with the backend, and that is the point:
+DTOs, policies and the DAL classes with private constructors are all still
+here, and the import boundaries below still deny by default. What changed is
+the far side of a mutation. **There is nowhere to write, so a mutation
+validates, authorizes and RETURNS the row it would have written**; the browser
+holds it for the rest of the visit (`app/(map)/_components/demo-store.tsx`).
+A server action therefore returns a DTO or a patch and calls no
+`revalidatePath`: re-rendering would hand back the same fixture and discard
+what the reader just did.
+
+Two things the database used to do now live in code, and both are load-bearing:
+
+- `deriveNeedState` in `data/need/need.policy.ts` is the `sync_need_state`
+  trigger, as a pure function. Server and browser both derive a case's status
+  from its own thread with it.
+- `resolveNeighborhood` in `data/geo/geo.dal.ts` is `neighborhood_at`:
+  point-in-polygon over the 114 official barrios. The barrio is never sent by
+  a caller and never stored in a fixture.
+
+`supabase/` stays in the repo as an artefact: 36 migrations, RLS, PostGIS and
+the seed. Nothing runs it, nothing imports it, and
+`20260818090000_contract_drop_legacy_names.sql` was never applied. Read it for
+the reasoning; do not wire it back in without reopening the decision.
 
 ## Language
 
@@ -52,27 +63,26 @@ app/  →  data/  →  lib/
 ```
 
 - `app/` holds routes, layouts and colocated components. Nothing else.
-- `data/` is the only path to the database. **No Supabase query in a page, a
-  component, a route handler, or an action.** A Server Component importing a
+- `data/` is the only path to the data. **No `@/lib/demo/*` import in a page,
+  a component, a route handler, or an action.** A Server Component importing a
   DAL is correct; that is the intended path.
-- `lib/` holds shared plumbing: clients, config, logging, labels.
+- `lib/` holds shared plumbing: the dataset, config, logging, labels.
 
 Illegal imports, enforced in `eslint.config.mjs` and mirrored in
 `oxlint.config.ts`:
 
 | From | May not import | Why |
 |---|---|---|
-| `app/`, `components/` | any `@/lib/supabase/*` client, `@supabase/supabase-js` | The service-role client bypasses row-level security; every other client belongs behind a DAL. `map-workspace.tsx` (realtime) and the auth session (`app/auth/**`) are the two named exceptions — see `eslint.config.mjs`. |
-| `app/`, `components/` | `@/lib/env.server` | Server config does not cross into the browser bundle |
-| `data/**` except `*.dal.ts` | any `@/lib/supabase/*` client, `@supabase/supabase-js` | One door to the database, not two. `data/user/require-user.ts` is the one named exception: it resolves the session every DAL factory needs before it can build its authorization context. |
+| `app/`, `components/` | `@/lib/demo/*` | The visibility rules — what a visitor sees versus a curator — live in the DAL's `listPublished`, which is where row-level security's job went. Reading the fixtures directly skips them. |
+| `data/**` except `*.dal.ts` | `@/lib/demo/*` | One door to the data, not two. |
 | `*.policy.ts` | anything with a session or a query | Policies are pure predicates |
 | `app/**`, `components/**` (not `ui/`) | literal Tailwind colours | The palette lives in `app/globals.css` |
 
 Both configs deny by default: an import path is blocked unless it matches a
-`!`-negated exception written into the pattern. A new file under
-`lib/supabase/` or a new database vendor is unreachable from `app/` or
-`data/**` the moment it exists, not just after someone remembers to add it to
-a list.
+`!`-negated exception written into the pattern. A new file under `lib/demo/`,
+or a real database put back behind the DALs one day, is unreachable from
+`app/` or `data/**` the moment it exists, not just after someone remembers to
+add it to a list.
 
 ## Where a new feature goes
 
@@ -87,12 +97,12 @@ Adding an entity means four files in `data/<module>/`, created in this order:
    `public()` for genuinely public reads), so an instance cannot exist without
    a resolved authorization context.
 4. `<module>.actions.ts` — `"use server"`. Orchestration only: build the DAL,
-   call it, revalidate.
+   call it, return what it returned.
 
 Copy the shape of `data/site/` exactly. It is the reference implementation.
 
 **Order inside every mutation, no exceptions:** validate input → authorize →
-mutate → validate output. Map rows to DTOs explicitly; never spread a database
+mutate → validate output. Map rows to DTOs explicitly; never spread a stored
 row into a response.
 
 ## Guardrails — things that never happen here
@@ -117,7 +127,8 @@ row into a response.
   Since 15 August `status` is not writable by the application at all: entries
   go into `need_updates` — *voy* (`on_the_way`), *ya ayudé* (`helped`),
   *sigue haciendo falta* (`still_needed`), *no es real* (`not_real`) — and
-  `sync_need_state` derives the status from them. Until 16 August two "ya
+  `deriveNeedState` (`data/need/need.policy.ts`, the old `sync_need_state`
+  trigger as a pure function) derives the status from them. Until 16 August two "ya
   ayudé" from two distinct phones also **closed** the case; that threshold is
   gone, because the premise under it was false — help arriving is not the
   same event as a household no longer needing help, and reading it as one
@@ -128,7 +139,7 @@ row into a response.
   contactable. "Sigue haciendo falta" still outranks every help before it and
   puts the case back to full red (`reopened`). Closing survives only as a
   curator's decision — `closed_completed` and `closed_rejected`, both
-  statements somebody is accountable for — and `sync_need_state` freezes
+  statements somebody is accountable for — and `deriveNeedState` freezes
   every closed state against later entries. If a feature ever needs to set a
   status directly, it is the feature that is wrong.
 - **Moving a pin is a neighbour's correction, not a curator's privilege —
@@ -142,23 +153,23 @@ row into a response.
   boundary to respect and anyone may move it. Walking a pin across the city
   is the destructive version and is the only thing refused, because the
   barrio drives the panel's filter, the frente weighting and every count
-  anyone reads. The barrio is never written by the application — the
-  `*_sets_neighborhood` triggers re-derive it from the new point, which is
-  why `neighborhood_id` stays out of the update.
-- **Realtime goes browser → Postgres directly, so RLS is the guard there, not
-  the DAL.** `sites` is the only table published to a realtime channel — see
-  `map-workspace.tsx`. Any new sensitive column must live in a table that no
-  channel subscribes to. Do not "temporarily" add one to a published table.
+  anyone reads. The barrio is never written by the application — the DAL
+  re-derives it from the new point through `resolveNeighborhood`, the same
+  call it authorized with, which is what the `*_sets_neighborhood` triggers
+  used to guarantee.
+- **A contact button never dials.** Every phone number here is invented, and
+  an invented Colombian mobile is somebody's real number. The buttons keep
+  their place and say what they are — see `DemoContactButton`.
 - **Nothing is deleted for being stale.** It is labelled stale and demoted.
-  Every perishable table carries `confirmed_at` + `expires_at`.
+  Every perishable row carries `confirmedAt` + `expiresAt`.
 - **No literal colours in components.** `bg-pending`, not `bg-red-500`.
 - **`components/ui/` is owned by the shadcn and mapcn CLIs.** Editing those
   files loses the change on the next update. Wrap them instead.
-- **kebab-case for source files, snake_case in the database.** Always.
+- **kebab-case for source files.** Always.
 
 ## Resolved versions
 
-Verified against `package.json` on 18 August 2026.
+Verified against `package.json` on 5 September 2026.
 
 | | |
 |---|---|
@@ -169,40 +180,35 @@ Verified against `package.json` on 18 August 2026.
 | shadcn CLI | 4.18.0 |
 | mapcn | shadcn registry, `@mapcn/map` (pins maplibre-gl to 5.x — see README) |
 | maplibre-gl | 5.24.0 |
-| @supabase/supabase-js | 2.112.3 |
-| @supabase/ssr | 0.12.4 |
 | Zod | 4.4.3 |
 | oxlint | 1.79.0, run type-aware via `oxlint-tsgolint` |
-| PostGIS | Supabase extension |
 
 Version-specific things that are easy to get wrong:
 
-- **`middleware.ts` does not exist in Next 16.** The file is `proxy.ts`, the
-  export is `proxy`, the runtime is Node and cannot be configured. Having both
-  files is a build error. Supabase's own docs still say `middleware.ts`; the
-  pattern is right, the filename is stale.
-- **Session refresh is `supabase.auth.getClaims()`**, called early, before the
-  response is committed. Later than that and the refreshed cookie is lost.
+- **`middleware.ts` does not exist in Next 16.** The file is `proxy.ts` and
+  the export is `proxy`. There is none in this repo — the only thing it did
+  was refresh a Supabase session — and having both files would be a build
+  error, so add it back only for something that genuinely needs to run on
+  every request.
 - **PPR is not experimental any more:** `cacheComponents: true`.
   `unstable_cache` is replaced by the `use cache` directive.
-- **PostGIS columns serialise as WKB hex through PostgREST.** Read through the
-  `sites_public` / `needs_public` / `services_public` / `animal_reports_public`
-  / `neighborhoods_public` / `need_updates_public` views, which project
-  `longitude` and `latitude`. All are declared `security_invoker = on`;
-  without that they would bypass every RLS policy.
+- **`public/barrios.geojson` is read from disk at request time.** Nothing
+  imports it, so `outputFileTracingIncludes` in `next.config.ts` is what
+  keeps it in the deployment. Drop that entry and every pin silently loses
+  its barrio in production while working locally.
 - **`oxlint --type-aware` needs `oxlint-tsgolint` installed**, not just
   `oxlint` itself — the type-checked rules (`typescript/no-floating-promises`)
   silently refuse to run without it.
 
 ## External data
 
-| Source | Gives us | Key |
-|---|---|---|
-| Nominatim | Geocoding an address the user typed | No |
-| Overpass | POI suggestions, and the accented spelling of barrio names | No |
-| SIG Alcaldía de Manizales | The official barrio polygons (ArcGIS open data) | No |
-| SGC | Live aftershocks | No |
-| CARTO | Basemap tiles (mapcn default) | No |
+The demo calls exactly one host at runtime, and it is the basemap.
+
+| Source | Gives us | When | Key |
+|---|---|---|---|
+| CARTO | Basemap tiles (mapcn default) | Every map load | No |
+| SIG Alcaldía de Manizales | The barrio polygons and the sector names | Build time, by hand (`scripts/`) | No |
+| Wikimedia Commons | The demo's animal photos | Once, committed to `public/mascotas/` | No |
 
 **INVIAS has an API but it does not carry closures** — only the road network.
 Daily landslide bulletins, and IDEAM's landslide alerts, are published as PDF,
@@ -212,13 +218,17 @@ from a road that reopened this morning, and maintaining that table by hand was
 a standing commitment nobody took. `closed_road` existed briefly and was
 dropped on 14 August — do not go looking for it.
 
-## Seed data warning
+## The fixtures, and the seed they are not
 
-`supabase/seed.sql` carries real names, needs and closures from press reporting,
-but **the coordinates are approximate and unverified**. Everything is seeded
-`published = false` on purpose. Somebody geocodes and confirms each row before
-it becomes visible. Sending someone to the wrong shelter is worse than having no
-pin at all.
+`lib/demo/fixtures/*.json` is invented from end to end: names, phones,
+addresses, threads. Keep it that way. Two rows carry `published: false` on
+purpose — without them the curator's queue is empty and half the product is
+invisible.
+
+`supabase/seed.sql` is the opposite and is **not** loaded anywhere: it carries
+real names and phone numbers from press reporting, with coordinates its own
+header calls approximate and unverified. Do not copy rows from it into a
+fixture.
 
 There is no "verificado por un curador" any more, on any table: the column and
 the badge were removed on 15 August because this project will not have a

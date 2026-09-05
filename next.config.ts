@@ -4,36 +4,28 @@ import type { NextConfig } from "next";
  * Content-Security-Policy notes:
  *  - MapLibre compiles its style expressions with `new Function`, so the worker
  *    and script sources need `blob:` and `'unsafe-eval'` in development.
- *  - Basemap tiles come from CARTO, geocoding from Nominatim/Overpass, and
- *    aftershocks from the SGC; each host is named rather than wildcarded.
+ *  - The only host left is CARTO, for the basemap tiles. Supabase used to be
+ *    here twice — https for PostgREST and Storage, wss for the realtime
+ *    channel — and both went with the database.
  */
 const connectSources = [
   "'self'",
-  "https://*.supabase.co",
-  "wss://*.supabase.co",
   "https://basemaps.cartocdn.com",
   "https://*.basemaps.cartocdn.com",
-  "https://nominatim.openstreetmap.org",
-  "https://overpass-api.de",
-  "https://datos.sgc.gov.co",
-  "https://challenges.cloudflare.com",
 ].join(" ");
 
 const csp = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   `worker-src 'self' blob:`,
   `child-src 'self' blob:`,
   `style-src 'self' 'unsafe-inline'`,
-  // Supabase Storage serves the animal photos. blob: is here for the local
-  // preview the report form shows before anything is uploaded.
-  // googleusercontent is where Google hosts the profile picture that comes
-  // back on the OIDC claims: without it the account bubble renders a broken
-  // <img> and silently falls back to nothing.
-  `img-src 'self' data: blob: https://*.supabase.co https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://*.googleusercontent.com`,
+  // The animal photos are committed under /public now, so 'self' covers
+  // them. `data:` is what a photo added during a visit arrives as, and
+  // `blob:` is the preview the report form shows while it is being chosen.
+  `img-src 'self' data: blob: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com`,
   `font-src 'self' data:`,
   `connect-src ${connectSources}`,
-  `frame-src https://challenges.cloudflare.com`,
   `frame-ancestors 'none'`,
   `base-uri 'self'`,
   `form-action 'self'`,
@@ -48,16 +40,14 @@ const nextConfig: NextConfig = {
   // it on a real one is not optional.
   allowedDevOrigins: ["192.168.1.136"],
 
-  images: {
-    // Animal photos live in Supabase Storage. Narrowed to the storage path so
-    // the optimizer cannot be pointed at arbitrary URLs on the project host.
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      },
-    ],
+  /**
+   * `public/barrios.geojson` is read at request time by `lib/demo/dataset.ts`
+   * — it is what stamps the barrio on every pin, the job PostGIS used to do.
+   * Nothing imports it, so the file tracer cannot know a server render needs
+   * it, and its absence would silently turn every barrio into "no barrio".
+   */
+  outputFileTracingIncludes: {
+    "/*": ["./public/barrios.geojson"],
   },
 
   async headers() {

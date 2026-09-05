@@ -1,0 +1,892 @@
+[
+ {
+  "name": "La Quinta",
+  "municipality": "manizales",
+  "parent": "Ciudadela la Linda"
+ },
+ {
+  "name": "Hospital Geriatrico san Isidro",
+  "municipality": "manizales",
+  "parent": "Bella Montaña"
+ },
+ {
+  "name": "Escuela de Trabajo la Linda",
+  "municipality": "manizales",
+  "parent": "Bella Montaña"
+ },
+ {
+  "name": "Villa Pilar II",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Torres de Avila",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Venecia",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "San Luis (Villapilar)",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Aquilino Villegas",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Urb. Atalaya",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Urb. Bello Horizonte",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Urb. Santa Mónica",
+  "municipality": "manizales",
+  "parent": "Villapilar"
+ },
+ {
+  "name": "Chipre Viejo",
+  "municipality": "manizales",
+  "parent": "Chipre"
+ },
+ {
+  "name": "Balcones de Chipre",
+  "municipality": "manizales",
+  "parent": "Chipre"
+ },
+ {
+  "name": "Bellavista",
+  "municipality": "manizales",
+  "parent": "Chipre"
+ },
+ {
+  "name": "La Chimenea I y II",
+  "municipality": "manizales",
+  "parent": "Campohermoso"
+ },
+ {
+  "name": "Altos de Castilla",
+  "municipality": "manizales",
+  "parent": "Campohermoso"
+ },
+ {
+  "name": "Terrazas de Campohermoso",
+  "municipality": "manizales",
+  "parent": "Campohermoso"
+ },
+ {
+  "name": "Conjunto Campohermoso",
+  "municipality": "manizales",
+  "parent": "Campohermoso"
+ },
+ {
+  "name": "Universidad de Manizales",
+  "municipality": "manizales",
+  "parent": "Campohermoso"
+ },
+ {
+  "name": "Topacio",
+  "municipality": "manizales",
+  "parent": "Morrogacho"
+ },
+ {
+  "name": "Montana",
+  "municipality": "manizales",
+  "parent": "Morrogacho"
+ },
+ {
+  "name": "Palmar",
+  "municipality": "manizales",
+  "parent": "La Francia"
+ },
+ {
+  "name": "San Francisco",
+  "municipality": "manizales",
+  "parent": "La Francia"
+ },
+ {
+  "name": "Poblado",
+  "municipality": "manizales",
+  "parent": "La Francia"
+ },
+ {
+  "name": "San Remo",
+  "municipality": "manizales",
+  "parent": "La Francia"
+ },
+ {
+  "name": "Candelaria",
+  "municipality": "manizales",
+  "parent": "La Francia"
+ },
+ {
+  "name": "Portal de los Alcazares",
+  "municipality": "manizales",
+  "parent": "Los Alcázares"
+ },
+ {
+  "name": "Portales",
+  "municipality": "manizales",
+  "parent": "Los Alcázares"
+ },
+ {
+  "name": "Villa Real",
+  "municipality": "manizales",
+  "parent": "Los Alcázares"
+ },
+ {
+  "name": "Quinta Hispania",
+  "municipality": "manizales",
+  "parent": "Los Alcázares"
+ },
+ {
+  "name": "Asturias",
+  "municipality": "manizales",
+  "parent": "Los Alcázares"
+ },
+ {
+  "name": "Jazmin",
+  "municipality": "manizales",
+  "parent": "Asís"
+ },
+ {
+  "name": "Camino del Medio",
+  "municipality": "manizales",
+  "parent": "Avanzada"
+ },
+ {
+  "name": "Tachuelo",
+  "municipality": "manizales",
+  "parent": "Avanzada"
+ },
+ {
+  "name": "Alto Galan",
+  "municipality": "manizales",
+  "parent": "Galán"
+ },
+ {
+  "name": "Maizal",
+  "municipality": "manizales",
+  "parent": "Galán"
+ },
+ {
+  "name": "Holanda",
+  "municipality": "manizales",
+  "parent": "Galán"
+ },
+ {
+  "name": "Sierra Morena (Estrada)",
+  "municipality": "manizales",
+  "parent": "Estrada"
+ },
+ {
+  "name": "San Vicente",
+  "municipality": "manizales",
+  "parent": "San José"
+ },
+ {
+  "name": "Galerias",
+  "municipality": "manizales",
+  "parent": "Colón"
+ },
+ {
+  "name": "La Riviera",
+  "municipality": "manizales",
+  "parent": "Alta Suiza"
+ },
+ {
+  "name": "Torres de Oriente",
+  "municipality": "manizales",
+  "parent": "Colseguros"
+ },
+ {
+  "name": "Agrícola de Seguros",
+  "municipality": "manizales",
+  "parent": "Colseguros"
+ },
+ {
+  "name": "Escuela de Carabineros",
+  "municipality": "manizales",
+  "parent": "La Toscana"
+ },
+ {
+  "name": "Balcones de la Palma",
+  "municipality": "manizales",
+  "parent": "Bosques de Niza"
+ },
+ {
+  "name": "Camino de la Palma",
+  "municipality": "manizales",
+  "parent": "Bosques de Niza"
+ },
+ {
+  "name": "Rincón de la Palma",
+  "municipality": "manizales",
+  "parent": "Bosques de Niza"
+ },
+ {
+  "name": "Cerro de Oro",
+  "municipality": "manizales",
+  "parent": "Bosques de Niza"
+ },
+ {
+  "name": "Mirador de la Sierra",
+  "municipality": "manizales",
+  "parent": "Bosques de Niza"
+ },
+ {
+  "name": "Colinas de San Sebastián",
+  "municipality": "manizales",
+  "parent": "Bosques de Niza"
+ },
+ {
+  "name": "El Pinar",
+  "municipality": "manizales",
+  "parent": "San Marcel"
+ },
+ {
+  "name": "Arboletes",
+  "municipality": "manizales",
+  "parent": "San Marcel"
+ },
+ {
+  "name": "Conjunto cerrado Santa Ana",
+  "municipality": "manizales",
+  "parent": "San Marcel"
+ },
+ {
+  "name": "Chachafruto",
+  "municipality": "manizales",
+  "parent": "San Marcel"
+ },
+ {
+  "name": "Bosque Popular",
+  "municipality": "manizales",
+  "parent": "San Marcel"
+ },
+ {
+  "name": "El portal del Bosque",
+  "municipality": "manizales",
+  "parent": "Alhambra"
+ },
+ {
+  "name": "Colinas del Viento",
+  "municipality": "manizales",
+  "parent": "Alhambra"
+ },
+ {
+  "name": "Valles de la Alhambra",
+  "municipality": "manizales",
+  "parent": "Cerros de la Alhambra"
+ },
+ {
+  "name": "Juanchito",
+  "municipality": "manizales",
+  "parent": "Maltería"
+ },
+ {
+  "name": "Sena",
+  "municipality": "manizales",
+  "parent": "Zona Industrial"
+ },
+ {
+  "name": "La Capilla",
+  "municipality": "manizales",
+  "parent": "Caserio la Enea"
+ },
+ {
+  "name": "Bosques de la Alhambra",
+  "municipality": "manizales",
+  "parent": "Caserio la Enea"
+ },
+ {
+  "name": "Villa Fundemos",
+  "municipality": "manizales",
+  "parent": "Caserio la Enea"
+ },
+ {
+  "name": "El Cairo",
+  "municipality": "manizales",
+  "parent": "Caserio la Enea"
+ },
+ {
+  "name": "Los Pinos",
+  "municipality": "manizales",
+  "parent": "La Enea"
+ },
+ {
+  "name": "Sector Gallinazo",
+  "municipality": "manizales",
+  "parent": "La Enea"
+ },
+ {
+  "name": "Aeropuerto",
+  "municipality": "manizales",
+  "parent": "La Enea"
+ },
+ {
+  "name": "Baja Leonora",
+  "municipality": "manizales",
+  "parent": "La Leonora"
+ },
+ {
+  "name": "Estadio",
+  "municipality": "manizales",
+  "parent": "Palogrande"
+ },
+ {
+  "name": "Universidad de Caldas",
+  "municipality": "manizales",
+  "parent": "Palogrande"
+ },
+ {
+  "name": "Universidad Nacional",
+  "municipality": "manizales",
+  "parent": "Palogrande"
+ },
+ {
+  "name": "Conjunto Ibiza",
+  "municipality": "manizales",
+  "parent": "Arboleda"
+ },
+ {
+  "name": "Los Sauces",
+  "municipality": "manizales",
+  "parent": "Palermo"
+ },
+ {
+  "name": "Bajo Palermo",
+  "municipality": "manizales",
+  "parent": "Palermo"
+ },
+ {
+  "name": "Sector del Batallon",
+  "municipality": "manizales",
+  "parent": "Camelia"
+ },
+ {
+  "name": "Andes",
+  "municipality": "manizales",
+  "parent": "Nevado"
+ },
+ {
+  "name": "Bajo Nevado",
+  "municipality": "manizales",
+  "parent": "Nevado"
+ },
+ {
+  "name": "Panamericana",
+  "municipality": "manizales",
+  "parent": "Nevado"
+ },
+ {
+  "name": "La Isla",
+  "municipality": "manizales",
+  "parent": "Marmato"
+ },
+ {
+  "name": "Solidaridad (Marmato)",
+  "municipality": "manizales",
+  "parent": "Marmato"
+ },
+ {
+  "name": "Solidaridad (San Antonio)",
+  "municipality": "manizales",
+  "parent": "San Antonio"
+ },
+ {
+  "name": "Campamento",
+  "municipality": "manizales",
+  "parent": "El Carmen"
+ },
+ {
+  "name": "La Providencia",
+  "municipality": "manizales",
+  "parent": "El Carmen"
+ },
+ {
+  "name": "Albania",
+  "municipality": "manizales",
+  "parent": "El Carmen"
+ },
+ {
+  "name": "El Rocio",
+  "municipality": "manizales",
+  "parent": "El Carmen"
+ },
+ {
+  "name": "Bosconia",
+  "municipality": "manizales",
+  "parent": "El Bosque"
+ },
+ {
+  "name": "Portal de Nogales",
+  "municipality": "manizales",
+  "parent": "Nogales"
+ },
+ {
+  "name": "Nuevo Horizontes",
+  "municipality": "manizales",
+  "parent": "Panorama"
+ },
+ {
+  "name": "Bella Montaña (Panorama)",
+  "municipality": "manizales",
+  "parent": "Panorama"
+ },
+ {
+  "name": "Villa Kempis (Arenillo)",
+  "municipality": "manizales",
+  "parent": "Centenario"
+ },
+ {
+  "name": "Chapinero",
+  "municipality": "manizales",
+  "parent": "Centenario"
+ },
+ {
+  "name": "Villa Jardín",
+  "municipality": "manizales",
+  "parent": "Estambul"
+ },
+ {
+  "name": "Torres de  Esponsion",
+  "municipality": "manizales",
+  "parent": "Estambul"
+ },
+ {
+  "name": "Niño Jesús de Praga",
+  "municipality": "manizales",
+  "parent": "Estambul"
+ },
+ {
+  "name": "Granjas de Estambul",
+  "municipality": "manizales",
+  "parent": "Estambul"
+ },
+ {
+  "name": "Estación Uribe",
+  "municipality": "manizales",
+  "parent": "Estambul"
+ },
+ {
+  "name": "Samaria",
+  "municipality": "manizales",
+  "parent": "Solferino"
+ },
+ {
+  "name": "Portón del Guamo",
+  "municipality": "manizales",
+  "parent": "Solferino"
+ },
+ {
+  "name": "La Carolita",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Altos de Granada I y II etapa",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Villa Café I y II etapa",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Cjto cerrado Altos de Granada",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Mirador de la Carola I y II etapa",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Cerros de la Carola",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Altos de la Carola",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Rincón de la Daniela",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Casas de la Colina",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "Reserva del Rio",
+  "municipality": "manizales",
+  "parent": "La Carola"
+ },
+ {
+  "name": "La Daniela",
+  "municipality": "manizales",
+  "parent": "Villahermosa"
+ },
+ {
+  "name": "Viña del Rio",
+  "municipality": "manizales",
+  "parent": "Villahermosa"
+ },
+ {
+  "name": "La Playa y la Sonora",
+  "municipality": "manizales",
+  "parent": "Villahermosa"
+ },
+ {
+  "name": "La Alameda",
+  "municipality": "manizales",
+  "parent": "San Cancio"
+ },
+ {
+  "name": "Villa del Campo",
+  "municipality": "manizales",
+  "parent": "San Cancio"
+ },
+ {
+  "name": "Loma Verde",
+  "municipality": "manizales",
+  "parent": "San Cancio"
+ },
+ {
+  "name": "Alto del perro",
+  "municipality": "manizales",
+  "parent": "Milán"
+ },
+ {
+  "name": "Sierra Bonita",
+  "municipality": "manizales",
+  "parent": "Milán"
+ },
+ {
+  "name": "Los Guaduales",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "Rincon de Doña Elvira",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "Edificio Tejarres del bosque",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "Condominio el Tejar",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "Rincon del Trebol",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "Bosques del Trebol",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "San Sebastian de Buena Vista",
+  "municipality": "manizales",
+  "parent": "El Trébol"
+ },
+ {
+  "name": "Granjas y Viviendas",
+  "municipality": "manizales",
+  "parent": "Vivienda Popular"
+ },
+ {
+  "name": "Sector del Aguacate",
+  "municipality": "manizales",
+  "parent": "Vivienda Popular"
+ },
+ {
+  "name": "San Luis (Kennedy)",
+  "municipality": "manizales",
+  "parent": "Kennedy"
+ },
+ {
+  "name": "Pepe Caceres",
+  "municipality": "manizales",
+  "parent": "Kennedy"
+ },
+ {
+  "name": "Ciudadela del Ciego",
+  "municipality": "manizales",
+  "parent": "Kennedy"
+ },
+ {
+  "name": "Sector Bolivariana",
+  "municipality": "manizales",
+  "parent": "Kennedy"
+ },
+ {
+  "name": "San Fernando",
+  "municipality": "manizales",
+  "parent": "Kennedy"
+ },
+ {
+  "name": "Santos",
+  "municipality": "manizales",
+  "parent": "Camilo Torres"
+ },
+ {
+  "name": "Villa Mercedes",
+  "municipality": "manizales",
+  "parent": "Camilo Torres"
+ },
+ {
+  "name": "11 de noviembre",
+  "municipality": "manizales",
+  "parent": "Las Colinas"
+ },
+ {
+  "name": "Castilla",
+  "municipality": "manizales",
+  "parent": "Las Colinas"
+ },
+ {
+  "name": "Sector Malhabar II",
+  "municipality": "manizales",
+  "parent": "Malhabar"
+ },
+ {
+  "name": "El Encuentro",
+  "municipality": "manizales",
+  "parent": "Aranjuez"
+ },
+ {
+  "name": "La Paz",
+  "municipality": "manizales",
+  "parent": "Aranjuez"
+ },
+ {
+  "name": "Villa Nueva",
+  "municipality": "manizales",
+  "parent": "Uribe"
+ },
+ {
+  "name": "El Palmar",
+  "municipality": "manizales",
+  "parent": "Uribe"
+ },
+ {
+  "name": "Los Alamos",
+  "municipality": "manizales",
+  "parent": "Velez"
+ },
+ {
+  "name": "Bajo Persia",
+  "municipality": "manizales",
+  "parent": "Persia"
+ },
+ {
+  "name": "Isabela",
+  "municipality": "manizales",
+  "parent": "Persia"
+ },
+ {
+  "name": "Eucaliptus",
+  "municipality": "manizales",
+  "parent": "Persia"
+ },
+ {
+  "name": "Portal Eucaliptus",
+  "municipality": "manizales",
+  "parent": "Persia"
+ },
+ {
+  "name": "Portal de San Luis",
+  "municipality": "manizales",
+  "parent": "Persia"
+ },
+ {
+  "name": "La Fuente",
+  "municipality": "manizales",
+  "parent": "Guamal"
+ },
+ {
+  "name": "Galicia",
+  "municipality": "manizales",
+  "parent": "Guamal"
+ },
+ {
+  "name": "La Palma",
+  "municipality": "manizales",
+  "parent": "Las Americas"
+ },
+ {
+  "name": "Residencias Caldas",
+  "municipality": "manizales",
+  "parent": "Las Americas"
+ },
+ {
+  "name": "Terminal de Transportes",
+  "municipality": "manizales",
+  "parent": "Las Americas"
+ },
+ {
+  "name": "Valvanera",
+  "municipality": "manizales",
+  "parent": "Centro"
+ },
+ {
+  "name": "Hoyo Frio",
+  "municipality": "manizales",
+  "parent": "Campoamor"
+ },
+ {
+  "name": "Saenz",
+  "municipality": "manizales",
+  "parent": "Santa Helena"
+ },
+ {
+  "name": "Conjunto cerrado Fundadores",
+  "municipality": "manizales",
+  "parent": "Santa Helena"
+ },
+ {
+  "name": "Parque Castilla",
+  "municipality": "manizales",
+  "parent": "Santa Helena"
+ },
+ {
+  "name": "Universidad Autonoma",
+  "municipality": "manizales",
+  "parent": "Santa Helena"
+ },
+ {
+  "name": "Conjunto cerrado la Estación",
+  "municipality": "manizales",
+  "parent": "Santa Helena"
+ },
+ {
+  "name": "Urbanizacion el Rio",
+  "municipality": "manizales",
+  "parent": "Los Cedros"
+ },
+ {
+  "name": "La Primavera",
+  "municipality": "manizales",
+  "parent": "El Sol"
+ },
+ {
+  "name": "Conjunto las Américas",
+  "municipality": "manizales",
+  "parent": "El Sol"
+ },
+ {
+  "name": "Villa del Rio",
+  "municipality": "manizales",
+  "parent": "La Asunción"
+ },
+ {
+  "name": "Nuevo Versalles",
+  "municipality": "manizales",
+  "parent": "Versalles"
+ },
+ {
+  "name": "Bavaria",
+  "municipality": "manizales",
+  "parent": "Lleras"
+ },
+ {
+  "name": "Conjunto cerrado Piamonte",
+  "municipality": "manizales",
+  "parent": "El Caribe"
+ },
+ {
+  "name": "Bengala",
+  "municipality": "manizales",
+  "parent": "Bosques del Norte"
+ },
+ {
+  "name": "Portal de Bengala",
+  "municipality": "manizales",
+  "parent": "Bosques del Norte"
+ },
+ {
+  "name": "Bosques de Bengala",
+  "municipality": "manizales",
+  "parent": "Bosques del Norte"
+ },
+ {
+  "name": "San Sebastián I etapa",
+  "municipality": "manizales",
+  "parent": "San Sebastián"
+ },
+ {
+  "name": "San Sebastián II etapa",
+  "municipality": "manizales",
+  "parent": "San Sebastián"
+ },
+ {
+  "name": "San Sebastián III etapa",
+  "municipality": "manizales",
+  "parent": "San Sebastián"
+ },
+ {
+  "name": "San Sebastián IV etapa",
+  "municipality": "manizales",
+  "parent": "San Sebastián"
+ },
+ {
+  "name": "Palonegro",
+  "municipality": "manizales",
+  "parent": "Altos de Capri"
+ },
+ {
+  "name": "Altos del Encenillo",
+  "municipality": "manizales",
+  "parent": "Altos de Capri"
+ },
+ {
+  "name": "Villas del Bosque",
+  "municipality": "manizales",
+  "parent": "Altos de Capri"
+ },
+ {
+  "name": "Piamonte II",
+  "municipality": "manizales",
+  "parent": "Peralonso"
+ },
+ {
+  "name": "Yarumales I y II",
+  "municipality": "manizales",
+  "parent": "Viveros"
+ },
+ {
+  "name": "Licorera",
+  "municipality": "manizales",
+  "parent": "Viveros"
+ },
+ {
+  "name": "Villa Luz",
+  "municipality": "manizales",
+  "parent": "Viveros"
+ }
+]

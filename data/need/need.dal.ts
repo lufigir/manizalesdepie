@@ -1,11 +1,10 @@
 import "server-only";
 
-import { getCurrentUser, type CurrentUser } from "@/data/user/require-user";
+import { getCurrentUser, type CurrentUser } from "@/data/user/current-user";
 import { log } from "@/lib/log";
-import { createAdminSupabase } from "@/lib/supabase/admin";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { needs as needRows, type NeedRow } from "@/lib/demo/dataset";
 
-import { resolveNeighborhoodId } from "@/data/geo/geo.dal";
+import { resolveNeighborhood } from "@/data/geo/geo.dal";
 import { canRelocate } from "@/data/geo/relocation.policy";
 
 import {
@@ -25,27 +24,25 @@ import {
   canPostNeedUpdate,
   canReportNeed,
   canUpdateNeed,
+  deriveNeedState,
 } from "./need.policy";
 
-/** How long a closed case stays on the public map before it drops off on
- *  its own. Long enough that someone already on the way still sees it and a
- *  wrong "cerrado" is easy to catch and undo; short enough that the map
- *  does not fill up with resolved cases nobody needs to see any more.
- *
- *  Duplicated as a literal in `sync_need_state`, which is where the
- *  ordinary close happens now. This copy only covers a curator's manual one. */
-const CLOSED_VISIBLE_HOURS = 6;
-
 /**
- * The only path from this application to `needs` and `need_updates`.
+ * The only path from this application to the cases and their threads.
  *
- * A need's contact fields live on `needs` itself and are public, so there is
- * no second visibility rule to keep and no reveal left to audit.
+ * A need's contact fields are public, so there is no second visibility rule
+ * to keep and no reveal left to audit.
  *
- * Private constructor and static factories, like `SiteDAL` — kept even
- * though most methods here no longer need an identity, because `close`
- * still does, and a class with a public constructor would let that one slip
- * through unauthenticated by accident.
+ * Private constructor and static factories, like `SiteDAL` — kept even though
+ * most methods here need no identity, because `close` still does, and a class
+ * with a public constructor would let that one slip through unauthorized by
+ * accident.
+ *
+ * The status is the thing to read carefully. It is not stored on a case in
+ * the fixtures and it is not writable here: `deriveNeedState` computes it
+ * from the case's own book, which is what the `sync_need_state` trigger did
+ * in Postgres. One person says what they did; no person decides what the case
+ * is.
  */
 export class NeedDAL {
   private constructor(private readonly user: CurrentUser | null) {}
@@ -59,59 +56,38 @@ export class NeedDAL {
     return new NeedDAL(null);
   }
 
-  /** Every open or recently-closed need, most recently confirmed
-   *  first. `needs_public` already excludes rows merged into another;
-   *  this also drops a closed case once `expires_at` has passed — see
-   *  `CLOSED_VISIBLE_HOURS`.
+  /**
+   * Every case, most recently confirmed first.
    *
-   *  A curator sees hidden cases too, distinguished on the card by
-   *  `AdminActions` — otherwise `setPublished(id, false)` would have no way
-   *  back short of a direct database query. Anyone else only ever sees
-   *  `published = true`, same as before. */
+   * A curator sees hidden cases too, distinguished on the card by
+   * `AdminActions`; anyone else only ever sees the published ones. The live
+   * version also dropped a closed case six hours after it was closed — this
+   * one keeps them, because a demo with no closed case in it never shows what
+   * a curator's verdict looks like.
+   */
   async listPublished(): Promise<NeedDTO[]> {
-    const supabase = await createServerSupabase();
+    const curator = this.user?.role === "curator";
 
-    let query = supabase
-      .from("needs_public")
-      .select("*")
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
-
-    if (this.user?.role !== "curator") {
-      query = query.eq("published", true);
-    }
-
-    const { data, error } = await query.order("confirmed_at", { ascending: false });
-
-    if (error) {
-      log.error("need.listPublished failed", { code: error.code });
-      throw new Error("No se pudieron cargar las necesidades");
-    }
-
-    return (data ?? []).map((row) => this.toDTO(row));
+    return needRows()
+      .filter((row) => curator || row.published)
+      .map((row) => this.toDTO(row))
+      .sort((a, b) => b.confirmedAt.localeCompare(a.confirmedAt));
   }
 
   /**
    * One case, or null. What a shared link resolves to.
    *
-   * Not filtered by `expires_at`, unlike `listPublished`: a link posted in a
-   * WhatsApp group outlives the case it points at, and "ya se resolvió" on
-   * the card is a better answer than a 404 for someone arriving late.
+   * A link posted in a WhatsApp group outlives the case it points at, so a
+   * closed one still resolves: "ya se resolvió" on the card is a better
+   * answer than a 404 for someone arriving late.
    */
   async findById(id: string): Promise<NeedDTO | null> {
-    const supabase = await createServerSupabase();
+    const curator = this.user?.role === "curator";
+    const row = needRows().find((candidate) => candidate.id === id);
 
-    const { data, error } = await supabase
-      .from("needs_public")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+    if (!row || (!row.published && !curator)) return null;
 
-    if (error) {
-      log.error("need.findById failed", { code: error.code, needId: id });
-      throw new Error("No se pudo cargar la necesidad");
-    }
-
-    return data ? this.toDTO(data) : null;
+    return this.toDTO(row);
   }
 
   /**
@@ -121,256 +97,163 @@ export class NeedDAL {
    * Order, in every mutation, without exception:
    *   1. validate input   2. authorize   3. mutate   4. validate output
    */
-  async report(input: unknown): Promise<{ id: string }> {
+  async report(input: unknown): Promise<NeedDTO> {
     const data = createNeedSchema.parse(input);
 
     if (!canReportNeed()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const { data: row, error } = await supabase
-      .from("needs")
-      .insert({
-        category: data.category,
-        description: data.description,
-        location: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
-        published: true,
-        created_by: this.user?.id ?? null,
-        // One insert now, not two. The contact fields used to be written to
-        // a separate table because they had a different visibility rule;
-        // they have the same one as the description now.
-        exact_address: data.exactAddress ?? null,
-        contact_name: data.contactName ?? null,
-        phone: data.phone ?? null,
-        notes: data.notes ?? null,
-      })
-      .select("id")
-      .single();
+    const now = new Date().toISOString();
 
-    if (error || !row) {
-      log.error("need.report failed", { code: error?.code });
-      throw new Error("No se pudo publicar la necesidad");
-    }
-
-    log.info("need reported", {
-      needId: row.id,
-      byUser: this.user?.id ?? "anon",
+    const need = needSchema.parse({
+      id: crypto.randomUUID(),
+      category: data.category,
+      description: data.description,
+      longitude: data.longitude,
+      latitude: data.latitude,
+      neighborhood:
+        resolveNeighborhood(data.longitude, data.latitude)?.name ?? null,
+      // Not sent, derived: a case with no entries in its book is `pending`,
+      // and that is the only status a new report can possibly have.
+      ...deriveNeedState([], null, now),
+      exactAddress: data.exactAddress ?? null,
+      contactName: data.contactName ?? null,
+      phone: data.phone ?? null,
+      notes: data.notes ?? null,
+      createdAt: now,
+      published: true,
     });
-    return { id: row.id };
+
+    log.info("need reported", { needId: need.id, byUser: this.user?.id ?? "anon" });
+    return need;
   }
 
   /**
    * Adds one entry to a case's book — anonymous, no account, several people
    * per case, each leaving a note for the others.
    *
-   * Note what this does NOT do: set a status. The insert lands and
-   * `sync_need_state` reads the case's state back out of every entry
-   * on it. That is the whole point of the redesign — one person can say what
-   * they did, and no person can decide what the case is.
+   * Note what it does NOT return: a status. The entry goes back on its own
+   * and the case's state is recomputed from every entry on it, by the same
+   * `deriveNeedState` this DAL reads with. That is the whole point of the
+   * design — one person can say what they did, and no person can decide what
+   * the case is.
    */
-  async postUpdate(input: unknown): Promise<void> {
+  async postUpdate(input: unknown): Promise<NeedUpdateDTO> {
     const data = postNeedUpdateSchema.parse(input);
 
     if (!canPostNeedUpdate()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-
-    const { error } = await supabase.from("need_updates").insert({
-      need_id: data.needId,
+    const entry = needUpdateSchema.parse({
+      id: crypto.randomUUID(),
       kind: data.kind,
       name: data.name ?? null,
       phone: data.phone ?? null,
       note: data.note,
+      createdAt: new Date().toISOString(),
     });
 
-    if (error) {
-      log.error("need.postUpdate failed", {
-        code: error.code,
-        needId: data.needId,
-        kind: data.kind,
-      });
-      throw new Error("No se pudo registrar lo que escribiste");
-    }
-
-    log.info("need update posted", {
-      needId: data.needId,
-      kind: data.kind,
-    });
+    log.info("need update posted", { needId: data.needId, kind: data.kind });
+    return entry;
   }
 
   /** A case's book, oldest first — the order things happened in, which is
    *  the order it reads as a thread. */
   async listUpdates(needId: string): Promise<NeedUpdateDTO[]> {
-    const supabase = await createServerSupabase();
+    const row = needRows().find((candidate) => candidate.id === needId);
+    if (!row) return [];
 
-    const { data, error } = await supabase
-      .from("need_updates_public")
-      .select("id, kind, name, phone, note, created_at")
-      .eq("need_id", needId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      log.error("need.listUpdates failed", { code: error.code, needId });
-      throw new Error("No se pudo cargar lo que ha pasado con este caso");
-    }
-
-    return (data ?? []).map((row) =>
-      needUpdateSchema.parse({
-        id: row.id,
-        kind: row.kind,
-        name: row.name,
-        phone: row.phone,
-        note: row.note,
-        createdAt: row.created_at,
-      }),
-    );
+    return row.updates
+      .slice()
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map((update) =>
+        needUpdateSchema.parse({
+          id: update.id,
+          kind: update.kind,
+          name: update.name,
+          phone: update.phone,
+          note: update.note,
+          createdAt: update.createdAt,
+        }),
+      );
   }
 
   /**
-   * A curator closing a case by hand. Not the ordinary path.
+   * A curator closing a case by hand. Not the ordinary path — there is no
+   * ordinary path any more, which is the point.
    *
-   * The ordinary path is the threshold in `sync_need_state`: two "ya
-   * ayudé" from two different numbers. This covers the two things a count
-   * cannot settle — a real case only one person ever helped with, and a
-   * case that genuinely is fake — and `closed_rejected` in particular is
-   * why this is gated at all, because it is the one outcome that calls
-   * somebody a liar. The trigger honours it: once a case is rejected, no
-   * number of later entries moves it again.
+   * This covers the two things a count cannot settle: a real case only one
+   * person ever helped with, and a case that genuinely is fake.
+   * `closed_rejected` in particular is why this is gated at all, because it
+   * is the one outcome that calls somebody a liar. `deriveNeedState` honours
+   * it: once a case is closed, no number of later entries moves it again.
    */
   async close(
     id: string,
     result: "closed_completed" | "closed_rejected",
-  ): Promise<void> {
+  ): Promise<Partial<NeedDTO>> {
     if (!canCloseNeed(this.user)) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const now = new Date();
-    const expiresAt = new Date(
-      now.getTime() + CLOSED_VISIBLE_HOURS * 60 * 60 * 1000,
-    ).toISOString();
-
-    const { error } = await supabase
-      .from("needs")
-      .update({ status: result, closed_at: now.toISOString(), expires_at: expiresAt })
-      .eq("id", id);
-
-    if (error) {
-      log.error("need.close failed", { code: error.code, needId: id });
-      throw new Error("No se pudo cerrar la necesidad");
-    }
-
-    log.info("need closed by curator", {
-      needId: id,
-      result,
-      byUser: this.user!.id,
-    });
+    log.info("need closed by curator", { needId: id, result, byUser: this.user!.id });
+    return { status: result, confirmedAt: new Date().toISOString() };
   }
 
   /** Corrects a case's own category or description — anonymous, like
    *  reporting one. Never touches the contact fields. */
-  async update(input: unknown): Promise<void> {
+  async update(input: unknown): Promise<Partial<NeedDTO>> {
     const data = updateNeedSchema.parse(input);
 
     if (!canUpdateNeed()) throw new Error("Forbidden");
 
-    const patch: Record<string, unknown> = {};
+    const patch: Partial<NeedDTO> = {};
     if (data.category !== undefined) patch.category = data.category;
     if (data.description !== undefined) patch.description = data.description;
-    if (Object.keys(patch).length === 0) return;
-
-    const supabase = createAdminSupabase();
-    const { error } = await supabase.from("needs").update(patch).eq("id", data.id);
-
-    if (error) {
-      log.error("need.update failed", { code: error.code, needId: data.id });
-      throw new Error("No se pudo actualizar la necesidad");
-    }
 
     log.info("need updated", { needId: data.id, fields: Object.keys(patch) });
+    return patch;
   }
 
   /**
    * Moves a case's pin to a corrected coordinate.
    *
    * Anybody may do it inside the case's own barrio; a curator may do it
-   * anywhere in the covered area. See `canRelocate`.
-   *
-   * The barrio is re-derived by `need_sets_neighborhood` from the new
-   * point, which is why `neighborhood_id` stays out of the patch: that
-   * trigger returns early when an update changes it by hand, and it would
-   * then keep the old barrio stamped on the new coordinate.
+   * anywhere in the covered area. See `canRelocate`. The barrio is re-derived
+   * from the destination, never carried over.
    */
-  async relocate(input: unknown): Promise<void> {
+  async relocate(input: unknown): Promise<Partial<NeedDTO>> {
     const { id, longitude, latitude } = relocateNeedSchema.parse(input);
 
-    const supabase = createAdminSupabase();
+    const current = needRows().find((row) => row.id === id);
+    const currentBarrio = current
+      ? (resolveNeighborhood(current.longitude, current.latitude)?.id ?? null)
+      : null;
 
-    const { data: current, error: readError } = await supabase
-      .from("needs")
-      .select("neighborhood_id")
-      .eq("id", id)
-      .maybeSingle();
+    const target = resolveNeighborhood(longitude, latitude);
 
-    if (readError || !current) {
-      log.error("need.relocate lookup failed", {
-        code: readError?.code,
-        needId: id,
-      });
-      throw new Error("No se pudo encontrar el caso");
-    }
-
-    const target = await resolveNeighborhoodId(longitude, latitude);
-
-    if (!canRelocate(this.user, current.neighborhood_id, target)) {
+    if (!canRelocate(this.user, currentBarrio, target?.id ?? null)) {
       throw new Error(
         "Solo puedes mover el caso dentro de su propio barrio. Si está en el barrio equivocado, repórtalo.",
       );
     }
 
-    const { error } = await supabase
-      .from("needs")
-      .update({ location: `SRID=4326;POINT(${longitude} ${latitude})` })
-      .eq("id", id);
-
-    if (error) {
-      log.error("need.relocate failed", { code: error.code, needId: id });
-      throw new Error("No se pudo mover el caso");
-    }
-
-    log.info("need relocated", {
-      needId: id,
-      byUser: this.user?.id ?? "anon",
-    });
+    log.info("need relocated", { needId: id, byUser: this.user?.id ?? "anon" });
+    return { longitude, latitude, neighborhood: target?.name ?? null };
   }
 
   /** A curator hides or republishes a case — reversible, the same
-   *  `published` column every list already filters by. */
-  async setPublished(id: string, published: boolean): Promise<void> {
+   *  `published` flag every list filters by. */
+  async setPublished(id: string, published: boolean): Promise<Partial<NeedDTO>> {
     if (!canManageNeed(this.user)) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
-    const { error } = await supabase
-      .from("needs")
-      .update({ published })
-      .eq("id", id);
-
-    if (error) {
-      log.error("need.setPublished failed", { code: error.code, needId: id });
-      throw new Error("No se pudo cambiar la visibilidad del caso");
-    }
+    log.info("need visibility changed", {
+      needId: id,
+      published,
+      byUser: this.user!.id,
+    });
+    return { published };
   }
 
-  /** A real `DELETE FROM`, for spam and test rows — curators only. Cascades
-   *  to `need_updates`. */
+  /** Removing a case outright — curators only, for spam and test rows. */
   async remove(id: string): Promise<void> {
     if (!canManageNeed(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const { error } = await supabase.from("needs").delete().eq("id", id);
-
-    if (error) {
-      log.error("need.remove failed", { code: error.code, needId: id });
-      throw new Error("No se pudo eliminar el caso");
-    }
 
     log.info("need deleted", { needId: id, byUser: this.user!.id });
   }
@@ -379,29 +262,18 @@ export class NeedDAL {
    * Removing one entry from a case's book — curators only, for abuse, a
    * phone number that should not have been published, or spam.
    *
-   * Deleting the row re-fires `sync_need_state` (the trigger is on `after
-   * insert or delete`), so `status`, `reopened` and both counts recompute
-   * from whatever entries remain. That is the whole reason this goes
-   * through a plain delete rather than a soft-delete flag: a tombstoned row
-   * would still be counted by the trigger, and a case could stay closed on
-   * the strength of an entry nobody can see any more.
+   * The book is append-only for everyone else, and that is what makes the
+   * derived status trustworthy: anyone who could delete an entry could erase
+   * the "sigue haciendo falta" keeping a case open.
    */
   async removeUpdate(id: string): Promise<void> {
     if (!canDeleteNeedUpdate(this.user)) throw new Error("Forbidden");
-
-    const supabase = createAdminSupabase();
-    const { error } = await supabase.from("need_updates").delete().eq("id", id);
-
-    if (error) {
-      log.error("need.removeUpdate failed", { code: error.code, updateId: id });
-      throw new Error("No se pudo eliminar la nota");
-    }
 
     log.info("need update deleted", { updateId: id, byUser: this.user!.id });
   }
 
   /** Map explicitly, never spread. */
-  private toDTO(row: Record<string, unknown>): NeedDTO {
+  private toDTO(row: NeedRow): NeedDTO {
     return needSchema.parse({
       id: row.id,
       category: row.category,
@@ -409,16 +281,21 @@ export class NeedDAL {
       longitude: row.longitude,
       latitude: row.latitude,
       neighborhood: row.neighborhood,
-      status: row.status,
-      onTheWayCount: row.on_the_way_count,
-      helpedCount: row.helped_count,
-      reopened: row.reopened,
-      exactAddress: row.exact_address,
-      contactName: row.contact_name,
+      // status, both counters and `reopened` all come from here — never from
+      // the fixture, which carries only what people wrote.
+      ...deriveNeedState(
+        row.updates.map((update) => ({
+          kind: update.kind as NeedUpdateDTO["kind"],
+          createdAt: update.createdAt,
+        })),
+        row.closedStatus,
+        row.createdAt,
+      ),
+      exactAddress: row.exactAddress,
+      contactName: row.contactName,
       phone: row.phone,
       notes: row.notes,
-      confirmedAt: row.confirmed_at,
-      createdAt: row.created_at,
+      createdAt: row.createdAt,
       published: row.published,
     });
   }

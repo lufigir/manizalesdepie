@@ -15,10 +15,10 @@ import {
 } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { Button } from "@/components/ui/button";
-
 import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
+import { DemoContactButton } from "./demo-contact";
+import { useDemo } from "./demo-store";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
 
@@ -32,6 +32,7 @@ import { useWorkspace } from "./workspace-context";
  */
 export function ServicePopup({ service }: { service: ServiceDTO }) {
   const { isAdmin } = useWorkspace();
+  const demo = useDemo();
 
   const Icon = SERVICE_TYPE_ICON[service.type];
   const { label: freshLabel, stale } = freshness(
@@ -84,30 +85,14 @@ export function ServicePopup({ service }: { service: ServiceDTO }) {
           {SERVICES_LABEL.contactTitle}
         </p>
         <div className="mt-1.5 flex gap-1.5">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1"
-            render={<a href={`tel:${service.whatsapp}`} />}
-          >
+          <DemoContactButton className="flex-1">
             <Phone className="size-3.5" aria-hidden />
             {service.whatsapp}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1"
-            render={
-              <a
-                href={`https://wa.me/${service.whatsapp}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            }
-          >
+          </DemoContactButton>
+          <DemoContactButton className="flex-1">
             <WhatsappIcon />
             {SERVICES_LABEL.contact}
-          </Button>
+          </DemoContactButton>
         </div>
       </div>
 
@@ -115,10 +100,16 @@ export function ServicePopup({ service }: { service: ServiceDTO }) {
         <div className="border-t pt-2">
           <AdminActions
             published={service.published}
-            onSetPublished={(published) =>
-              setServicePublished(service.id, published)
+            onSetPublished={async (published) =>
+              demo.patch(
+                service.id,
+                await setServicePublished(service.id, published),
+              )
             }
-            onDelete={() => deleteService(service.id)}
+            onDelete={async () => {
+              await deleteService(service.id);
+              demo.remove(service.id);
+            }}
           />
         </div>
       )}

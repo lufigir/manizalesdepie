@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Map, MapControls } from "@/components/ui/map";
 
-import type { CurrentUser } from "@/data/user/require-user";
-import type { SiteDTO, SiteStatus } from "@/data/site/site.dto";
+import type { CurrentUser } from "@/data/user/current-user";
+import type { SiteDTO } from "@/data/site/site.dto";
 import type { AnimalDTO } from "@/data/animal/animal.dto";
 import { animalMapCoordinates } from "@/data/animal/animal.policy";
 import type { NeighborhoodDTO } from "@/data/neighborhood/neighborhood.dto";
@@ -20,12 +20,12 @@ import {
   type TabId,
 } from "@/lib/tabs";
 import { fanOutCollisions } from "@/lib/marker-fan";
-import { createClient } from "@/lib/supabase/client";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 import { AnimalPopup } from "./animal-popup";
 import { AccountMenu } from "./account-menu";
+import { useDemo } from "./demo-store";
 import { AttendanceStats } from "./attendance-stats";
 import { BarrioHeader } from "./barrio-header";
 import { BarrioLayer, type BarrioProps } from "./barrio-layer";
@@ -122,16 +122,30 @@ type Props = {
  * this component's own primary button can jump straight to one.
  */
 export function MapWorkspace({
-  sites,
-  animals = [],
-  services = [],
-  needs = [],
+  sites: serverSites,
+  animals: serverAnimals = [],
+  services: serverServices = [],
+  needs: serverNeeds = [],
   barrios = [],
   initialSelectedId,
   tab: forcedTab,
   children,
   user = null,
 }: Props) {
+  /**
+   * Everything the map draws: what the server sent, plus whatever the reader
+   * has reported, corrected or hidden during this visit.
+   *
+   * One seam for all of it, at the top of the tree. Every list below — the
+   * markers, the panel, the counters, the card — reads from these and so
+   * cannot disagree with each other about what exists.
+   */
+  const demo = useDemo();
+  const sites = demo.merge("sites", serverSites);
+  const animals = demo.merge("animals", serverAnimals);
+  const services = demo.merge("services", serverServices);
+  const needs = demo.merge("needs", serverNeeds);
+
   const sharedLink = initialSelectedId !== undefined;
   const isAdmin = user?.role === "curator";
   const userName = user?.fullName ?? null;
@@ -288,21 +302,18 @@ export function MapWorkspace({
     dismiss();
   }, [dismiss, relocating]);
 
-  const liveStatus = useLiveSiteStatus();
-
-  const withLiveStatus = useMemo(
-    () =>
-      sites.map((site) => ({
-        ...site,
-        status: liveStatus[site.id] ?? site.status,
-      })),
-    [sites, liveStatus],
-  );
-
-  /** Every site the map ever draws. Every `SiteType` belongs to a section
-   *  now (see `SITE_TYPE_TAB`), so there is nothing left to filter out here
-   *  — the map is unconditional, and the panel does the narrowing. */
-  const mapSites = withLiveStatus;
+  /**
+   * Every site the map ever draws. Every `SiteType` belongs to a section now
+   * (see `SITE_TYPE_TAB`), so there is nothing left to filter out here — the
+   * map is unconditional, and the panel does the narrowing.
+   *
+   * This used to be the server's list with a realtime overlay on top: the
+   * browser held a Supabase channel on `sites` and patched each pin's status
+   * as the city moved. The channel went with the database, and the one thing
+   * that moves now is what the reader does — which `demo.merge` above has
+   * already folded in.
+   */
+  const mapSites = sites;
 
   /**
    * The panel narrows to the chosen barrio; the map never does.
@@ -359,7 +370,7 @@ export function MapWorkspace({
   const selectedEntity = useMemo(() => {
     if (!selectedId) return null;
 
-    const site = withLiveStatus.find((row) => row.id === selectedId);
+    const site = mapSites.find((row) => row.id === selectedId);
     if (site) {
       return {
         coordinates: { longitude: site.longitude, latitude: site.latitude },
@@ -395,7 +406,7 @@ export function MapWorkspace({
     }
 
     return null;
-  }, [selectedId, withLiveStatus, needs, animals, services, barriosByName]);
+  }, [selectedId, mapSites, needs, animals, services, barriosByName]);
 
   /**
    * The nudge for pins landing on one identical coordinate.
@@ -744,37 +755,4 @@ export function MapWorkspace({
       </div>
     </WorkspaceContext>
   );
-}
-
-/**
- * Only the field that actually churns rides the live channel: whether a place
- * is open, full or closed. Names, addresses and item lists are served cached
- * from the server render, because they barely move and a socket per row would
- * cost battery for nothing.
- */
-function useLiveSiteStatus() {
-  const [statuses, setStatuses] = useState<Record<string, SiteStatus>>({});
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel("site-status")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "sites" },
-        (payload) => {
-          const row = payload.new as { id?: string; status?: SiteStatus };
-          if (!row.id || !row.status) return;
-          setStatuses((prev) => ({ ...prev, [row.id!]: row.status! }));
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, []);
-
-  return statuses;
 }

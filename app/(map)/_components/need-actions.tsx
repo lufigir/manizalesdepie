@@ -37,6 +37,8 @@ import { cn } from "@/lib/utils";
 
 import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
+import { DemoContactButton } from "./demo-contact";
+import { useDemo } from "./demo-store";
 import { NeedThread } from "./need-thread";
 import { useWorkspace } from "./workspace-context";
 
@@ -81,6 +83,7 @@ const CLOSE_ACTION_LABEL: Record<CloseOutcome, string> = {
  */
 export function NeedActions({ order }: { order: NeedDTO }) {
   const { isAdmin, userName, startRelocate } = useWorkspace();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +112,23 @@ export function NeedActions({ order }: { order: NeedDTO }) {
    * renders inside the card of the SELECTED pin, so this is one request for
    * one case the reader has already chosen to open, not one per pin.
    */
-  const [updates, setUpdates] = useState<NeedUpdateDTO[] | null>(null);
+  const [serverUpdates, setServerUpdates] = useState<NeedUpdateDTO[] | null>(
+    null,
+  );
+
+  /**
+   * The book as it stands: what the server has, plus what this visit added,
+   * minus whatever a curator deleted. Merged here rather than in the store
+   * because the server half arrives per-card, asynchronously, and only this
+   * component knows when.
+   */
+  const updates =
+    serverUpdates === null
+      ? null
+      : [
+          ...serverUpdates.filter((entry) => !demo.isRemoved(entry.id)),
+          ...demo.entriesFor(order.id),
+        ];
   /** The entry this reader just wrote, so the thread can point at it. */
   const [ownEntryId, setOwnEntryId] = useState<string | null>(null);
 
@@ -135,7 +154,7 @@ export function NeedActions({ order }: { order: NeedDTO }) {
     let cancelled = false;
     listNeedUpdates(order.id)
       .then((rows) => {
-        if (!cancelled) setUpdates(rows);
+        if (!cancelled) setServerUpdates(rows);
       })
       .catch(() => {
         // Silent: the thread is not the reason this card was opened, and a
@@ -176,22 +195,24 @@ export function NeedActions({ order }: { order: NeedDTO }) {
 
     startTransition(async () => {
       try {
-        await postNeedUpdate({
+        const entry = await postNeedUpdate({
           needId: order.id,
           kind,
           name: name.trim() || undefined,
           phone: phone.trim() || undefined,
           note: trimmedNote,
         });
+
+        // The entry carries no status, and neither does this: the store
+        // recomputes the case's state from the whole book, which is what
+        // `sync_need_state` did in the database. One person says what they
+        // did; no person decides what the case is.
+        demo.addNeedEntry(order, entry, updates ?? []);
+
         setPosted(kind);
         setComposing(null);
         setNote("");
-        // The thread this reader just joined is the one thing worth showing
-        // next: it is where their own note lands, and where they can see
-        // that the case did not just switch off.
-        const rows = await listNeedUpdates(order.id);
-        setUpdates(rows);
-        setOwnEntryId(rows.at(-1)?.id ?? null);
+        setOwnEntryId(entry.id);
       } catch (cause) {
         const msg =
           cause instanceof Error ? cause.message : NEED_LABEL.failed;
@@ -206,7 +227,7 @@ export function NeedActions({ order }: { order: NeedDTO }) {
     setError(null);
     startTransition(async () => {
       try {
-        await closeNeed(order.id, result);
+        demo.patch(order.id, await closeNeed(order.id, result));
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : NEED_LABEL.failed);
       } finally {
@@ -219,7 +240,10 @@ export function NeedActions({ order }: { order: NeedDTO }) {
     setError(null);
     startTransition(async () => {
       try {
-        await updateNeed({ id: order.id, category, description });
+        demo.patch(
+          order.id,
+          await updateNeed({ id: order.id, category, description }),
+        );
         setEditOpen(false);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : NEED_LABEL.failed);
@@ -408,30 +432,14 @@ export function NeedActions({ order }: { order: NeedDTO }) {
               {order.contactName && <p>{order.contactName}</p>}
               {order.phone && (
                 <div className="mt-1.5 flex gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    render={<a href={`tel:${order.phone}`} />}
-                  >
+                  <DemoContactButton className="flex-1">
                     <Phone className="size-3.5" aria-hidden />
                     {order.phone}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    render={
-                      <a
-                        href={`https://wa.me/57${order.phone}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      />
-                    }
-                  >
+                  </DemoContactButton>
+                  <DemoContactButton className="flex-1">
                     <WhatsappIcon />
                     {NEED_LABEL.contactWhatsapp}
-                  </Button>
+                  </DemoContactButton>
                 </div>
               )}
               {order.notes && (
@@ -598,8 +606,13 @@ export function NeedActions({ order }: { order: NeedDTO }) {
 
             <AdminActions
               published={order.published}
-              onSetPublished={(published) => setNeedPublished(order.id, published)}
-              onDelete={() => deleteNeed(order.id)}
+              onSetPublished={async (published) =>
+                demo.patch(order.id, await setNeedPublished(order.id, published))
+              }
+              onDelete={async () => {
+                await deleteNeed(order.id);
+                demo.remove(order.id);
+              }}
             />
           </div>
         )}

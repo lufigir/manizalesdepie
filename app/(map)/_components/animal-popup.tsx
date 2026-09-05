@@ -8,10 +8,10 @@ import { type AnimalDTO } from "@/data/animal/animal.dto";
 import { ANIMAL_KIND_STYLE, ANIMAL_LABEL, freshness } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-import { Button } from "@/components/ui/button";
-
 import { WhatsappIcon } from "./whatsapp-icon";
 import { AdminActions } from "./admin-actions";
+import { DemoContactButton } from "./demo-contact";
+import { useDemo } from "./demo-store";
 import { ShareButton } from "./share-button";
 import { useWorkspace } from "./workspace-context";
 
@@ -24,6 +24,7 @@ import { useWorkspace } from "./workspace-context";
  */
 export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
   const { isAdmin } = useWorkspace();
+  const demo = useDemo();
 
   const { label: freshLabel } = freshness(animal.lastSeenAt, ANIMAL_LABEL.fresh);
   const resolved = animal.resolvedAt !== null;
@@ -33,7 +34,18 @@ export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
       {/* Full-width photo first — the face is what reunites an animal, so it
           gets the whole row before any text competes for width. */}
       <div className="bg-muted relative aspect-[4/3] w-full overflow-hidden rounded-xl">
-        {animal.photoUrl ? (
+        {animal.photoUrl?.startsWith("data:") ? (
+          // A photo somebody attached during this visit. It never reached a
+          // server, so there is nothing for the image optimizer to fetch and
+          // `next/image` cannot take a data URL — a plain <img> is the only
+          // honest way to show it.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={animal.photoUrl}
+            alt={animal.petName ?? animal.description.slice(0, 60)}
+            className="size-full object-cover"
+          />
+        ) : animal.photoUrl ? (
           <Image
             src={animal.photoUrl}
             alt={animal.petName ?? animal.description.slice(0, 60)}
@@ -82,28 +94,22 @@ export function AnimalPopup({ animal }: { animal: AnimalDTO }) {
         className="w-full"
       />
 
-      <Button
-        size="sm"
-        variant="secondary"
-        className="w-full"
-        render={
-          <a
-            href={`https://wa.me/${animal.whatsapp}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          />
-        }
-      >
+      <DemoContactButton className="w-full">
         <WhatsappIcon />
         {ANIMAL_LABEL.contact}
-      </Button>
+      </DemoContactButton>
 
       {isAdmin && (
         <div className="border-t pt-2">
           <AdminActions
             published={animal.published}
-            onSetPublished={(published) => setAnimalPublished(animal.id, published)}
-            onDelete={() => deleteAnimal(animal.id)}
+            onSetPublished={async (published) =>
+              demo.patch(animal.id, await setAnimalPublished(animal.id, published))
+            }
+            onDelete={async () => {
+              await deleteAnimal(animal.id);
+              demo.remove(animal.id);
+            }}
           />
         </div>
       )}

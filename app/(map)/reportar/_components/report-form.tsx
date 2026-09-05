@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 import { useDraft } from "@/app/_hooks/use-draft";
 
+import { useDemo } from "../../_components/demo-store";
+
 import { BarrioPicker } from "./barrio-picker";
 import { Field, RequiredMark } from "./field";
 import { PinPicker } from "./pin-picker";
@@ -41,6 +43,7 @@ export function ReportForm({
   header: React.ReactNode;
 }) {
   const router = useRouter();
+  const demo = useDemo();
   const [pending, startTransition] = useTransition();
   // From `lg` the barrio, the written address and the map move into their
   // own column instead of sitting inline between the other fields — see the
@@ -125,9 +128,16 @@ export function ReportForm({
     formData.set("latitude", String(point.lat));
 
     try {
-      const { id } = await proposeSite(formData);
+      const site = await proposeSite(formData);
+      // Straight into the store: the server has no memory of this one, so if
+      // the browser drops it here the pin is gone the moment the form
+      // unmounts.
+      demo.add("sites", site);
       clear();
-      router.push(`/punto/${id}`);
+      // Back to the map, not to `/punto/[id]`. That route resolves the pin on
+      // the SERVER, which has never heard of this one and would answer 404 —
+      // the report lands on the map instead, where the store can show it.
+      router.push("/");
     } catch (cause) {
       // The DAL surfaces schema messages, which carry the useful ones — the
       // out-of-area rejection above all.

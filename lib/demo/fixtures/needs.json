@@ -1,0 +1,522 @@
+[
+  {
+    "slug": "need-escombros-galan-cancha",
+    "category": "debris_removal",
+    "description": "El muro de contención de la cancha se vino sobre el andén y tapó la entrada de tres casas. Se necesita una volqueta y gente con pala; los vecinos ya movieron lo que podían cargar a mano.",
+    "longitude": -75.51191,
+    "latitude": 5.07525,
+    "exactAddress": "Carrera 11 con calle 34, al lado de la cancha de Galán",
+    "contactName": "Édinson Marulanda",
+    "phone": "3000000201",
+    "notes": "Hay dos adultos mayores en la casa del fondo.",
+    "createdHoursAgo": 30,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Cuadrilla Ferretería El Cable",
+        "phone": "3000000301",
+        "note": "Vamos mañana a las 7 con la volqueta y cuatro personas. Llevamos palas, no hace falta que consigan.",
+        "hoursAgo": 6
+      }
+    ]
+  },
+  {
+    "slug": "need-escombros-san-jose-calle26",
+    "category": "debris_removal",
+    "description": "Media fachada de una casa de bahareque quedó en la vía y el paso de la cuadra está cerrado. Ambulancias no pueden subir.",
+    "longitude": -75.51412,
+    "latitude": 5.07184,
+    "exactAddress": "Calle 26 entre carreras 13 y 14, San José",
+    "contactName": "Junta de Acción Comunal San José",
+    "phone": "3000000202",
+    "notes": null,
+    "createdHoursAgo": 41,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Brigada Universidad Nacional",
+        "phone": "3000000302",
+        "note": "Somos ocho estudiantes, llegamos el sábado temprano. Falta quien preste una volqueta para sacar lo que juntemos.",
+        "hoursAgo": 12
+      },
+      {
+        "kind": "helped",
+        "name": "Don Aníbal",
+        "phone": "3000000303",
+        "note": "Hicimos la mitad: liberamos el carril de subida. Queda el montón del andén, que necesita máquina.",
+        "hoursAgo": 4
+      }
+    ]
+  },
+  {
+    "slug": "need-riesgo-persia-alto",
+    "category": "structural_risk",
+    "description": "Grieta de lado a lado en el muro de carga de una casa de dos pisos, con seis personas viviendo dentro. Nadie del municipio ha venido a mirarla.",
+    "longitude": -75.5035,
+    "latitude": 5.05644,
+    "exactAddress": "Sector alto de Persia, subiendo por la escalera del salón comunal",
+    "contactName": "Mayerli Grajales",
+    "phone": "3000000203",
+    "notes": "Prefieren que llamen antes de subir.",
+    "createdHoursAgo": 22,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-riesgo-villapilar",
+    "category": "structural_risk",
+    "description": "Un talud sobre tres viviendas quedó suelto y con el aguacero de anoche se movió otra vez. Piden que alguien evalúe si hay que evacuar.",
+    "longitude": -75.52619,
+    "latitude": 5.08533,
+    "exactAddress": "Villapilar, sector Venecia, última cuadra antes de la ladera",
+    "contactName": null,
+    "phone": null,
+    "notes": "Reportado por un vecino; no dejó datos de contacto.",
+    "createdHoursAgo": 15,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-materiales-la-linda",
+    "category": "supplies",
+    "description": "Se necesitan tejas de zinc y lonas para cubrir cuatro casas destechadas antes del próximo aguacero. También sirven puntillas y un par de martillos.",
+    "longitude": -75.54834,
+    "latitude": 5.09412,
+    "exactAddress": "Ciudadela La Linda, entrada por la tienda La Esperanza",
+    "contactName": "Guadalupe Ocampo",
+    "phone": "3000000204",
+    "notes": null,
+    "createdHoursAgo": 36,
+    "published": true,
+    "updates": [
+      {
+        "kind": "helped",
+        "name": "Ferretería del sector",
+        "phone": "3000000304",
+        "note": "Donamos 12 tejas y las dejamos en la tienda. Alcanzan para dos casas, faltan las otras dos.",
+        "hoursAgo": 20
+      },
+      {
+        "kind": "still_needed",
+        "name": "Guadalupe Ocampo",
+        "phone": "3000000204",
+        "note": "Gracias, pero seguimos cortos: las dos casas de la parte de arriba siguen sin techo y con niños.",
+        "hoursAgo": 9
+      }
+    ]
+  },
+  {
+    "slug": "need-mercado-chipre-familia",
+    "category": "supplies",
+    "description": "Familia de cinco, dos de ellos niños, se quedó sin nada tras el sismo. Necesitan mercado y elementos de aseo; ropa de niño talla 6 y 10.",
+    "longitude": -75.52572,
+    "latitude": 5.07653,
+    "exactAddress": "Chipre, calle 22 con carrera 4, casa de dos pisos color verde",
+    "contactName": "Yaneth Duque",
+    "phone": "3000000205",
+    "notes": null,
+    "createdHoursAgo": 27,
+    "published": true,
+    "updates": [
+      {
+        "kind": "helped",
+        "name": "Fundación Manos de Caldas",
+        "phone": "3000000305",
+        "note": "Entregamos un mercado para quince días y kit de aseo. Ropa de niño todavía no conseguimos.",
+        "hoursAgo": 5
+      }
+    ]
+  },
+  {
+    "slug": "need-agua-morrogacho",
+    "category": "supplies",
+    "description": "El sector lleva dos días sin agua: se rompió la acometida. Se necesitan botellones o un carrotanque para veinte familias.",
+    "longitude": -75.53451,
+    "latitude": 5.07365,
+    "exactAddress": "Morrogacho, sector Topacio, junto al tanque viejo",
+    "contactName": "Comité de agua del sector",
+    "phone": "3000000206",
+    "notes": null,
+    "createdHoursAgo": 19,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Transportes La Ladera",
+        "phone": "3000000306",
+        "note": "Tenemos un carrotanque disponible el jueves en la mañana. Confirmen si sigue haciendo falta.",
+        "hoursAgo": 3
+      }
+    ]
+  },
+  {
+    "slug": "need-rescate-animal-arenillo",
+    "category": "animal_rescue",
+    "description": "Refugio con 92 perros y 4 gatos, a cargo de una pareja mayor. Se quedaron sin alimento y sin medicamentos veterinarios; el techo de dos corrales se cayó.",
+    "longitude": -75.53227,
+    "latitude": 5.04829,
+    "exactAddress": "Sector El Arenillo, vía al alto, portón azul",
+    "contactName": "Fundación Huellas del Arenillo",
+    "phone": "3000000207",
+    "notes": "Reciben concentrado de cualquier marca.",
+    "createdHoursAgo": 44,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Adriana Ríos",
+        "phone": "3000000307",
+        "note": "Llevo 40 kilos de concentrado el domingo. ¿Alguien puede llevar tejas para los corrales?",
+        "hoursAgo": 14
+      },
+      {
+        "kind": "helped",
+        "name": "Veterinaria del norte",
+        "phone": "3000000308",
+        "note": "Fuimos con dos veterinarios, revisamos a los perros heridos y dejamos antibióticos para una semana.",
+        "hoursAgo": 7
+      }
+    ]
+  },
+  {
+    "slug": "need-rescate-animal-villamaria",
+    "category": "animal_rescue",
+    "description": "Refugio de mascotas con 48 perros y 20 gatos: se necesita ayuda para poner tejas y sacar escombros del patio.",
+    "longitude": -75.514,
+    "latitude": 5.0458,
+    "exactAddress": "Villamaría, dos cuadras arriba del parque principal",
+    "contactName": "Leidy Ortiz",
+    "phone": "3000000208",
+    "notes": null,
+    "createdHoursAgo": 33,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-gato-atrapado-centro",
+    "category": "animal_rescue",
+    "description": "Hay un gato atrapado entre las placas de una casa desocupada desde el sismo. Se le oye, no se le ve. Se necesita alguien con herramienta y experiencia.",
+    "longitude": -75.51622,
+    "latitude": 5.06829,
+    "exactAddress": "Centro, carrera 21 con calle 30, casa esquinera con cinta amarilla",
+    "contactName": "Vecinos de la cuadra",
+    "phone": "3000000209",
+    "notes": null,
+    "createdHoursAgo": 8,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-escombros-alta-suiza",
+    "category": "debris_removal",
+    "description": "Un tapial se cayó dentro del patio y bloquea la salida de emergencia del edificio. Son unos tres viajes de volqueta.",
+    "longitude": -75.48194,
+    "latitude": 5.05054,
+    "exactAddress": "Alta Suiza, edificio de cuatro pisos frente a la panadería",
+    "contactName": "Administración del edificio",
+    "phone": "3000000210",
+    "notes": null,
+    "createdHoursAgo": 26,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-escombros-la-francia",
+    "category": "debris_removal",
+    "description": "Escombros de dos casas demolidas ocupan toda la vía peatonal que usan los niños para ir a la escuela.",
+    "longitude": -75.53246,
+    "latitude": 5.06775,
+    "exactAddress": "La Francia, camino peatonal detrás de la escuela",
+    "contactName": "Nubia Cardona",
+    "phone": "3000000211",
+    "notes": null,
+    "createdHoursAgo": 47,
+    "published": true,
+    "updates": [
+      {
+        "kind": "helped",
+        "name": "Cuadrilla del barrio",
+        "phone": "3000000309",
+        "note": "Entre ocho vecinos abrimos un paso de un metro. Sirve para pasar, pero falta sacar el resto.",
+        "hoursAgo": 24
+      },
+      {
+        "kind": "helped",
+        "name": "Constructora Los Cerros",
+        "phone": "3000000310",
+        "note": "Prestamos la retro dos horas y sacamos casi todo. Queda solo el montón de la esquina.",
+        "hoursAgo": 10
+      }
+    ]
+  },
+  {
+    "slug": "need-riesgo-solferino",
+    "category": "structural_risk",
+    "description": "La placa del segundo piso quedó pandeada y se oye crujir. Viven ocho personas y no tienen a dónde ir mientras revisan.",
+    "longitude": -75.48717,
+    "latitude": 5.07774,
+    "exactAddress": "Solferino, calle 60 con carrera 15",
+    "contactName": "Familia Betancur",
+    "phone": "3000000212",
+    "notes": null,
+    "createdHoursAgo": 12,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-riesgo-bosques-del-norte",
+    "category": "structural_risk",
+    "description": "Escalera comunal de acceso a doce casas partida por la mitad. La gente está subiendo por el barranco.",
+    "longitude": -75.4904,
+    "latitude": 5.08174,
+    "exactAddress": "Bosques del Norte, escalera del bloque 4",
+    "contactName": "Óscar Zuluaga",
+    "phone": "3000000213",
+    "notes": null,
+    "createdHoursAgo": 38,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Ingeniera voluntaria",
+        "phone": "3000000311",
+        "note": "Paso el miércoles a mirar qué se necesita para una escalera provisional en madera.",
+        "hoursAgo": 16
+      }
+    ]
+  },
+  {
+    "slug": "need-mercado-la-enea",
+    "category": "supplies",
+    "description": "Cuatro familias que dormían en el salón comunal necesitan mercado, colchonetas y cobijas. Van cinco noches ahí.",
+    "longitude": -75.46149,
+    "latitude": 5.02981,
+    "exactAddress": "La Enea, salón comunal detrás del parque",
+    "contactName": "Marta Lucía Henao",
+    "phone": "3000000214",
+    "notes": null,
+    "createdHoursAgo": 29,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-pañales-los-cedros",
+    "category": "supplies",
+    "description": "Se necesitan pañales de adulto talla M y suplemento nutricional para una señora encamada. La casa quedó sin servicio de agua.",
+    "longitude": -75.50003,
+    "latitude": 5.06881,
+    "exactAddress": "Los Cedros, casa 14 de la manzana C",
+    "contactName": "Blanca Restrepo",
+    "phone": "3000000215",
+    "notes": "Hija cuidadora, disponible todo el día.",
+    "createdHoursAgo": 18,
+    "published": true,
+    "updates": [
+      {
+        "kind": "helped",
+        "name": "Droguería del barrio",
+        "phone": "3000000312",
+        "note": "Dejamos dos paquetes de pañales talla M. El suplemento no lo tenemos, toca en una droguería grande.",
+        "hoursAgo": 2
+      }
+    ]
+  },
+  {
+    "slug": "need-herramienta-sacatin",
+    "category": "supplies",
+    "description": "La cuadrilla del barrio necesita dos discos de corte para metal, uno para madera y una caja de puntilla de media pulgada.",
+    "longitude": -75.52924,
+    "latitude": 5.08843,
+    "exactAddress": "Sacatín, casa comunal",
+    "contactName": "Jhon Fredy Salazar",
+    "phone": "3000000216",
+    "notes": null,
+    "createdHoursAgo": 21,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-otro-transporte-fatima",
+    "category": "other",
+    "description": "Una familia con dos niños necesita cómo trasladar sus cosas a la casa de un familiar en Villamaría. Son unas quince cajas y dos camas.",
+    "longitude": -75.49708,
+    "latitude": 5.05248,
+    "exactAddress": "Fátima, carrera 26 con calle 63",
+    "contactName": "Sandra Milena Ruiz",
+    "phone": "3000000217",
+    "notes": null,
+    "createdHoursAgo": 25,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Camioneta de Julián",
+        "phone": "3000000313",
+        "note": "Yo tengo camioneta y puedo hacer dos viajes el sábado en la tarde.",
+        "hoursAgo": 8
+      }
+    ]
+  },
+  {
+    "slug": "need-otro-combustible-fundadores",
+    "category": "other",
+    "description": "Bomberos voluntarios del sector piden apoyo con combustible para los vehículos que están moviendo ayuda por la ciudad.",
+    "longitude": -75.50985,
+    "latitude": 5.06613,
+    "exactAddress": "Fundadores, sede de bomberos voluntarios",
+    "contactName": "Jairo Loaiza",
+    "phone": "3000000218",
+    "notes": null,
+    "createdHoursAgo": 34,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-otro-psicologia-comuneros",
+    "category": "other",
+    "description": "En el albergue improvisado hay niños que no están durmiendo. Piden apoyo psicosocial, aunque sea una jornada.",
+    "longitude": -75.49095,
+    "latitude": 5.07276,
+    "exactAddress": "Comuneros, salón parroquial",
+    "contactName": "Padre de la parroquia",
+    "phone": "3000000219",
+    "notes": null,
+    "createdHoursAgo": 16,
+    "published": true,
+    "updates": [
+      {
+        "kind": "on_the_way",
+        "name": "Colectivo de psicólogas",
+        "phone": "3000000314",
+        "note": "Vamos tres psicólogas el viernes de 2 a 6. Necesitamos un espacio cerrado para los niños.",
+        "hoursAgo": 5
+      }
+    ]
+  },
+  {
+    "slug": "need-escombros-nogales",
+    "category": "debris_removal",
+    "description": "Cayó un árbol grande sobre el muro del antejardín y hay vidrios en toda la acera. Se necesita motosierra.",
+    "longitude": -75.52432,
+    "latitude": 5.0591,
+    "exactAddress": "Nogales, calle 45 con carrera 32",
+    "contactName": "Rodrigo Peláez",
+    "phone": "3000000220",
+    "notes": null,
+    "createdHoursAgo": 11,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-riesgo-la-sultana",
+    "category": "structural_risk",
+    "description": "Tres casas quedaron con la cimentación descubierta después de que se movió el terreno. Piden evaluación urgente.",
+    "longitude": -75.47241,
+    "latitude": 5.06165,
+    "exactAddress": "La Sultana, parte alta, sobre la vía destapada",
+    "contactName": "Líder comunal del sector",
+    "phone": "3000000221",
+    "notes": null,
+    "createdHoursAgo": 40,
+    "published": true,
+    "updates": [
+      {
+        "kind": "helped",
+        "name": "Ingeniero civil voluntario",
+        "phone": "3000000315",
+        "note": "Revisé las tres casas: dos son habitables, la del medio no. Dejé el concepto por escrito con la líder.",
+        "hoursAgo": 18
+      },
+      {
+        "kind": "still_needed",
+        "name": "Líder comunal del sector",
+        "phone": "3000000221",
+        "note": "La familia de la casa del medio sigue durmiendo ahí porque no tiene a dónde ir. Necesitamos ayuda con arriendo o un albergue.",
+        "hoursAgo": 6
+      }
+    ]
+  },
+  {
+    "slug": "need-mercado-estambul",
+    "category": "supplies",
+    "description": "Señora sola, 78 años, sin familia en la ciudad. Necesita mercado y que alguien le ayude a limpiar la cocina.",
+    "longitude": -75.52642,
+    "latitude": 5.04891,
+    "exactAddress": "Estambul, casa esquinera con reja blanca",
+    "contactName": "Doña Rosalba",
+    "phone": "3000000222",
+    "notes": "Es sorda de un oído; timbrar fuerte.",
+    "createdHoursAgo": 9,
+    "published": true,
+    "updates": []
+  },
+  {
+    "slug": "need-escombros-cerrado",
+    "category": "debris_removal",
+    "description": "Escombros del muro lateral de la escuela sobre la entrada de los salones. Ya fue atendido y la escuela volvió a clases.",
+    "longitude": -75.49586,
+    "latitude": 5.06577,
+    "exactAddress": "La Argentina, escuela del barrio",
+    "contactName": "Rectoría de la escuela",
+    "phone": "3000000223",
+    "notes": null,
+    "createdHoursAgo": 52,
+    "published": true,
+    "closedStatus": "closed_completed",
+    "updates": [
+      {
+        "kind": "helped",
+        "name": "Cuadrilla de la alcaldía",
+        "phone": "3000000316",
+        "note": "Sacamos todo en dos viajes de volqueta y limpiamos el patio.",
+        "hoursAgo": 30
+      },
+      {
+        "kind": "helped",
+        "name": "Padres de familia",
+        "phone": "3000000317",
+        "note": "Terminamos de barrer y lavamos el corredor. Los niños ya volvieron a clase.",
+        "hoursAgo": 26
+      }
+    ]
+  },
+  {
+    "slug": "need-rechazado",
+    "category": "supplies",
+    "description": "Solicitud de mercado y electrodomésticos para una dirección que no existe. Reportada varias veces desde el mismo número.",
+    "longitude": -75.50568,
+    "latitude": 5.04913,
+    "exactAddress": "Las Colinas, dirección sin nomenclatura",
+    "contactName": null,
+    "phone": null,
+    "notes": null,
+    "createdHoursAgo": 43,
+    "published": true,
+    "closedStatus": "closed_rejected",
+    "updates": [
+      {
+        "kind": "not_real",
+        "name": "Vecino del sector",
+        "phone": "3000000318",
+        "note": "Fui a la dirección y no existe. Nadie en la cuadra conoce el caso.",
+        "hoursAgo": 21
+      }
+    ]
+  },
+  {
+    "slug": "need-oculto-spam",
+    "category": "other",
+    "description": "Reporte con datos de contacto de una tercera persona publicados sin su permiso. Ocultado por curaduría; existe aquí para que la cola de moderación tenga algo dentro.",
+    "longitude": -75.51324,
+    "latitude": 5.06416,
+    "exactAddress": "Campoamor",
+    "contactName": null,
+    "phone": null,
+    "notes": null,
+    "createdHoursAgo": 7,
+    "published": false,
+    "updates": []
+  }
+]

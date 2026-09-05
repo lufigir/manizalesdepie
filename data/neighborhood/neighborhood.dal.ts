@@ -1,12 +1,11 @@
 import "server-only";
 
-import { log } from "@/lib/log";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { neighborhoods } from "@/lib/demo/dataset";
 
 import { neighborhoodSchema, type NeighborhoodDTO } from "./neighborhood.dto";
 
 /**
- * The only path from this application to `neighborhoods`.
+ * The only path from this application to the barrios.
  *
  * Read-only, and it shows: there is one factory and it is `public()`. The
  * barrios are the Alcaldía's official layer, published as open data, and the
@@ -31,33 +30,21 @@ export class NeighborhoodDAL {
    * line (`parentName`), not the ordering, that has to carry the relationship
    * between the two.
    *
-   * ~294 rows of six short fields — on the order of ten kilobytes on the
+   * 292 rows of six short fields — on the order of ten kilobytes on the
    * wire. That is still well under the 149 KB of `public/barrios.geojson`'s
    * 114 polygons, and the comparison is more one-sided than it looks: the
    * geojson carries polygons for the barrios only and has no sector rows in
    * it at all, so it could not serve this picker even at its own size.
    */
   async list(): Promise<NeighborhoodDTO[]> {
-    const supabase = await createServerSupabase();
-
-    const { data, error } = await supabase
-      .from("neighborhoods_public")
-      .select("id, name, municipality, longitude, latitude, parent")
-      .order("name");
-
-    if (error) {
-      log.error("neighborhood.list failed", { code: error.code });
-      throw new Error("No se pudieron cargar los barrios");
-    }
-
-    return (data ?? []).map((row) =>
+    return neighborhoods().map((row) =>
       neighborhoodSchema.parse({
         id: row.id,
         name: row.name,
         municipality: row.municipality,
         longitude: row.longitude,
         latitude: row.latitude,
-        parentName: row.parent,
+        parentName: row.parentName,
       }),
     );
   }

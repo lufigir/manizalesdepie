@@ -1,4 +1,4 @@
-import type { CurrentUser } from "@/data/user/require-user";
+import type { CurrentUser } from "@/data/user/current-user";
 
 /**
  * Pure predicates. No database, no session lookup, no side effects.

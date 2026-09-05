@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { AnimalDAL } from "@/data/animal/animal.dal";
 import { NeedDAL } from "@/data/need/need.dal";
 import { SiteDAL } from "@/data/site/site.dal";
-import { getCurrentUser } from "@/data/user/require-user";
-import { clientEnv } from "@/lib/env";
+import { getCurrentUser } from "@/data/user/current-user";
+import { SITE_URL } from "@/lib/env";
 import {
   OG_LABEL,
   NEED_CATEGORY_LABEL,
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `${clientEnv.NEXT_PUBLIC_SITE_URL}/necesidad/${order.id}`,
+      url: `${SITE_URL}/necesidad/${order.id}`,
       locale: "es_CO",
       type: "website",
     },
@@ -79,7 +79,7 @@ export default async function SharedNeedPage({ params }: Params) {
     : [order, ...needs];
 
   return (
-    <main className="h-dvh w-full overflow-hidden">
+    <main className="h-full w-full overflow-hidden">
       <MapWorkspace
         sites={sites}
         needs={withShared}
