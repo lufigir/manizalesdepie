@@ -1,0 +1,64 @@
+# The boundary rules in `eslint.config.mjs` are only real if something
+# refuses to merge when they fail. Until this file existed they ran when
+# somebody remembered to type `npm run lint`, which is the same as advisory.
+#
+# `tsc --noEmit` is here because `next build` is the only thing that type
+# checks this repo today, and it does so as a side effect of bundling — a
+# type error in a file no route imports would not surface.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch makes the first run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `npm ci` honours `.npmrc`, so `ignore-scripts=true` applies here too.
+      # `oxlint-tsgolint` still arrives, because it ships as an optional
+      # dependency rather than a postinstall step.
+      - run: npm ci
+
+      - name: ESLint (layer boundaries)
+        run: npm run lint
+
+      - name: Oxlint (type-aware)
+        run: npm run lint:oxlint
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      # Last, because it is the slowest and the three checks above catch
+      # most of what would break it.
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholders on purpose, not secrets that went missing.
+          #
+          # `lib/env.ts` and `lib/env.server.ts` parse at import time and throw
+          # when a variable is absent, so the build cannot run without all
+          # four. Nothing here reaches the network: every route is dynamic, so
+          # the build compiles and type checks but never issues a query. Real
+          # values would buy nothing and would put a service key in CI.
+          #
+          # If a future build starts prerendering real data, this job will
+          # fail against these values — which is the correct moment to decide
+          # whether CI should hold credentials at all.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
+          NEXT_PUBLIC_SITE_URL: https://placeholder.invalid
+          SUPABASE_SECRET_KEY: placeholder-secret-key

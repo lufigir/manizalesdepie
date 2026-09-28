@@ -30,7 +30,6 @@ const eslintConfig = defineConfig([
     // until someone deliberately negates it — never unreachable by omission.
     name: "manizales/ui-may-not-reach-the-database",
     files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
-    ignores: ["app/api/**"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -40,6 +39,10 @@ const eslintConfig = defineConfig([
               group: [
                 "@/lib/supabase/*",
                 "@supabase/supabase-js",
+                // `createBrowserClient` and `createServerClient` live here.
+                // Denying only the wrappers in `lib/supabase/` would leave
+                // the door they wrap wide open.
+                "@supabase/ssr",
                 // `map-workspace.tsx` subscribes to realtime straight from
                 // the browser (see AGENTS.md: "Realtime goes browser →
                 // Postgres directly"), which is the one place the UI is
@@ -77,6 +80,7 @@ const eslintConfig = defineConfig([
               group: [
                 "@/lib/supabase/*",
                 "@supabase/supabase-js",
+                "@supabase/ssr",
                 "!@/lib/supabase/server",
                 // The Google button starts the OAuth redirect from the
                 // browser, so it needs the browser client too.
@@ -116,7 +120,11 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/lib/supabase/*", "@supabase/supabase-js"],
+              group: [
+                "@/lib/supabase/*",
+                "@supabase/supabase-js",
+                "@supabase/ssr",
+              ],
               message:
                 "Solo *.dal.ts habla con la base de datos. Un DTO, una policy o una action que consulte rompe la única puerta de entrada.",
             },
@@ -127,6 +135,12 @@ const eslintConfig = defineConfig([
   },
 
   {
+    // Deny-by-default, like the two blocks above. Listing what a policy may
+    // not import was the weak version: it left `@supabase/ssr`, `next/cache`
+    // and every `*.dal` reachable, so the rule only caught the mistakes
+    // somebody had already thought of. A policy needs exactly two things —
+    // the shape of what it judges, and who is asking — so those two are the
+    // negated exceptions and everything else is closed.
     name: "manizales/policies-stay-pure",
     files: ["data/**/*.policy.ts"],
     rules: {
@@ -135,9 +149,18 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
-              group: ["@/lib/supabase/*", "next/headers", "next/navigation"],
+              group: [
+                "@/data/*/*",
+                "@/lib/*",
+                "@/lib/*/*",
+                "@supabase/*",
+                "next/*",
+                "server-only",
+                "!@/data/*/*.dto",
+                "!@/data/user/require-user",
+              ],
               message:
-                "Una policy es una función pura: recibe lo que necesita y devuelve un booleano. Sin sesión, sin base de datos, sin efectos.",
+                "Una policy es una función pura: recibe lo que necesita y devuelve un booleano. Sin sesión, sin base de datos, sin efectos. Solo puede importar tipos de un *.dto o de require-user.",
             },
           ],
         },
@@ -146,8 +169,48 @@ const eslintConfig = defineConfig([
   },
 
   {
+    // `lib/` is the bottom layer: it may not reach up into the layers built
+    // on top of it. The one thing that legitimately travels upward is the
+    // shared vocabulary — a DTO type — which is why `lib/labels.ts`,
+    // `lib/tabs.ts` and `lib/urgency.ts` can name the shapes they render
+    // without `data/` becoming their dependency.
+    //
+    // Without this block `lib/` was the only layer in the repo with no
+    // boundary at all: nothing stopped a helper from importing a DAL and
+    // quietly turning shared plumbing into a second door to the database.
+    name: "manizales/lib-is-the-bottom-layer",
+    files: ["lib/**/*.ts"],
+    ignores: ["lib/supabase/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/app/*",
+                "@/app/*/*",
+                "@/components/*",
+                "@/components/*/*",
+                "@/data/*/*",
+                "!@/data/*/*.dto",
+              ],
+              message:
+                "lib/ es la capa de abajo: no importa de app/, components/ ni data/. Lo único que sube es un tipo de *.dto, que es vocabulario compartido.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    // `.ts` as well as `.tsx`, and `lib/` as well as the UI: every colour
+    // class in this product is decided in `lib/labels.ts` and `lib/tabs.ts`
+    // (`NEED_ROLLUP_STYLE`, `SITE_STATUS_MARKER`, …), which the old
+    // `.tsx`-only pattern left as the one unlinted surface in the repo.
     name: "manizales/no-literal-colors",
-    files: ["app/**/*.tsx", "components/**/*.tsx"],
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.ts"],
     ignores: ["components/ui/**"],
     rules: {
       "no-restricted-syntax": [
