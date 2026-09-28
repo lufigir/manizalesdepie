@@ -106,6 +106,11 @@ export class AnimalDAL {
    * no insert policy at all, which is what stops a public map from becoming a
    * place anyone can host any image. The file is downscaled on the client
    * before it gets here, so what crosses the wire is small.
+   *
+   * This is Storage, not a `public` table — 20260820010000's column grants
+   * do not reach it, and giving the bucket its own anon/authenticated
+   * upload policy is a different, larger decision than this migration
+   * makes. The service-role client remains the only path in.
    */
   async uploadPhoto(file: File): Promise<string> {
     if (!canReportAnimal()) throw new Error("Forbidden");
@@ -137,7 +142,10 @@ export class AnimalDAL {
 
     if (!canReportAnimal()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: RLS grants anon/authenticated INSERT on exactly
+    // these columns (20260820010000). `published` is left out for the same
+    // reason as `SiteDAL.propose` — the column defaults to true.
+    const supabase = await createServerSupabase();
     const { data: row, error } = await supabase
       .from("animal_reports")
       .insert({
@@ -171,7 +179,10 @@ export class AnimalDAL {
   async resolve(id: string): Promise<void> {
     if (!canResolveAnimal()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: `animal_reports` grants anon/authenticated
+    // UPDATE on `resolved_at` alongside the ordinary editable fields
+    // (20260820010000) — this is open to anyone, the same bar as reporting.
+    const supabase = await createServerSupabase();
     const { error } = await supabase
       .from("animal_reports")
       .update({ resolved_at: new Date().toISOString() })
@@ -200,7 +211,9 @@ export class AnimalDAL {
     if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
     if (Object.keys(patch).length === 0) return;
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: `animal_reports` grants anon/authenticated
+    // UPDATE on exactly these six columns (20260820010000).
+    const supabase = await createServerSupabase();
     const { error } = await supabase.from("animal_reports").update(patch).eq("id", data.id);
 
     if (error) {
@@ -220,6 +233,8 @@ export class AnimalDAL {
   async setPublished(id: string, published: boolean): Promise<void> {
     if (!canManageAnimal(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client, same as every other
+    // manage/publish/remove method in this codebase.
     const supabase = createAdminSupabase();
     const { error } = await supabase
       .from("animal_reports")
@@ -238,6 +253,7 @@ export class AnimalDAL {
   async remove(id: string): Promise<void> {
     if (!canManageAnimal(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client.
     const supabase = createAdminSupabase();
     const { error } = await supabase.from("animal_reports").delete().eq("id", id);
 

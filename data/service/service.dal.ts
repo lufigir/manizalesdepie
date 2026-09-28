@@ -17,11 +17,6 @@ import {
   canProposeService,
 } from "./service.policy";
 
-/** A service with no stated end is worth showing for a while, not forever —
- *  long enough that "tengo una volqueta" is not gone by lunch, short enough
- *  that it eventually asks to be confirmed like everything else here. */
-const DEFAULT_AVAILABILITY_DAYS = 7;
-
 /**
  * The only path from this application to `services`.
  *
@@ -112,7 +107,14 @@ export class ServiceDAL {
 
     const hasPoint = data.longitude !== undefined && data.latitude !== undefined;
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: RLS grants anon/authenticated INSERT on exactly
+    // these columns (20260820010000). `expires_at` is no longer sent here —
+    // "a service with no stated end is worth showing for a while, not
+    // forever" now lives as the column's own `now() + 7 days` default
+    // (20260820010000) rather than a literal this method computed by hand,
+    // so it never needed a client-facing grant at all. `published` is left
+    // out for the same reason as `SiteDAL.propose`.
+    const supabase = await createServerSupabase();
     const { data: row, error } = await supabase
       .from("services")
       .insert({
@@ -123,13 +125,6 @@ export class ServiceDAL {
           ? `SRID=4326;POINT(${data.longitude} ${data.latitude})`
           : null,
         whatsapp: data.whatsapp,
-        published: true,
-        // The form used to ask "¿hasta cuándo?" and take the answer as the
-        // expiry. Nobody answered it, 46 times out of 46, so the window is
-        // the only thing left setting it.
-        expires_at: new Date(
-          Date.now() + DEFAULT_AVAILABILITY_DAYS * 24 * 60 * 60 * 1000,
-        ).toISOString(),
         created_by: this.user?.id ?? null,
       })
       .select("id")
@@ -161,7 +156,9 @@ export class ServiceDAL {
     if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
     if (Object.keys(patch).length === 0) return;
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: `services` grants anon/authenticated UPDATE on
+    // exactly these four columns (20260820010000).
+    const supabase = await createServerSupabase();
     const { error } = await supabase
       .from("services")
       .update(patch)
@@ -187,6 +184,8 @@ export class ServiceDAL {
   async setPublished(id: string, published: boolean): Promise<void> {
     if (!canManageService(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client, same as every other
+    // manage/publish/remove method in this codebase.
     const supabase = createAdminSupabase();
     const { error } = await supabase
       .from("services")
@@ -206,6 +205,7 @@ export class ServiceDAL {
   async remove(id: string): Promise<void> {
     if (!canManageService(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client.
     const supabase = createAdminSupabase();
     const { error } = await supabase.from("services").delete().eq("id", id);
 

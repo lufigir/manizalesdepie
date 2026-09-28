@@ -156,7 +156,12 @@ export class SiteDAL {
 
     if (!canProposeSite()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: RLS grants anon/authenticated INSERT on exactly
+    // these columns (20260820010000), and `published` is left out of the
+    // payload entirely — the column defaults to true, which is what "on the
+    // map immediately" already meant. Sending it explicitly would need a
+    // grant this migration deliberately does not hand to a non-curator.
+    const supabase = await createServerSupabase();
     const { data: row, error } = await supabase
       .from("sites")
       .insert({
@@ -167,7 +172,6 @@ export class SiteDAL {
         location: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
         schedule: data.schedule ?? null,
         whatsapp: data.whatsapp ?? null,
-        published: true,
         created_by: this.user?.id ?? null,
       })
       .select("id")
@@ -182,7 +186,16 @@ export class SiteDAL {
     return { id: row.id };
   }
 
-  /** Makes a site visible to the city. Curators only. */
+  /**
+   * Makes a site visible to the city. Curators only.
+   *
+   * Stays on the service-role client: RLS *can* let a curator's own session
+   * do this — `sites_update_anyone` plus the `published` grant on
+   * `authenticated` and `forbid_publish_toggle_by_non_curator` all allow it
+   * — but the admin client is what every other curator action here already
+   * uses, and there is no reason for this one alone to depend on the
+   * caller's session still being fresh mid-review.
+   */
   async publish(id: string): Promise<void> {
     if (!canPublishSite(this.user)) throw new Error("Forbidden");
 
@@ -210,6 +223,15 @@ export class SiteDAL {
 
     if (!canConfirmSite()) throw new Error("Forbidden");
 
+    // Stays on the service-role client. `confirmed_at` is exactly the
+    // column 20260820000000 stopped letting anon/authenticated touch — it
+    // is what `confirmation_bumps_count` used to let a stranger spin in a
+    // loop — so 20260820010000 grants neither `status` nor `confirmed_at`
+    // on `sites` to anyone. This method still needs to write both, plus the
+    // `site_confirmations` row right after, and that table has carried no
+    // anon/authenticated INSERT grant since the same migration. Splitting
+    // the two writes across two clients would only add a place for them to
+    // disagree.
     const supabase = createAdminSupabase();
     const now = new Date().toISOString();
 
@@ -256,7 +278,11 @@ export class SiteDAL {
     if (data.whatsapp !== undefined) patch.whatsapp = data.whatsapp;
     if (Object.keys(patch).length === 0) return;
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: 20260820010000 grants anon/authenticated UPDATE
+    // on exactly these six columns, so this is the whole authorization
+    // surface — there is no `published`/`status`/coordinate in `patch` for
+    // RLS to have to reject.
+    const supabase = await createServerSupabase();
     const { error } = await supabase.from("sites").update(patch).eq("id", data.id);
 
     if (error) {
@@ -290,6 +316,15 @@ export class SiteDAL {
   async relocate(input: unknown): Promise<void> {
     const { id, longitude, latitude } = relocateSiteSchema.parse(input);
 
+    // Stays on the service-role client, and has to: `canRelocate` needs the
+    // pin's CURRENT barrio to authorize the move, so this method reads
+    // `neighborhood_id` before it knows whether the caller may write
+    // anything at all. RLS can gate a write against the row being written,
+    // not against a value read earlier in the same request — there is no
+    // policy shape for "allowed only if a fact resolved two queries ago
+    // says so". `location` also carries no anon/authenticated UPDATE grant
+    // at all (20260820010000), so the session-bound client could not make
+    // this write regardless.
     const supabase = createAdminSupabase();
 
     const { data: current, error: readError } = await supabase
@@ -329,6 +364,8 @@ export class SiteDAL {
   async setPublished(id: string, published: boolean): Promise<void> {
     if (!canManageSite(this.user)) throw new Error("Forbidden");
 
+    // Curator-only, like every other manage/publish/remove method here —
+    // stays on the service-role client for the same reason `publish` does.
     const supabase = createAdminSupabase();
     const { error } = await supabase.from("sites").update({ published }).eq("id", id);
 
@@ -343,6 +380,8 @@ export class SiteDAL {
   async remove(id: string): Promise<void> {
     if (!canManageSite(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client for the same reason
+    // as `publish` and `setPublished` above.
     const supabase = createAdminSupabase();
     const { error } = await supabase.from("sites").delete().eq("id", id);
 

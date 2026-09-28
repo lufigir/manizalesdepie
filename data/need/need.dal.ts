@@ -126,14 +126,18 @@ export class NeedDAL {
 
     if (!canReportNeed()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: RLS grants anon/authenticated INSERT on exactly
+    // these columns (20260820010000). `status` is never in this payload —
+    // it is not even a column the grant covers — `published` is left out
+    // for the same reason as `SiteDAL.propose`: the column defaults to
+    // true.
+    const supabase = await createServerSupabase();
     const { data: row, error } = await supabase
       .from("needs")
       .insert({
         category: data.category,
         description: data.description,
         location: `SRID=4326;POINT(${data.longitude} ${data.latitude})`,
-        published: true,
         created_by: this.user?.id ?? null,
         // One insert now, not two. The contact fields used to be written to
         // a separate table because they had a different visibility rule;
@@ -172,7 +176,11 @@ export class NeedDAL {
 
     if (!canPostNeedUpdate()) throw new Error("Forbidden");
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: `need_updates` grants anon/authenticated INSERT
+    // on exactly these five columns (20260820010000). `sync_need_state`
+    // itself runs `security definer`, so it derives `status` regardless of
+    // which client made this insert.
+    const supabase = await createServerSupabase();
 
     const { error } = await supabase.from("need_updates").insert({
       need_id: data.needId,
@@ -242,6 +250,16 @@ export class NeedDAL {
   ): Promise<void> {
     if (!canCloseNeed(this.user)) throw new Error("Forbidden");
 
+    // Stays on the service-role client, and has to: `needs.status` carries
+    // no anon/authenticated grant at all, for either role, under any
+    // condition — see 20260820010000. That is the point of the redesign
+    // this method is the one deliberate exception to: nothing in this
+    // application writes `status` except this curator override and the
+    // `security definer` trigger that derives it from `need_updates`.
+    // Opening a `status` grant, even one gated to `authenticated` and
+    // `is_curator()` the way `published` is, would put a second writer next
+    // to `sync_need_state` for the one column this schema promises has
+    // only one.
     const supabase = createAdminSupabase();
     const now = new Date();
     const expiresAt = new Date(
@@ -277,7 +295,10 @@ export class NeedDAL {
     if (data.description !== undefined) patch.description = data.description;
     if (Object.keys(patch).length === 0) return;
 
-    const supabase = createAdminSupabase();
+    // Runs as the caller: `needs` grants anon/authenticated UPDATE on only
+    // `category` and `description` (20260820010000), which is the whole
+    // contents of `patch` by construction.
+    const supabase = await createServerSupabase();
     const { error } = await supabase.from("needs").update(patch).eq("id", data.id);
 
     if (error) {
@@ -302,6 +323,11 @@ export class NeedDAL {
   async relocate(input: unknown): Promise<void> {
     const { id, longitude, latitude } = relocateNeedSchema.parse(input);
 
+    // Stays on the service-role client — same reason as `SiteDAL.relocate`:
+    // `canRelocate` needs the case's current barrio, read before this
+    // method knows whether the caller may write anything, which is not
+    // something an RLS policy can condition on. `location` also carries no
+    // anon/authenticated UPDATE grant on `needs` at all.
     const supabase = createAdminSupabase();
 
     const { data: current, error: readError } = await supabase
@@ -347,6 +373,8 @@ export class NeedDAL {
   async setPublished(id: string, published: boolean): Promise<void> {
     if (!canManageNeed(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client, same as every other
+    // manage/publish/remove method in this codebase.
     const supabase = createAdminSupabase();
     const { error } = await supabase
       .from("needs")
@@ -364,6 +392,7 @@ export class NeedDAL {
   async remove(id: string): Promise<void> {
     if (!canManageNeed(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client.
     const supabase = createAdminSupabase();
     const { error } = await supabase.from("needs").delete().eq("id", id);
 
@@ -389,6 +418,7 @@ export class NeedDAL {
   async removeUpdate(id: string): Promise<void> {
     if (!canDeleteNeedUpdate(this.user)) throw new Error("Forbidden");
 
+    // Curator-only — stays on the service-role client.
     const supabase = createAdminSupabase();
     const { error } = await supabase.from("need_updates").delete().eq("id", id);
 
