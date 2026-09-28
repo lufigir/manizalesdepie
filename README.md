@@ -37,10 +37,6 @@ From **Project Settings → API**, copy into `.env.local`:
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable (anon) key |
 | `SUPABASE_SECRET_KEY` | Secret (service role) key — **server only** |
 
-`NEXT_PUBLIC_CURATOR_WHATSAPP` is the number curators staff, digits only with
-the country code (`57` for Colombia). It is shown across the whole app because
-the people who lost their homes are not the ones using it.
-
 `lib/env.ts` validates all of this at load. A missing variable fails the build
 rather than surfacing as a null at 3am.
 
@@ -60,13 +56,13 @@ views, the proximity RPCs and every row-level security policy.
 npx supabase db execute --file supabase/seed.sql
 ```
 
-The seed carries real shelter names, real needs, real road closures and the
-real blood-type urgency, all sourced from press and institutional reporting.
+The seed carries real shelter names and real needs, sourced from press and
+institutional reporting.
 
 **The coordinates are approximate and unverified.** Every row is inserted with
 `published = false` on purpose. Sending someone to the wrong shelter during an
-emergency is worse than having no pin at all, so a curator must geocode and
-confirm each row before it goes live.
+emergency is worse than having no pin at all, so each row is geocoded and
+confirmed before it goes live.
 
 ### 4. Google sign-in
 
@@ -125,8 +121,8 @@ npm run dev
   is being useless when the event itself took down the network. This was
   decided against with the evidence on the table.
 - **Phone numbers are declared, not verified.** No SMS OTP, because it costs
-  money and the project runs on free tiers. A Google account gives traceability;
-  a curator calls before verifying a listing.
+  money and the project runs on free tiers. A Google account gives traceability,
+  and a listing carries the confirmations neighbours leave on it.
 - **The name excludes Villamaría**, which also has casualties and displaced
   families.
 - **Free tier under load.** If this catches on, the ceiling arrives at the worst

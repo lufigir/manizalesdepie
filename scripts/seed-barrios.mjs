@@ -1,5 +1,5 @@
 /**
- * Loads public/barrios.geojson into the `neighborhood` table.
+ * Loads public/barrios.geojson into the `neighborhoods` table.
  *
  * Run after `node scripts/fetch-barrios.mjs`, and again whenever the Alcaldía
  * updates the layer:
