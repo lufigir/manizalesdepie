@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AnimalDAL } from "@/data/animal/animal.dal";
-import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
+import { loadWorkspaceData } from "@/data/workspace/load-workspace-data";
 import { clientEnv } from "@/lib/env";
 import { ANIMAL_LABEL, OG_LABEL, freshness } from "@/lib/labels";
+import { parseBarrioParam } from "@/lib/workspace-search-params";
 
 import { MapWorkspace } from "../../_components/map-workspace";
 
@@ -24,7 +25,10 @@ import { MapWorkspace } from "../../_components/map-workspace";
  * location, which is what lost means.
  */
 
-type Params = { params: Promise<{ id: string }> };
+type Params = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
@@ -57,30 +61,34 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function SharedAnimalPage({ params }: Params) {
+export default async function SharedAnimalPage({ params, searchParams }: Params) {
   const { id } = await params;
 
-  const [animal, animals, sites, user] = await Promise.all([
+  const [animal, workspace, user, rawSearchParams] = await Promise.all([
     AnimalDAL.public().findById(id),
-    AnimalDAL.public().listPublished(),
-    SiteDAL.public().listPublished(),
+    loadWorkspaceData(),
     getCurrentUser(),
+    searchParams,
   ]);
 
   if (!animal) notFound();
 
   // A hidden report is not in the list; adding it back keeps the card from
   // opening onto nothing, the same way every other shared route does.
-  const withShared = animals.some((row) => row.id === animal.id)
-    ? animals
-    : [animal, ...animals];
+  const animals = workspace.animals.some((row) => row.id === animal.id)
+    ? workspace.animals
+    : [animal, ...workspace.animals];
 
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
-        sites={sites}
-        animals={withShared}
+        sites={workspace.sites}
+        animals={animals}
+        services={workspace.services}
+        needs={workspace.needs}
+        barrios={workspace.barrios}
         initialSelectedId={animal.id}
+        initialBarrioName={parseBarrioParam(rawSearchParams)}
         tab="pets"
         user={user}
       />

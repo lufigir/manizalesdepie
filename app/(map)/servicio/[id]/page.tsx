@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ServiceDAL } from "@/data/service/service.dal";
-import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
+import { loadWorkspaceData } from "@/data/workspace/load-workspace-data";
 import { clientEnv } from "@/lib/env";
 import {
   OG_LABEL,
   SERVICE_TYPE_LABEL,
   SERVICES_LABEL,
 } from "@/lib/labels";
+import { parseBarrioParam } from "@/lib/workspace-search-params";
 
 import { MapWorkspace } from "../../_components/map-workspace";
 
@@ -27,7 +28,10 @@ import { MapWorkspace } from "../../_components/map-workspace";
  * here.
  */
 
-type Params = { params: Promise<{ id: string }> };
+type Params = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
@@ -56,14 +60,17 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function SharedServicePage({ params }: Params) {
+export default async function SharedServicePage({
+  params,
+  searchParams,
+}: Params) {
   const { id } = await params;
 
-  const [service, services, sites, user] = await Promise.all([
+  const [service, workspace, user, rawSearchParams] = await Promise.all([
     ServiceDAL.public().findById(id),
-    ServiceDAL.public().listPublished(),
-    SiteDAL.public().listPublished(),
+    loadWorkspaceData(),
     getCurrentUser(),
+    searchParams,
   ]);
 
   if (!service) notFound();
@@ -71,16 +78,20 @@ export default async function SharedServicePage({ params }: Params) {
   // A link outlives the week a service is published for: `listPublished`
   // drops it once `expires_at` passes, so the shared one is added back
   // rather than opening onto an empty map. The card says how stale it is.
-  const withShared = services.some((row) => row.id === service.id)
-    ? services
-    : [service, ...services];
+  const services = workspace.services.some((row) => row.id === service.id)
+    ? workspace.services
+    : [service, ...workspace.services];
 
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
-        sites={sites}
-        services={withShared}
+        sites={workspace.sites}
+        services={services}
+        needs={workspace.needs}
+        animals={workspace.animals}
+        barrios={workspace.barrios}
         initialSelectedId={service.id}
+        initialBarrioName={parseBarrioParam(rawSearchParams)}
         tab="services"
         user={user}
       />

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Map, MapControls } from "@/components/ui/map";
 
@@ -98,14 +105,25 @@ type Props = {
    *  to say that belongs to no family and so does not belong inside
    *  `UnifiedPanel`. Nothing passes it today. */
   children?: React.ReactNode;
-  /** Every barrio, for the picker inside the relocation overlay. Empty on the
-   *  shared-entity routes, which do not load them: relocating from a shared
-   *  link still works, it just aims by dragging alone. */
+  /** Every barrio, for the picker inside the relocation overlay and for
+   *  resolving `initialBarrioName` below. Every route that renders this
+   *  component loads the same five families, so this is never empty in
+   *  practice. */
   barrios?: NeighborhoodDTO[];
   /** The signed-in reader, or null. Resolved once, server-side, by whichever
    *  route rendered this; the account bubble and the curator-only strips read
    *  from it rather than fetching their own session. */
   user?: CurrentUser | null;
+  /** The `?barrio=` query string, read on the server and validated there
+   *  against nothing more than "is this a single non-empty string" (see
+   *  `parseBarrioParam`) — matching it against a real barrio happens here,
+   *  against the `barrios` list this component already has. An unmatched or
+   *  absent name seeds "toda la ciudad", never an error.
+   *
+   *  Read server-side and passed down rather than pulled from
+   *  `useSearchParams` during the first client render, so the initial filter
+   *  never flashes from "todo" to a barrio after hydration. */
+  initialBarrioName?: string;
 };
 
 /**
@@ -131,6 +149,7 @@ export function MapWorkspace({
   tab: forcedTab,
   children,
   user = null,
+  initialBarrioName,
 }: Props) {
   const sharedLink = initialSelectedId !== undefined;
   const isAdmin = user?.role === "curator";
@@ -166,9 +185,67 @@ export function MapWorkspace({
   // reported by `BarrioLayer` and shown as a small chip beside the corner's
   // other content, so hovering the map still names the barrio it is over.
   const [hoverBarrio, setHoverBarrio] = useState<string | null>(null);
-  // The barrio being filtered by, set by tapping one on the map. Null is the
-  // whole city, which is where everyone starts.
-  const [barrio, setBarrio] = useState<BarrioProps | null>(null);
+  /**
+   * The barrio being filtered by, set by tapping one on the map. Null is the
+   * whole city.
+   *
+   * Seeded from `initialBarrioName` — the `?barrio=` query string, already
+   * read server-side — rather than from a fresh `null` every time: a shared
+   * link that names a barrio has to open already filtered to it. A name that
+   * matches nothing in `barrios` (stale, mistyped, or simply never loaded)
+   * falls back to the whole city rather than erroring; see the effect below
+   * for the other half of this, which keeps the URL in sync afterwards.
+   */
+  const [barrio, setBarrio] = useState<BarrioProps | null>(() => {
+    if (!initialBarrioName) return null;
+    const match = barrios.find((row) => row.name === initialBarrioName);
+    return match
+      ? {
+          id: match.name,
+          name: match.name,
+          comuna: null,
+          lon: match.longitude,
+          lat: match.latitude,
+        }
+      : null;
+  });
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [, startBarrioTransition] = useTransition();
+
+  /**
+   * Keeps `?barrio=` pointed at whatever `barrio` currently is, so the
+   * filter a reader picks on the map is the filter a link they copy still
+   * carries — "Mira lo que hace falta en San Joaquín" only works as a
+   * WhatsApp message if the URL says so.
+   *
+   * `replace`, not `push`: switching barrios is narrowing a view, not
+   * visiting a new page, so it should not fill the back button with one
+   * entry per tap. Wrapped in a transition so the navigation it causes never
+   * blocks the tap that triggered it.
+   */
+  useEffect(() => {
+    const current = searchParams.get("barrio");
+    const next = barrio?.name ?? null;
+    if (current === next) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) {
+      params.set("barrio", next);
+    } else {
+      params.delete("barrio");
+    }
+    const query = params.toString();
+
+    startBarrioTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    });
+  }, [barrio, pathname, router, searchParams]);
+
   /**
    * Shut or open, remembered separately for each width.
    *

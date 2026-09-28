@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { AnimalDAL } from "@/data/animal/animal.dal";
 import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
+import { loadWorkspaceData } from "@/data/workspace/load-workspace-data";
 import { clientEnv } from "@/lib/env";
 import { SITE_STATUS_LABEL, SITE_TYPE_LABEL, confidence } from "@/lib/labels";
 import { SITE_TYPE_TAB } from "@/lib/tabs";
+import { parseBarrioParam } from "@/lib/workspace-search-params";
 
 import { MapWorkspace } from "../../_components/map-workspace";
 
@@ -22,7 +23,10 @@ import { MapWorkspace } from "../../_components/map-workspace";
  * anyone somewhere they then have to navigate out of.
  */
 
-type Params = { params: Promise<{ id: string }> };
+type Params = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 /**
  * The OpenGraph block is the point of the separate route: WhatsApp unfurls it
@@ -58,23 +62,23 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function SharedSitePage({ params }: Params) {
+export default async function SharedSitePage({ params, searchParams }: Params) {
   const { id } = await params;
 
-  const [site, sites, animals, user] = await Promise.all([
+  const [site, workspace, user, rawSearchParams] = await Promise.all([
     SiteDAL.public().findById(id),
-    SiteDAL.public().listPublished(),
-    AnimalDAL.public().listPublished(),
+    loadWorkspaceData(),
     getCurrentUser(),
+    searchParams,
   ]);
 
   if (!site) notFound();
 
   // The shared pin may be unpublished — a curator's link, say — in which case
   // it is not in the list. Adding it keeps the card from opening onto nothing.
-  const withShared = sites.some((s) => s.id === site.id)
-    ? sites
-    : [site, ...sites];
+  const sites = workspace.sites.some((s) => s.id === site.id)
+    ? workspace.sites
+    : [site, ...workspace.sites];
 
   // The section is a property of the pin that was shared, not of the route, so
   // it is passed in rather than read off the URL.
@@ -83,9 +87,13 @@ export default async function SharedSitePage({ params }: Params) {
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
-        sites={withShared}
-        animals={animals}
+        sites={sites}
+        animals={workspace.animals}
+        services={workspace.services}
+        needs={workspace.needs}
+        barrios={workspace.barrios}
         initialSelectedId={site.id}
+        initialBarrioName={parseBarrioParam(rawSearchParams)}
         tab={tab}
         user={user}
       />

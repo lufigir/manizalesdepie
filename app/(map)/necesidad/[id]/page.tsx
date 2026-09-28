@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { AnimalDAL } from "@/data/animal/animal.dal";
 import { NeedDAL } from "@/data/need/need.dal";
-import { SiteDAL } from "@/data/site/site.dal";
 import { getCurrentUser } from "@/data/user/require-user";
+import { loadWorkspaceData } from "@/data/workspace/load-workspace-data";
 import { clientEnv } from "@/lib/env";
 import {
   OG_LABEL,
@@ -12,6 +11,7 @@ import {
   NEED_ROLLUP_LABEL,
   needRollup,
 } from "@/lib/labels";
+import { parseBarrioParam } from "@/lib/workspace-search-params";
 
 import { MapWorkspace } from "../../_components/map-workspace";
 
@@ -30,7 +30,10 @@ import { MapWorkspace } from "../../_components/map-workspace";
  * whether to load a truck actually needs.
  */
 
-type Params = { params: Promise<{ id: string }> };
+type Params = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
@@ -58,15 +61,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function SharedNeedPage({ params }: Params) {
+export default async function SharedNeedPage({ params, searchParams }: Params) {
   const { id } = await params;
 
-  const [order, sites, needs, animals, user] = await Promise.all([
+  const [order, workspace, user, rawSearchParams] = await Promise.all([
     NeedDAL.public().findById(id),
-    SiteDAL.public().listPublished(),
-    NeedDAL.public().listPublished(),
-    AnimalDAL.public().listPublished(),
+    loadWorkspaceData(),
     getCurrentUser(),
+    searchParams,
   ]);
 
   if (!order) notFound();
@@ -74,17 +76,20 @@ export default async function SharedNeedPage({ params }: Params) {
   // A link outlives the case it points at: `listPublished` drops one a few
   // hours after it closes, so the shared one is added back rather than
   // opening onto an empty map.
-  const withShared = needs.some((o) => o.id === order.id)
-    ? needs
-    : [order, ...needs];
+  const needs = workspace.needs.some((o) => o.id === order.id)
+    ? workspace.needs
+    : [order, ...workspace.needs];
 
   return (
     <main className="h-dvh w-full overflow-hidden">
       <MapWorkspace
-        sites={sites}
-        needs={withShared}
-        animals={animals}
+        sites={workspace.sites}
+        needs={needs}
+        animals={workspace.animals}
+        services={workspace.services}
+        barrios={workspace.barrios}
         initialSelectedId={order.id}
+        initialBarrioName={parseBarrioParam(rawSearchParams)}
         // A case is something to go and do, so a shared one opens on
         // "Ayudar" whatever the reader was looking at last.
         tab="help"
